@@ -1,0 +1,146 @@
+import argparse
+import os
+from typing import Any, Dict, Tuple
+import torch
+import torchvision
+import torchvision.transforms as transforms
+from lightning.pytorch import Trainer, seed_everything
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.loggers import MLFlowLogger
+from sklearn.preprocessing import MinMaxScaler
+import yaml
+
+from utils.utils import create_model, load_config, get_dataset
+from utils.datasets import MNIST
+
+def train(
+    train_config: Dict[str, Any],
+    model: torch.nn.Module,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: torch.utils.data.DataLoader,
+    test_loader: torch.utils.data.DataLoader,
+    logger: MLFlowLogger,
+) -> None:
+    seed_everything(train_config["seed"], workers=True)
+
+    # Configure the trainer with specifics from the train_config.
+    trainer = Trainer(
+        accelerator=train_config["accelerator"],
+        devices=train_config["devices"],
+        max_epochs=train_config["epochs"],
+        gradient_clip_val=train_config["gradient_clip_val"],
+        log_every_n_steps=train_config["log_every_n_steps"],
+        logger=logger,
+        callbacks=[
+            EarlyStopping(
+                monitor="valid_loss",
+                patience=train_config["early_stop_patience"],
+            ),
+            ModelCheckpoint(
+                monitor="valid_loss",
+                dirpath=logger._artifact_location,
+                filename="best_model",
+                save_top_k=1,
+                mode="min",
+            ),
+        ],
+    )
+
+    # Set precision for matrix multiplication
+    # torch.set_float32_matmul_precision("highest") # Default used by PyTorch
+    # torch.set_float32_matmul_precision("high") # Faster, but less precise
+    # torch.set_float32_matmul_precision("medium") # Even faster, but also less precise
+    torch.set_float32_matmul_precision(precision=train_config["precision"])
+
+    # Start the model training and validation process.
+    trainer.fit(model, train_loader, val_loader)
+    # Optionally evaluate the model on test data using the best model checkpoint.
+    trainer.test(model, test_loader, ckpt_path="best")
+
+
+def run(args: argparse.Namespace) -> None:
+    configs = load_config(args.config_file)
+    configs["logger"]["artifact_location"] = args.artifact_location
+    #configs["data"]["data_path"] = args.data_path
+    print("Configurations:")
+    #print_dict(configs)
+
+    # Setup logger with MLFlow with configurations read from the file.
+    logger_config = configs["logger"]
+    run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
+    l_logger = MLFlowLogger(
+        experiment_name=logger_config["experiment_name"],
+        run_name=run_name,
+        tracking_uri=logger_config["mlflow_uri"],
+        tags=logger_config["tags"],
+        artifact_location=artifact_location,
+    )
+    print("Logger setup!")
+
+    # Dataset preparation and loading.
+    dataset_config = configs["data"]
+
+
+    train_dataset, test_dataset = get_dataset(dataset_config["dataset"])
+    # Download and load the training dataset
+    batch_size = dataset_config["batch_size"]
+
+    train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [dataset_config['train_ratio'], dataset_config['val_ratio']])
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    # Download and load the test dataset
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+
+    print("Dataset loaded!")
+
+    # Model creation using the utility function with configurations.
+    model_config = configs["model"]
+    print(f"*******dataset parameters: {train_dataset[0][0].shape}")
+    model_config["channels"] = train_dataset[0][0].shape[0]
+    print(model_config["channels"])
+    # print(f"*******dataset parameters: {dataset.parameters}")
+    model = create_model(model_config)
+    print("Model built!")
+
+    # Initiate training with the setup configurations and prepared dataset and model.
+    train_config = configs["train"]
+    train(train_config, model, train_loader, val_loader, test_loader, l_logger)
+    #model.save_model("./artifacts/model.pkl")
+    # Save configuration used for the training in the logger's artifact location.
+    #save_config(configs, os.path.join(artifact_location, "config.yaml"))
+
+
+def get_unique_run_name_and_artile_location(
+    logger_config: Dict[str, Any]
+) -> Tuple[str, str]:
+    run_name = logger_config["run_name"]
+    artifact_location = logger_config["artifact_location"]
+    os.makedirs(artifact_location, exist_ok=True)
+    artifact_location = os.path.join(artifact_location, run_name)
+    # check if run_name already exists, then add a suffix (account for already existing suffixes)
+    if os.path.exists(artifact_location):
+        suffix = 1
+        while os.path.exists(artifact_location + f"_{suffix}"):
+            suffix += 1
+        run_name = run_name + f"_{suffix}"
+        artifact_location = artifact_location + f"_{suffix}"
+
+    return run_name, artifact_location
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Parser for training a model with PyTorch Lightning"
+    )
+
+    
+    args = parser.parse_args()
+    args.config_file = "./configs/config.yaml"
+    args.artifact_location= "./artifacts"
+
+    run(args)
+
+    
