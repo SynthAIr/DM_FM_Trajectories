@@ -9,9 +9,19 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
+from model.Traj_UNet import Guide_UNet2
+#from utils.helper import create_model, load_config, get_dataset
+#from utils.datasets import MNIST
 
-from utils.utils import create_model, load_config, get_dataset
-from utils.datasets import MNIST
+def load_config(config_file):
+    with open(config_file, "r") as stream:
+        try:
+            return yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+def get_dataset(dataset_name: str) -> Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset]:
+    return None, None
 
 def train(
     train_config: Dict[str, Any],
@@ -79,8 +89,6 @@ def run(args: argparse.Namespace) -> None:
 
     # Dataset preparation and loading.
     dataset_config = configs["data"]
-
-
     train_dataset, test_dataset = get_dataset(dataset_config["dataset"])
     # Download and load the training dataset
     batch_size = dataset_config["batch_size"]
@@ -92,7 +100,6 @@ def run(args: argparse.Namespace) -> None:
     # Download and load the test dataset
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-
     print("Dataset loaded!")
 
     # Model creation using the utility function with configurations.
@@ -101,7 +108,7 @@ def run(args: argparse.Namespace) -> None:
     model_config["channels"] = train_dataset[0][0].shape[0]
     print(model_config["channels"])
     # print(f"*******dataset parameters: {dataset.parameters}")
-    model = create_model(model_config)
+    model = Guide_UNet2(model_config)
     print("Model built!")
 
     # Initiate training with the setup configurations and prepared dataset and model.

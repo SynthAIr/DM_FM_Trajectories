@@ -20,15 +20,23 @@ data:
   test_batch_size: 64
   
 model:
-  type: diffusion
-  z_dim: 256
-  hidden_dim: 512
-  lr: 0.0001
-  lr_step_size: 200
-  lr_gamma: 0.5
-  dropout: 0.0
-  llv_coef: 1.0
-  kld_coef: 1.0
-  scale: 1.0
-  conditional: True
-  num_classes: 10
+  #type: diffusion
+  type: "simple"
+  attr_dim: 8
+  guidance_scale: 3
+  in_channels: 2
+  out_ch: 2
+  ch: 128
+  ch_mult: [ 1, 2, 2, 2 ]
+  num_res_blocks: 2
+  attn_resolutions: [ 16 ]
+  dropout: 0.1
+  traj_length: 200
+  lr: 2e-4
+  diffusion:
+    beta_schedule: 'linear'
+    beta_start: 0.0001
+    beta_end: 0.05
+    num_diffusion_timesteps: 500
+    ema: True
+    ema_rate: 0.9999
