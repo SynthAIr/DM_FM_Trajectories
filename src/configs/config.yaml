@@ -2,16 +2,16 @@ train:
   epochs: 10
   accelerator: 'gpu'
   devices: 1
-  seed: 37
+  seed: 42
   gradient_clip_val: 0.5
   log_every_n_steps: 2
   early_stop_patience: 10
   precision: 'high'
 logger:
   mlflow_uri: http://127.0.0.1:8080
-  experiment_name: diffusion
-  run_name: diffusion
-  tags: {'model': 'cond_vae', 'dataset': 'cifar10'}
+  experiment_name: AirDiffTraj
+  run_name: AirDiffTraj
+  tags: {'model': 'diffusion', 'dataset': 'opensky'}
 data:
   dataset: mnist
   train_ratio: 0.8
@@ -20,7 +20,6 @@ data:
   test_batch_size: 64
   
 model:
-  #type: diffusion
   type: "simple"
   attr_dim: 8
   guidance_scale: 3

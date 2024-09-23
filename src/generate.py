@@ -9,20 +9,17 @@ import torchvision
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
-from model import VAE
 import matplotlib.pyplot as plt
 import numpy as np
-from model.vae import ConditionalVAE
-from model.diffusion import Diffusion
-from utils import create_model, load_config
-from utils.datasets import MNIST, FashionMNIST, CIFAR10
+from utils import load_config
+from model.Traj_UNet import Guide_UNet2
 
 
 def run(args):
     config = load_config(args.config_file)
     args.checkpoint = f"./artifacts/{config['model']['type']}/best_model.ckpt"
 
-    model = Diffusion.load_from_checkpoint(args.checkpoint, map_location=torch.device('cuda'))
+    model = Guide_UNet2.load_from_checkpoint(args.checkpoint, map_location=torch.device('cuda'))
 
     model.eval()
 
@@ -35,7 +32,7 @@ def run(args):
     # Download and load the training dataset
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
-    train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
+    #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
     
     n = 10
     c = 3
@@ -60,20 +57,6 @@ def run(args):
     # Flatten the axes array for easy iteration
     axes = axes.flatten()
 
-    # Iterate over the samples and plot each image
-    for i in range(n):
-        X, y = train_dataset[i]
-        X = X.to(model.device).unsqueeze(0)
-        y = y.to(model.device).unsqueeze(0)
-        #print(X)
-        _, _, x = model.forward(X, y)
-        x = x[0]
-        x *= 255
-        print(x.shape)
-        ax = axes[i]
-        ax.imshow(x.cpu().detach().numpy().transpose((1,2,0)), cmap='gray')
-        ax.axis('off')  # Hide the axis
-        ax.set_title(f"Original {y.argmax()}")
 
     # Hide any unused subplots
     for i in range(n, len(axes)):

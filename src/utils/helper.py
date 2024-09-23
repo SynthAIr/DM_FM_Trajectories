@@ -1,4 +1,5 @@
 import torch
+import yaml
 from sklearn.datasets import make_swiss_roll
 
 
@@ -21,3 +22,10 @@ def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2
         betas = torch.linspace(-6, 6, n_timesteps)
         betas = torch.sigmoid(betas) * (end - start) + start
     return betas
+
+def load_config(config_file):
+    with open(config_file, "r") as stream:
+        try:
+            return yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)

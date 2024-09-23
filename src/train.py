@@ -12,13 +12,8 @@ import yaml
 from model.Traj_UNet import Guide_UNet2
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
+from utils.helper import load_config
 
-def load_config(config_file):
-    with open(config_file, "r") as stream:
-        try:
-            return yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            print(exc)
 
 def get_dataset(dataset_name: str) -> Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset]:
     return None, None
