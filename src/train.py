@@ -13,6 +13,7 @@ from utils import TrafficDataset
 #from utils.datasets import MNIST
 from utils.helper import load_config, save_config
 from utils.train_utils import get_dataloaders
+from utils.condition_utils import load_conditions
 
 
 
@@ -80,6 +81,7 @@ def run(args: argparse.Namespace) -> None:
 
     # Dataset preparation and loading.
     dataset_config = configs["data"]
+    conditional_features = load_conditions(dataset_config)
 
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
@@ -90,7 +92,7 @@ def run(args: argparse.Namespace) -> None:
             "features": dataset_config["info_features"],
             "index": dataset_config["info_index"],
         },
-        conditional_features= None,
+        conditional_features= conditional_features,
     )
 
     train_loader, val_loader, test_loader = get_dataloaders(

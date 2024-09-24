@@ -55,7 +55,7 @@ class ContinuousConditions(Condition):
         return [self.label]
 
 
-class CyclicalConditions(Condition):
+class CyclicConditions(Condition):
     """
     Class for cyclical conditions represented as sin and cos
     """
@@ -84,69 +84,28 @@ class CyclicalConditions(Condition):
         return self._cyclic_to_tensor(data, n_repeat)
 
     def get_type(self) -> str:
-        return "cyclical"
+        return "cyclic"
 
     def get_feature_names(self) -> List[str]:
         return [self.label + "_sin", self.label + "_cos"]
 
-class OneHotConditions(Condition):
-    """
-    Class for one hot conditions
-    Main idea being the label is the int value of the category from preprocessing
 
-    Category col is the column name of the category as string values
-    Values are are the unique values of the category that are sorted which is used to get the index of the category
-
-    """
-    def __init__(self, label: str, category_col: str, values = None):
-        super().__init__(label)
-        self.category_col = category_col
-        self.values = values
-        if values is not None:
-            self.values = sorted(values)
-            self.n_categories = len(self.values)
-
-    def init_categories(self, values: List[str]):
-        self.values = sorted(values)
-        self.n_categories = len(self.values)
-    
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
-        """
-        Convert the data to a tensor
-        Supports both using the index of the category directly or the string value
-        """
-        if self.values is None:
-            raise ValueError("Values not set for one hot condition")
-        
-        if type(data) == str or issubclass(type(data), Enum):
-            data = self.values.index(data)
-
-        return F.one_hot(torch.tensor(data, dtype=torch.int64), num_classes=self.n_categories)
-
-    def get_type(self) -> str:
-        return "one_hot"
-
-    def get_feature_names(self) -> List[str]:
-        return [self.label]
-
-class EmbeddingConditions(Condition):
+class Categorical(Condition):
     """
     Class for embedding conditions
     """
-    def __init__(self, label, n_categories, embedding_dim):
+    def __init__(self, label):
         super().__init__(label)
-        self.n_categories = n_categories
-        self.embedding_dim = embedding_dim
-        self.embedding = nn.Embedding(n_categories, embedding_dim)
-    
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
-        return self.embedding(data)
+
+    def to_tensor(self, data, n_repeat = 31) -> torch.Tensor:
+        return torch.tensor([data]*n_repeat, dtype=torch.float)
 
     def get_type(self) -> str:
-        return "embedding"
+        return "continuous"
 
     def get_feature_names(self) -> List[str]:
         return [self.label]
+
 
 class ConditionHandler:
     """
@@ -162,14 +121,12 @@ class ConditionHandler:
         """
         Add a condition to the handler
         """
-        if type == "cyclical":
-            self.condition_map[label] = CyclicalConditions(label, max_val, bins, labels)
+        if type == "cyclic":
+            self.condition_map[label] = CyclicConditions(label, max_val, bins, labels)
         elif type == "continuous":
             self.condition_map[label] = ContinuousConditions(label)
-        elif type == "embedding":
-            self.condition_map[label] = EmbeddingConditions(label, n_categories, embedding_dim)
-        #elif type == "one_hot":
-            #self.condition_map[label] = OneHotConditions(label, )
+        elif type == "categorical":
+            self.condition_map[label] = Categorical(label)
 
     def process(self, name, data) -> torch.Tensor:
         """
@@ -199,24 +156,6 @@ class ConditionHandler:
 
         return torch.FloatTensor(all_conditions)
 
-def get_cond_len(conditional_features: List[Condition], seq_len = 31) -> int:
-    """
-    Get the amount single features from the conditional features
-    """
-    cond_len = 0
-    for cf in conditional_features:
-        match cf.get_type():
-            case "continuous":
-                cond_len += 1 * seq_len
-            case "cyclical":
-                cond_len += 2 * seq_len
-            case "embedding":
-                cond_len += cf.embedding_dim
-            case "one_hot":
-                cond_len += cf.n_categories
-            case _:
-                NotImplementedError("Condition type not implemented")
-    return cond_len
 
 def load_conditions(config, dataset: pd.DataFrame = None) -> List[Condition]:
     """
@@ -230,19 +169,12 @@ def load_conditions(config, dataset: pd.DataFrame = None) -> List[Condition]:
         match condition["type"]:
             case "continuous":
                 condtions.append(ContinuousConditions(name))
-            case "cyclical":
+            case "cyclic":
                 bins = condition.get("bins", None)
                 labels = condition.get("labels", None)
-                condtions.append(CyclicalConditions(name, condition["max_value"], bins, labels))
-            case "embedding":
-                condtions.append(EmbeddingConditions(name, condition["n_categories"], condition["embedding_dim"]))
-            case "one_hot":
-                categories_col = condition.get("category_col", None)
-                if categories_col is not None:
-                    categories = list(set([f.data[categories_col].values[0] for f in dataset.traffic])) if dataset is not None else None
-                    condtions.append(OneHotConditions(name, categories_col, categories))
-                else:
-                    condtions.append(OneHotConditions(name, None))
+                condtions.append(CyclicConditions(name, condition["max_value"], bins, labels))
+            case "categorical":
+                condtions.append(Categorical(name))
             case _:
                 NotImplementedError("Condition type not implemented")
         

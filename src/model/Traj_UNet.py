@@ -40,11 +40,16 @@ class Attention(nn.Module):
 
 
 class WideAndDeep(nn.Module):
-    def __init__(self, embedding_dim=128, hidden_dim=256):
+    def __init__(self, continuous_len, categorical_len,embedding_dim=128, hidden_dim=256):
         super(WideAndDeep, self).__init__()
 
         # Wide part (linear model for continuous attributes)
-        self.wide_fc = nn.Linear(5, embedding_dim)
+        self.wide_fc = nn.Linear(continuous_len, embedding_dim)
+
+        """
+        self.embeddings = nn.ModuleList([
+            nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
+        ])
 
         # Deep part (neural network for categorical attributes)
         self.depature_embedding = nn.Embedding(288, hidden_dim)
@@ -52,29 +57,30 @@ class WideAndDeep(nn.Module):
         self.eid_embedding = nn.Embedding(257, hidden_dim)
         self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
+        """
 
-    def forward(self, attr):
+    def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
-        continuous_attrs = attr[:, 1:6]
-
-        # Categorical attributes
-        depature, sid, eid = attr[:, 0].long(
-        ), attr[:, 6].long(), attr[:, 7].long()
-
-        # Wide part
+        print(continuous_attrs.shape, categorical_attrs.shape)
         wide_out = self.wide_fc(continuous_attrs)
 
-        # Deep part
-        depature_embed = self.depature_embedding(depature)
-        sid_embed = self.sid_embedding(sid)
-        eid_embed = self.eid_embedding(eid)
-        categorical_embed = torch.cat(
-            (depature_embed, sid_embed, eid_embed), dim=1)
+        """
+        # Deep part: Processing categorical features
+        embeddings = []
+        for i in range(categorical_attrs.size(1)):  # Loop over each categorical column
+            embedding = self.embeddings[i](categorical_attrs[:, i].long())
+            embeddings.append(embedding)
+
+        # Concatenate all embeddings for categorical features
+        categorical_embed = torch.cat(embeddings, dim=1)
+
+        # Pass the concatenated embeddings through the deep part of the model
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
-        # Combine wide and deep embeddings
         combined_embed = wide_out + deep_out
-
+        """
+        # Combine wide (continuous) and deep (categorical) outputs
+        combined_embed = wide_out
         return combined_embed
 
 
@@ -415,8 +421,8 @@ class Guide_UNet(nn.Module):
         self.unet = Model(config)
         # self.guide_emb = Guide_Embedding(self.attr_dim, self.ch)
         # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
-        self.guide_emb = WideAndDeep(self.ch)
-        self.place_emb = WideAndDeep(self.ch)
+        self.guide_emb = WideAndDeep(4,0,self.ch)
+        self.place_emb = WideAndDeep(4,0, self.ch)
 
     def forward(self, x, t, attr):
         guide_emb = self.guide_emb(attr)
@@ -445,8 +451,8 @@ class Guide_UNet2(L.LightningModule):
         self.unet = Model(config)
         # self.guide_emb = Guide_Embedding(self.attr_dim, self.ch)
         # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
-        self.guide_emb = WideAndDeep(self.ch)
-        self.place_emb = WideAndDeep(self.ch)
+        self.guide_emb = WideAndDeep(4, 0, self.ch)
+        self.place_emb = WideAndDeep(4, 0, self.ch)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
@@ -481,35 +487,38 @@ class Guide_UNet2(L.LightningModule):
         xt, noise = self.q_xt_x0(x0, t)
         return xt, noise, t
 
-    def reverse_process(self, x_t, t, c=None):
+    def reverse_process(self, x_t, t, con, cat):
         """
+        :param cat: Cateogrical attributes
+        :param con: Continuous attributes
         :param x_t: X with noise for t timesteps
         :param t: Timestep
-        :param c: Conditional Information
         :return:
         """
+        guide_emb = self.guide_emb(con, cat)
+        place_vector_con = torch.zeros(con.shape, device=con.device)
+        place_vector_cat = torch.zeros(cat.shape, device=cat.device)
 
-        guide_emb = self.guide_emb(c)
-        place_vector = torch.zeros(c.shape, device=c.device)
-        place_emb = self.place_emb(place_vector)
+        place_emb = self.place_emb(place_vector_con, place_vector_cat)
+
         cond_noise = self.unet(x_t, t, guide_emb)
         uncond_noise = self.unet(x_t, t, place_emb)
         pred_noise = cond_noise + self.guidance_scale * (cond_noise -
                                                              uncond_noise)
         return pred_noise
 
-    def forward(self, x, c=None):
+    def forward(self, x, con, cat):
         x_t, noise, t = self.forward_process(x)
-        x_hat = self.reverse_process(x_t, t, c)
+        x_hat = self.reverse_process(x_t, t, con, cat)
         return x_t, noise, x_hat
 
     def sample(self, n, c, t=None):
         raise NotImplementedError("Not implemented yet")
 
     def step(self, batch, batch_idx):
-        x, c, _ = batch
+        x, con, cat = batch
         x_t, noise, t = self.forward_process(x)
-        pred_noise = self.reverse_process(x_t, t, c)
+        pred_noise = self.reverse_process(x_t, t, con, cat)
         loss = F.mse_loss(noise.float(), pred_noise)
         return loss
 

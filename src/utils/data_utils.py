@@ -248,7 +248,9 @@ class TrafficDataset(Dataset):
         self.info_params = info_params
 
         self.data: torch.Tensor
-        self.conditions: torch.Tensor
+        self.continuous_conditions: torch.Tensor
+        self.categorical_conditions: torch.Tensor
+
         self.lengths: List[int]
         self.infos: List[Any]
         # self.target_transform = target_transform
@@ -256,16 +258,30 @@ class TrafficDataset(Dataset):
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
 
         condition_fs = []
-        self.cond_scaler = None
-        self.conditions = torch.empty(len(data))
+        self.con_cond_scaler = None
+        self.cat_cond_scaler = None
+
+        self.continuous_conditions = torch.empty(len(data))
+        self.categorical_conditions = torch.empty(len(data))
+
         if self.conditional_features is not None and len(self.conditional_features) > 0:
-            condition_fs = self._get_conditions(traffic)
-            # Concatenate all condition features along the appropriate axis
-            conditions = np.concatenate(condition_fs, axis=1)
-            self.cond_scaler = MinMaxScaler(feature_range=(0, 1))
-            conditions = self.cond_scaler.fit_transform(conditions)
-            conditions = torch.FloatTensor(conditions)
-            self.conditions = conditions
+
+            def scale_conditions(conditions_fs: List[torch.Tensor]):
+
+                if len(conditions_fs) == 0:
+                    return torch.empty(len(data)), None
+
+                conditions = np.concatenate(conditions_fs, axis=1)
+                scaler = MinMaxScaler(feature_range=(-1, 1))
+                conditions = scaler.fit_transform(conditions)
+                conditions = torch.FloatTensor(conditions)
+                return conditions, scaler
+
+            con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
+            self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
+            self.cat_conditions, self.cat_cond_scaler = scale_conditions(cat_condition_fs)
+
+            print(self.con_conditions.shape, self.cat_conditions.shape)
 
         self.scaler = scaler
         if self.scaler is not None:
@@ -299,35 +315,26 @@ class TrafficDataset(Dataset):
 
 
     def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]: 
-        condition_fs = []
+        condition_continuous = []
+        condition_categorical = []
         for feature in self.conditional_features:
             feature_type = feature.get_type()
             feature_names = feature.get_feature_names()
 
             if feature_type == "continuous":
                 feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
-                condition_fs.append(feature_data)
+                condition_continuous.append(feature_data)
 
-            elif feature_type == "cyclical":
+            elif feature_type == "cyclic":
                 for name in feature_names:
                     feature_data = np.array([f.data[name].values.ravel() for f in traffic])
-                    condition_fs.append(feature_data)
+                    condition_continuous.append(feature_data)
 
-            elif feature_type == "embedding":
-                feature_data = np.array([f.data[feature_names].values[0] for f in traffic])
-                tensor_data = feature.to_tensor(torch.tensor(feature_data).numpy())
-                condition_fs.append(tensor_data)
+            elif feature_type == "categorical":
+                feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+                condition_categorical.append(feature_data)
 
-            elif feature_type == "one_hot":
-                #condition_feature_names.extend(feature_names)
-                col_name = feature.category_col
-                col_names = list(set([f.data[col_name].values[0] for f in traffic]))
-                feature.init_categories(col_names)
-                feature_data = np.array([f.data[feature_names].values[0] for f in traffic])
-                tensor_data = feature.to_tensor(torch.tensor(feature_data).numpy())
-                condition_fs.append(tensor_data.view(-1, feature.n_categories))
-
-        return condition_fs
+        return condition_continuous, condition_categorical
 
 
     @classmethod
@@ -378,13 +385,10 @@ class TrafficDataset(Dataset):
             list: List of informations that could be needed like, labels or
                 original latitude and longitude values.
         """
-        infos = []
-        if self.info_params["index"] is not None:
-            infos = self.infos[index]
-
         # TODO: Added for easier Diffusion, should be removed
         #return self.pad_to_32(self.data[index]), self.conditions[index], infos
-        return self.data[index], self.conditions[index], infos
+        # Data, continuous conditions, categorical conditions
+        return self.data[index], self.con_conditions[index], self.cat_conditions[index]
 
     @property
     def input_dim(self) -> int:
