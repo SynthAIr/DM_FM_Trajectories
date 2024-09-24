@@ -94,9 +94,8 @@ def run(args: argparse.Namespace) -> None:
         },
         conditional_features= conditional_features,
     )
-    #print(dataset.data.shape)
-    #print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
-    #print(dataset.con_conditions, dataset.cat_conditions)
+    print(dataset.data.shape)
+    print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
 
     train_loader, val_loader, test_loader = get_dataloaders(
         dataset,

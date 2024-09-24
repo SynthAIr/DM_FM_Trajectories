@@ -44,7 +44,7 @@ class WideAndDeep(nn.Module):
         super(WideAndDeep, self).__init__()
 
         # Wide part (linear model for continuous attributes)
-        self.wide_fc = nn.Linear(continuous_len, embedding_dim)
+        self.wide_fc = nn.Linear(continuous_len*4408, embedding_dim)
 
         """
         self.embeddings = nn.ModuleList([
@@ -530,7 +530,7 @@ class Guide_UNet2(L.LightningModule):
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
         print("Called this on train batch end hooks")
-        if self.config.model.ema:
+        if self.config['diffusion']['ema']:
             self.ema_helper.update(self.unet)
 
     def validation_step(self, batch, batch_idx):

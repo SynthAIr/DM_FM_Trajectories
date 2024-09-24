@@ -334,6 +334,8 @@ class TrafficDataset(Dataset):
                 feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
                 condition_categorical.append(feature_data)
 
+        print("Continuous conditions: ", len(condition_continuous))
+        print("Categorical conditions: ", len(condition_categorical))
         return condition_continuous, condition_categorical
 
 
