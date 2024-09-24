@@ -12,11 +12,9 @@ import yaml
 from model.Traj_UNet import Guide_UNet2
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
-from utils.helper import load_config
+from utils.helper import load_config, save_config
 
 
-def get_dataset(dataset_name: str) -> Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset]:
-    return None, None
 
 def train(
     train_config: Dict[str, Any],
@@ -84,7 +82,9 @@ def run(args: argparse.Namespace) -> None:
 
     # Dataset preparation and loading.
     dataset_config = configs["data"]
+
     train_dataset, test_dataset = get_dataset(dataset_config["dataset"])
+
     # Download and load the training dataset
     batch_size = dataset_config["batch_size"]
 
@@ -109,9 +109,8 @@ def run(args: argparse.Namespace) -> None:
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = configs["train"]
     train(train_config, model, train_loader, val_loader, test_loader, l_logger)
-    #model.save_model("./artifacts/model.pkl")
     # Save configuration used for the training in the logger's artifact location.
-    #save_config(configs, os.path.join(artifact_location, "config.yaml"))
+    save_config(configs, os.path.join(artifact_location, "config.yaml"))
 
 
 def get_unique_run_name_and_artile_location(
@@ -145,4 +144,33 @@ if __name__ == "__main__":
 
     run(args)
 
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Train a Air traffic trajectory generation model"
+    )
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        #required=True,
+        default="./configs/config.yaml",
+        help="Path to the config file"
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        #required=True,
+        default="./data",
+        help="Path to the training data file"
+    )
+    parser.add_argument(
+        "--artifact_path",
+        dest="artifact_location",
+        type=str,
+        #required=True,
+        default="./artifacts",
+        help="Path to save the artifacts",
+    )
+    args = parser.parse_args()
+    run(args)
     

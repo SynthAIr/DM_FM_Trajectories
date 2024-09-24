@@ -29,3 +29,8 @@ def load_config(config_file):
             return yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
+
+
+def save_config(config, config_file):
+    with open(config_file, "w") as f:
+        yaml.dump(config, f)
