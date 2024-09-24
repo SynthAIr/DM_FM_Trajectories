@@ -500,7 +500,7 @@ class Guide_UNet2(L.LightningModule):
         raise NotImplementedError("Not implemented yet")
 
     def step(self, batch, batch_idx):
-        x, c = batch
+        x, c, _ = batch
         x_t, noise, t = self.forward_process(x)
         pred_noise = self.reverse_process(x_t, t, c)
         loss = F.mse_loss(noise.float(), pred_noise)
