@@ -2,8 +2,6 @@ import argparse
 import os
 from typing import Any, Dict, Tuple
 import torch
-import torchvision
-import torchvision.transforms as transforms
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
