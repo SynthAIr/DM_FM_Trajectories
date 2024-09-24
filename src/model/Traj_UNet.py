@@ -512,8 +512,13 @@ class Guide_UNet2(L.LightningModule):
         x_hat = self.reverse_process(x_t, t, con, cat)
         return x_t, noise, x_hat
 
-    def sample(self, n, c, t=None):
-        raise NotImplementedError("Not implemented yet")
+    def sample(self, n, t, con, cat):
+        x = torch.randn(n, 3, 64).cuda()
+        x_t, noise, t = self.forward_process(x)
+        pred_noise = self.reverse_process(x_t, t, con, cat)
+        x_hat = x_t - pred_noise
+        return x_hat, noise, x
+
 
     def step(self, batch, batch_idx):
         x, con, cat = batch
