@@ -488,7 +488,14 @@ class Guide_UNet2(L.LightningModule):
         :param c: Conditional Information
         :return:
         """
-        pred_noise = self.unet(x_t.float(), t, c)
+
+        guide_emb = self.guide_emb(c)
+        place_vector = torch.zeros(c.shape, device=c.device)
+        place_emb = self.place_emb(place_vector)
+        cond_noise = self.unet(x_t, t, guide_emb)
+        uncond_noise = self.unet(x_t, t, place_emb)
+        pred_noise = cond_noise + self.guidance_scale * (cond_noise -
+                                                             uncond_noise)
         return pred_noise
 
     def forward(self, x, c=None):
