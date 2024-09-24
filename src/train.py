@@ -8,7 +8,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
 from model.Traj_UNet import Guide_UNet2
-from src.utils import TrafficDataset
+from utils import TrafficDataset
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
 from utils.helper import load_config, save_config

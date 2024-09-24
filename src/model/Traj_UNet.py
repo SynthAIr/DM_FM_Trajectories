@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import torch.nn.functional as F
 import lightning as L
 
-from src.utils import EMAHelper
+from utils import EMAHelper
 
 """
 Code from https://github.com/Yasoz/DiffTraj
