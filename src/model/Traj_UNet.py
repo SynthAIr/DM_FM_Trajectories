@@ -252,10 +252,10 @@ class Model(nn.Module):
         dropout = config["dropout"]
         in_channels = config["in_channels"]
         resolution = config["traj_length"]
-        resamp_with_conv = config["resamp_with_conv"]
+        resamp_with_conv = ["resamp_with_conv"]
         num_timesteps = config["diffusion"]["num_diffusion_timesteps"]
 
-        if config["model"]["type"] == 'bayesian':
+        if config["type"] == 'bayesian':
             self.logvar = nn.Parameter(torch.zeros(num_timesteps))
 
         self.ch = ch
@@ -438,7 +438,6 @@ class Guide_UNet2(L.LightningModule):
 
     def __init__(self, config):
         super().__init__()
-        print(config)
         self.config = config
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
@@ -449,16 +448,16 @@ class Guide_UNet2(L.LightningModule):
         self.guide_emb = WideAndDeep(self.ch)
         self.place_emb = WideAndDeep(self.ch)
 
-        diff_config = config["diffusion.num"]
-        self.n_steps = diff_config["diffusion_timesteps"]
+        diff_config = config["diffusion"]
+        self.n_steps = diff_config["num_diffusion_timesteps"]
         self.beta = torch.linspace(diff_config["beta_start"],
                               diff_config["beta_end"], self.n_steps).cuda()
         self.alpha = 1. - self.beta
         self.alpha_bar = torch.cumprod(self.alpha, dim=0)
-        self.lr = config.lr  # Explore this - might want it lower when training on the full dataset
+        self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
 
-        if config.ema:
-            self.ema_helper = EMAHelper(mu=config.ema_rate)
+        if config['diffusion']['ema']:
+            self.ema_helper = EMAHelper(mu=config['diffusion']['ema_rate'])
             self.ema_helper.register(self)
         else:
             self.ema_helper = None
