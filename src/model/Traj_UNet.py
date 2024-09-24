@@ -61,7 +61,7 @@ class WideAndDeep(nn.Module):
 
     def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
-        print(continuous_attrs.shape, categorical_attrs.shape)
+        #print(continuous_attrs.shape, categorical_attrs.shape)
         wide_out = self.wide_fc(continuous_attrs)
 
         """
@@ -534,7 +534,7 @@ class Guide_UNet2(L.LightningModule):
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
-        print("Called this on train batch end hooks")
+        #print("Called this on train batch end hooks")
         if self.config['diffusion']['ema']:
             self.ema_helper.update(self.unet)
 
