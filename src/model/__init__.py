@@ -1,2 +1,2 @@
-from AirTrajUnet import *
-from Traj_UNet import *
+from model.AirTrajUnet import *
+from model.Traj_UNet import *

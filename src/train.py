@@ -10,9 +10,11 @@ from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
 from model.Traj_UNet import Guide_UNet2
+from src.utils import TrafficDataset
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
 from utils.helper import load_config, save_config
+from utils.train_utils import get_dataloaders
 
 
 
@@ -63,10 +65,8 @@ def train(
 
 def run(args: argparse.Namespace) -> None:
     configs = load_config(args.config_file)
+    configs["data"]["data_path"] = args.data_path
     configs["logger"]["artifact_location"] = args.artifact_location
-    #configs["data"]["data_path"] = args.data_path
-    print("Configurations:")
-    #print_dict(configs)
 
     # Setup logger with MLFlow with configurations read from the file.
     logger_config = configs["logger"]
@@ -83,25 +83,30 @@ def run(args: argparse.Namespace) -> None:
     # Dataset preparation and loading.
     dataset_config = configs["data"]
 
-    train_dataset, test_dataset = get_dataset(dataset_config["dataset"])
+    dataset = TrafficDataset.from_file(
+        dataset_config["data_path"],
+        features=dataset_config["features"],
+        shape=dataset_config["data_shape"],
+        scaler=MinMaxScaler(feature_range=(-1, 1)),
+        info_params={
+            "features": dataset_config["info_features"],
+            "index": dataset_config["info_index"],
+        },
+        conditional_features= None,
+    )
 
-    # Download and load the training dataset
-    batch_size = dataset_config["batch_size"]
-
-    train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [dataset_config['train_ratio'], dataset_config['val_ratio']])
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-    # Download and load the test dataset
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
+    train_loader, val_loader, test_loader = get_dataloaders(
+        dataset,
+        dataset_config["train_ratio"],
+        dataset_config["val_ratio"],
+        dataset_config["batch_size"],
+        dataset_config["test_batch_size"],
+    )
     print("Dataset loaded!")
 
-    # Model creation using the utility function with configurations.
+
+    print("Dataset loaded!")
     model_config = configs["model"]
-    print(f"*******dataset parameters: {train_dataset[0][0].shape}")
-    model_config["channels"] = train_dataset[0][0].shape[0]
-    print(model_config["channels"])
     # print(f"*******dataset parameters: {dataset.parameters}")
     model = Guide_UNet2(model_config)
     print("Model built!")
@@ -131,18 +136,6 @@ def get_unique_run_name_and_artile_location(
     return run_name, artifact_location
 
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(
-        description="Parser for training a model with PyTorch Lightning"
-    )
-
-    
-    args = parser.parse_args()
-    args.config_file = "./configs/config.yaml"
-    args.artifact_location= "./artifacts"
-
-    run(args)
 
 if __name__ == "__main__":
 
@@ -160,7 +153,7 @@ if __name__ == "__main__":
         "--data_path",
         type=str,
         #required=True,
-        default="./data",
+        default="./data/OpenSky_EHAM_LIMC_trajectories.pkl",
         help="Path to the training data file"
     )
     parser.add_argument(

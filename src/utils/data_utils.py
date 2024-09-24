@@ -114,7 +114,7 @@ def calculate_final_distance(df, destination_lat_lon, distance_threshold):
 
 class Downloader(abc.ABC):
     @abc.abstractmethod
-    def download():
+    def download(self):
         pass
 
 
@@ -258,7 +258,7 @@ class TrafficDataset(Dataset):
         condition_fs = []
         self.cond_scaler = None
         self.conditions = torch.empty(len(data))
-        if len(self.conditional_features) > 0:
+        if self.conditional_features is not None and len(self.conditional_features) > 0:
             condition_fs = self._get_conditions(traffic)
             # Concatenate all condition features along the appropriate axis
             conditions = np.concatenate(condition_fs, axis=1)

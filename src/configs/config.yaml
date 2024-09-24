@@ -13,11 +13,16 @@ logger:
   run_name: AirDiffTraj
   tags: {'model': 'diffusion', 'dataset': 'opensky'}
 data:
-  dataset: mnist
+  dataset: opensky
+  data_path: ./data/traffic.pkl
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta' ]
+  data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
   batch_size: 64
   test_batch_size: 64
+  info_features: [ ] # These are useless
+  info_index: -1 # Useless
   
 model:
   type: "simple"

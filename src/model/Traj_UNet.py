@@ -245,17 +245,17 @@ class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        ch, out_ch, ch_mult = config.ch, config.out_ch, tuple(
-            config.ch_mult)
-        num_res_blocks = config.num_res_blocks
-        attn_resolutions = config.attn_resolutions
-        dropout = config.dropout
-        in_channels = config.in_channels
-        resolution = config.traj_length
-        resamp_with_conv = config.resamp_with_conv
-        num_timesteps = config.diffusion.num_diffusion_timesteps
+        ch, out_ch, ch_mult = config["ch"], config["out_ch"], tuple(
+            config["ch_mult"])
+        num_res_blocks = config["num_res_blocks"]
+        attn_resolutions = config["attn_resolutions"]
+        dropout = config["dropout"]
+        in_channels = config["in_channels"]
+        resolution = config["traj_length"]
+        resamp_with_conv = config["resamp_with_conv"]
+        num_timesteps = config["diffusion"]["num_diffusion_timesteps"]
 
-        if config.model.type == 'bayesian':
+        if config["model"]["type"] == 'bayesian':
             self.logvar = nn.Parameter(torch.zeros(num_timesteps))
 
         self.ch = ch
@@ -438,19 +438,21 @@ class Guide_UNet2(L.LightningModule):
 
     def __init__(self, config):
         super().__init__()
+        print(config)
         self.config = config
-        self.ch = config.ch * 4
-        self.attr_dim = config.attr_dim
-        self.guidance_scale = config.guidance_scale
+        self.ch = config["ch"] * 4
+        self.attr_dim = config["attr_dim"]
+        self.guidance_scale = config["guidance_scale"]
         self.unet = Model(config)
         # self.guide_emb = Guide_Embedding(self.attr_dim, self.ch)
         # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
         self.guide_emb = WideAndDeep(self.ch)
         self.place_emb = WideAndDeep(self.ch)
 
-        self.n_steps = config.diffusion.num_diffusion_timesteps
-        self.beta = torch.linspace(config.diffusion.beta_start,
-                              config.diffusion.beta_end, self.n_steps).cuda()
+        diff_config = config["diffusion.num"]
+        self.n_steps = diff_config["diffusion_timesteps"]
+        self.beta = torch.linspace(diff_config["beta_start"],
+                              diff_config["beta_end"], self.n_steps).cuda()
         self.alpha = 1. - self.beta
         self.alpha_bar = torch.cumprod(self.alpha, dim=0)
         self.lr = config.lr  # Explore this - might want it lower when training on the full dataset
