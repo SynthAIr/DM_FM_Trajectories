@@ -1,5 +1,6 @@
-
 import argparse
+from typing import Any, Dict
+import os
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -13,84 +14,113 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import load_config
 from model.Traj_UNet import Guide_UNet2
+from utils.data_utils import TrafficDataset
+from traffic.core import Traffic
+from traffic.algorithms.generation import Generation
+from sklearn.preprocessing import MinMaxScaler
+from utils.conditions import load_conditions
 
+
+
+def load_and_prepare_data(configs):
+    """
+    Load and prepare the dataset for the model.
+    """
+    dataset_config = configs['data']
+    dataset = TrafficDataset.from_file(
+        dataset_config["data_path"],
+        features=dataset_config["features"],
+        shape=dataset_config["data_shape"],
+        scaler=MinMaxScaler(feature_range=(-1, 1)),
+        info_params={
+            "features": dataset_config["info_features"],
+            "index": dataset_config["info_index"],
+        },
+        conditional_features = load_conditions(dataset_config) if configs["model"]["conditional"] else []
+    )
+    traffic = Traffic.from_file(dataset_config["data_path"])
+
+    return dataset, traffic
+
+def get_checkpoint_path(logger_config: Dict[str, Any]):
+    """
+    Get the path to the checkpoint file.
+    """
+    run_name = logger_config["run_name"]
+    artifact_location = logger_config["artifact_location"]
+    # check that the artifact location exists, otherwise raise an error
+    if not os.path.exists(artifact_location):
+        raise FileNotFoundError(f"Artifact directory {artifact_location} not found!")
+
+    artifact_location = os.path.join(artifact_location, run_name)
+    # check that artifact location exists, otherwise raise an error
+    if not os.path.exists(artifact_location):
+        raise FileNotFoundError(f"Artifact location {artifact_location} not found!")
+
+    # get the "best_model.ckpt" file
+    checkpoint = os.path.join(artifact_location, "best_model.ckpt")
+    # check that the checkpoint exists, otherwise raise an error
+    if not os.path.exists(checkpoint):
+        raise FileNotFoundError(f"Checkpoint file {checkpoint} not found!")
+
+    return checkpoint
+
+def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
+    """
+    Load the trained model and create the trajectory generation model.
+    """
+    #model = Guide_UNet2.load_from_checkpoint(checkpoint_path, map_location=torch.device('cuda'))
+    model = Guide_UNet2.load_from_checkpoint(checkpoint_path, dataset_params = dataset_params)
+    model.eval()  # Set the model to evaluation mode
+    print("Model loaded with checkpoint!")
+    
+    """
+    trajectory_generation_model = Generation(
+        generation=trained_model,
+        features=trained_model.hparams.dataset_params["features"],
+        scaler=dataset_scaler,
+    )
+    """
+    print("Trajectory generation model created!")
+
+    return model
+
+def get_config_data(config_path: str, data_path: str, artifact_location: str):
+    configs = load_config(config_path)
+    configs["data"]["data_path"] = data_path 
+    configs["logger"]["artifact_location"] = artifact_location
+    
+    dataset, traffic = load_and_prepare_data(configs)
+
+    condition_config = configs["data"]
+
+    if dataset.conditional_features is None:
+        conditions = load_conditions(condition_config, dataset)
+    else:
+        conditions = dataset.conditional_features
+
+    return configs, dataset, traffic, conditions
+
+def generate_samples(model, n, c_, t):
+    raise NotImplementedError("Juhu")
 
 def run(args):
-    config = load_config(args.config_file)
-    args.checkpoint = f"./artifacts/{config['model']['type']}/best_model.ckpt"
+    args.checkpoint = f"./artifacts/AirDiffTraj/best_model.ckpt"
+    checkpoint_path = get_checkpoint_path(config["logger"])
+    config, dataset, traffic, conditions = get_config_data(args.config_file, args.data_path, args.artifact_location)
 
-    model = Guide_UNet2.load_from_checkpoint(args.checkpoint, map_location=torch.device('cuda'))
-
-    model.eval()
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),  # Convert images to PyTorch tensors
-        #transforms.Lambda(lambda x: x / 255),
-        transforms.Lambda(lambda x: (x > 0.5).float())
-    ])
+    model = get_models(config["model"], dataset.parameters, args.checkpoint, dataset.scaler)
 
     # Download and load the training dataset
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
     
-    n = 10
-    c = 3
-
-    
     #x = x.view(-1, 1, 28, 28)
-    c_ = torch.zeros(10).to(model.device)
-    c_[c] = 1
-    print(c_.shape)
-    t = 20
     samples = model.sample(n, c_, t).reshape(n, 1, 28, 28)
     print(samples.shape)
 
-    #print(samples)
-    # Reshape and move the samples to the CPU
-    # Define grid dimensions (e.g., 4x4 grid for 16 images)
-    num_rows = 4
-    num_cols = 4
-
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 12))
-
-    # Flatten the axes array for easy iteration
-    axes = axes.flatten()
-
-
-    # Hide any unused subplots
-    for i in range(n, len(axes)):
-        axes[i].axis('off')
-
-    # Adjust layout
-    plt.tight_layout()
-    plt.show()
-
-
-
-    # Create a figure and a set of subplots
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 12))
-
-    # Flatten the axes array for easy iteration
-    axes = axes.flatten()
-
-    # Iterate over the samples and plot each image
-    for i in range(n):
-        ax = axes[i]
-        s = samples[i]
-        s *= 255
-        print(s.shape)
-        ax.imshow(s.cpu().detach().numpy().transpose((1,2,0)), cmap='gray')
-        ax.axis('off')  # Hide the axis
-
-    for i in range(n, len(axes)):
-        axes[i].axis('off')
-
-    # Adjust layout
-    plt.tight_layout()
-    plt.show()
-
-
+    
 
 if __name__ == "__main__":
 
@@ -100,6 +130,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.config_file = "./configs/config.yaml"
+    args.data_path = "./data/traffic.pkl"
     args.artifact_location= "./artifacts"
     args.checkpoint = "./artifacts/diffusion_1/best_model.ckpt"
 
