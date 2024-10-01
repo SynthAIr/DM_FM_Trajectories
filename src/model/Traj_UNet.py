@@ -46,41 +46,36 @@ class WideAndDeep(nn.Module):
         # Wide part (linear model for continuous attributes)
         self.wide_fc = nn.Linear(continuous_len*4408, embedding_dim)
 
-        """
-        self.embeddings = nn.ModuleList([
-            nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
-        ])
+        #self.embeddings = nn.ModuleList([
+        #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
+        #])
 
-        # Deep part (neural network for categorical attributes)
-        self.depature_embedding = nn.Embedding(288, hidden_dim)
-        self.sid_embedding = nn.Embedding(257, hidden_dim)
-        self.eid_embedding = nn.Embedding(257, hidden_dim)
-        self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
+        self.adep_embedding = nn.Embedding(2, hidden_dim)
+        self.ades_embedding = nn.Embedding(2, hidden_dim)
+
+        #self.depature_embedding = nn.Embedding(288, hidden_dim)
+        #self.sid_embedding = nn.Embedding(257, hidden_dim)
+        #self.eid_embedding = nn.Embedding(257, hidden_dim)
+        self.deep_fc1 = nn.Linear(hidden_dim*2, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
-        """
 
     def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
         #print(continuous_attrs.shape, categorical_attrs.shape)
         wide_out = self.wide_fc(continuous_attrs)
 
-        """
         # Deep part: Processing categorical features
-        embeddings = []
-        for i in range(categorical_attrs.size(1)):  # Loop over each categorical column
-            embedding = self.embeddings[i](categorical_attrs[:, i].long())
-            embeddings.append(embedding)
+        adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
+        ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
 
-        # Concatenate all embeddings for categorical features
-        categorical_embed = torch.cat(embeddings, dim=1)
-
-        # Pass the concatenated embeddings through the deep part of the model
+        categorical_embed = torch.cat(
+            (adep_embedding, ades_embedding), dim=1)
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         combined_embed = wide_out + deep_out
-        """
+
         # Combine wide (continuous) and deep (categorical) outputs
-        combined_embed = wide_out
+        #combined_embed = wide_out
         return combined_embed
 
 
