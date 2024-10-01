@@ -17,13 +17,14 @@ data:
   data_path: ./data/traffic.pkl
   features: [ 'latitude', 'longitude', 'altitude', 'timedelta' ]
   conditional_features:
-    wind_speed:
-      type: 'continuous'
-    temperature:
-      type: 'continuous'
-    wind_direction:
+    hour:
       type: 'cyclic'
-      max_value: 180
+    month:
+      type: 'cyclic'
+    ADEP:
+      type: 'categorical'
+    ADES:
+      type: 'categorical'
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
