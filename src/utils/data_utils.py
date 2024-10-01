@@ -261,8 +261,8 @@ class TrafficDataset(Dataset):
         self.con_cond_scaler = None
         self.cat_cond_scaler = None
 
-        self.continuous_conditions = torch.empty(len(data))
-        self.categorical_conditions = torch.empty(len(data))
+        self.con_conditions = torch.empty(len(data))
+        self.cat_conditions = torch.empty(len(data))
 
         if self.conditional_features is not None and len(self.conditional_features) > 0:
 
@@ -279,7 +279,8 @@ class TrafficDataset(Dataset):
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
-            self.cat_conditions, self.cat_cond_scaler = scale_conditions(cat_condition_fs)
+            self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
+            self.cat_conditions = torch.FloatTensor(self.cat_conditions)
 
             print(self.con_conditions.shape, self.cat_conditions.shape)
 
@@ -320,19 +321,25 @@ class TrafficDataset(Dataset):
         for feature in self.conditional_features:
             feature_type = feature.get_type()
             feature_names = feature.get_feature_names()
+            feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+            print(feature_names,feature_type, feature_data.shape)
 
             if feature_type == "continuous":
-                feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+                #feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+                feature_data = feature.to_tensor(feature_data)
                 condition_continuous.append(feature_data)
 
             elif feature_type == "cyclic":
-                for name in feature_names:
-                    feature_data = np.array([f.data[name].values.ravel() for f in traffic])
-                    condition_continuous.append(feature_data)
+                #feature_data = np.array([f.data[feature.label].values.ravel() for f in traffic])
+                feature_data = feature.to_tensor(feature_data)
+                condition_continuous.append(feature_data)
 
             elif feature_type == "categorical":
-                feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+                #feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
+                feature_data = feature.to_tensor(feature_data)
                 condition_categorical.append(feature_data)
+
+            print(feature_data.shape)
 
         print("Continuous conditions: ", len(condition_continuous))
         print("Categorical conditions: ", len(condition_categorical))
@@ -357,23 +364,6 @@ class TrafficDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.data)
-
-    def pad_to_32(self, data):
-        # Check the original shape
-
-        original_shape = data.shape
-        assert original_shape[1] == 31, "The second dimension must be 31."
-
-        # Create a new array with the desired shape
-        padded_data = np.zeros((original_shape[0], 32))
-        
-        # Copy the original data
-        padded_data[:, :-1] = data
-        
-        # Repeat the last value of each row
-        padded_data[:, -1] = data[:, -1]
-        
-        return torch.tensor(padded_data, dtype=torch.float)
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int, List[Any]]:
         """Get item method, returns datapoint at some index.
