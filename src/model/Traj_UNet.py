@@ -427,6 +427,8 @@ class Guide_UNet(nn.Module):
     def forward(self, x, t, attr):
         guide_emb = self.guide_emb(attr)
         place_vector = torch.zeros(attr.shape, device=attr.device)
+        place_vector = place_vector.type_as(attr)
+
         place_emb = self.place_emb(place_vector)
         cond_noise = self.unet(x, t, guide_emb)
         uncond_noise = self.unet(x, t, place_emb)
@@ -497,7 +499,9 @@ class Guide_UNet2(L.LightningModule):
         """
         guide_emb = self.guide_emb(con, cat)
         place_vector_con = torch.zeros(con.shape, device=con.device)
-        place_vector_cat = torch.zeros(cat.shape, device=cat.device, dtype=torch.int)
+        place_vector_cat = torch.zeros(cat.shape, device=cat.device)
+        place_vector_con = place_vector_con.type_as(con)
+        place_vector_cat = place_vector_cat.type_as(cat)
 
         place_emb = self.place_emb(place_vector_con, place_vector_cat)
 
