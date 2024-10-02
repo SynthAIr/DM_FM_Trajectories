@@ -17,8 +17,7 @@ def get_timestep_embedding(timesteps, embedding_dim):
 
     half_dim = embedding_dim // 2
     emb = np.log(10000) / (half_dim - 1)
-    emb = torch.exp(torch.arange(half_dim, dtype=torch.float32) * -emb)
-    emb = emb.to(device=timesteps.device)
+    emb = torch.exp(torch.arange(half_dim, dtype=torch.float32, device=timesteps.device) * -emb)
     emb = timesteps.float()[:, None] * emb[None, :]
     emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
     if embedding_dim % 2 == 1:  # zero pad
@@ -460,9 +459,15 @@ class Guide_UNet2(L.LightningModule):
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
         self.beta = torch.linspace(diff_config["beta_start"],
-                              diff_config["beta_end"], self.n_steps).cuda()
+                              diff_config["beta_end"], self.n_steps, device=self.device)
+        self.register_buffer("beta", self.beta)
+
         self.alpha = 1. - self.beta
+        self.register_buffer("alpha", self.alpha)
+
         self.alpha_bar = torch.cumprod(self.alpha, dim=0)
+        self.register_buffer("alpha_bar", self.alpha_bar)
+
         self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
 
         if config['diffusion']['ema']:
@@ -484,7 +489,7 @@ class Guide_UNet2(L.LightningModule):
 
     def forward_process(self, x0):
         t = torch.randint(low=0, high=self.n_steps,
-                          size=(len(x0) // 2 + 1,), device=x0.device)
+                          size=(len(x0) // 2 + 1,), device=self.device)
         t = torch.cat([t, self.n_steps - t - 1], dim=0)[:len(x0)]
         # Get the noised images (xt) and the noise (our target)
         xt, noise = self.q_xt_x0(x0, t)
@@ -499,8 +504,8 @@ class Guide_UNet2(L.LightningModule):
         :return:
         """
         guide_emb = self.guide_emb(con, cat)
-        place_vector_con = torch.zeros(con.shape, device=con.device)
-        place_vector_cat = torch.zeros(cat.shape, device=cat.device)
+        place_vector_con = torch.zeros(con.shape, device=self.device)
+        place_vector_cat = torch.zeros(cat.shape, device=self.device)
         place_vector_con = place_vector_con.type_as(con)
         place_vector_cat = place_vector_cat.type_as(cat)
 
