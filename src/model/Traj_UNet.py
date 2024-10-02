@@ -477,9 +477,12 @@ class Guide_UNet2(L.LightningModule):
     q(x_t| x_0) = N(mean, var)
     """
     def q_xt_x0(self, x0, t, debug=False):
-        mean = gather(self.alpha_bar, t) ** 0.5 * x0
+        #mean = gather(self.alpha_bar, t) ** 0.5 * x0
+        mean = gather(self.alpha_bar, t)
+        x0 = x0.to(mean.device)
+        mean = mean ** 0.5 * x0
         var = 1 - gather(self.alpha_bar, t)
-        eps = torch.randn_like(x0).to(x0.device)
+        eps = torch.randn_like(x0, device=x0.device)
         return mean + (var ** 0.5) * eps, eps  # also returns noise
 
     def forward_process(self, x0):
@@ -519,7 +522,8 @@ class Guide_UNet2(L.LightningModule):
 
 
     def sample(self, n, c, t=None):
-        raise NotImplementedError("Womp Womp")
+        #raise NotImplementedError("Womp Womp")
+        pass
 
     def step(self, batch, batch_idx):
         x, con, cat = batch
