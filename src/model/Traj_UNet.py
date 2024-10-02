@@ -487,7 +487,7 @@ class Guide_UNet2(L.LightningModule):
 
     def forward_process(self, x0):
         t = torch.randint(low=0, high=self.n_steps,
-                          size=(len(x0) // 2 + 1,)).cuda()
+                          size=(len(x0) // 2 + 1,), device=x0.device)
         t = torch.cat([t, self.n_steps - t - 1], dim=0)[:len(x0)]
         # Get the noised images (xt) and the noise (our target)
         xt, noise = self.q_xt_x0(x0, t)
@@ -501,6 +501,9 @@ class Guide_UNet2(L.LightningModule):
         :param t: Timestep
         :return:
         """
+        t = t.to(x_t.device)
+        con = con.to(x_t.device)
+        cat = cat.to(x_t.device)
         guide_emb = self.guide_emb(con, cat)
         place_vector_con = torch.zeros(con.shape, device=con.device)
         place_vector_cat = torch.zeros(cat.shape, device=cat.device)
