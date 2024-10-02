@@ -62,6 +62,12 @@ class WideAndDeep(nn.Module):
     def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
         #print(continuous_attrs.shape, categorical_attrs.shape)
+        self.wide_fc = self.wide_fc.to(continuous_attrs.device)
+        self.adep_embedding = self.adep_embedding.to(categorical_attrs.device)
+        self.ades_embedding = self.ades_embedding.to(categorical_attrs.device)
+        self.deep_fc1 = self.deep_fc1.to(categorical_attrs.device)
+        self.deep_fc2 = self.deep_fc2.to(categorical_attrs.device)
+
         wide_out = self.wide_fc(continuous_attrs)
 
         # Deep part: Processing categorical features
