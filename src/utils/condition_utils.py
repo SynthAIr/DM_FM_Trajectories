@@ -102,7 +102,7 @@ class CategoricalCondition(Condition):
     def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
         data = data[:,0]
         data = [self.to_index[d] for d in data]
-        data = torch.tensor([data], dtype=torch.float)
+        data = torch.tensor([data], dtype=torch.int)
         return data.reshape(-1, 1)
 
     def get_type(self) -> str:
