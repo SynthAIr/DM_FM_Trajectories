@@ -31,7 +31,6 @@ def train(
     trainer = Trainer(
         accelerator=train_config["accelerator"],
         devices=train_config["devices"],
-        auto_select_gpus=True,
         max_epochs=train_config["epochs"],
         gradient_clip_val=train_config["gradient_clip_val"],
         log_every_n_steps=train_config["log_every_n_steps"],
