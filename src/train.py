@@ -155,7 +155,7 @@ if __name__ == "__main__":
         "--data_path",
         type=str,
         #required=True,
-        default="./data/OpenSky_EHAM_LIMC_trajectories.pkl",
+        default="./data/OpenSky_EHAM_LIMC.pkl",
         help="Path to the training data file"
     )
     parser.add_argument(

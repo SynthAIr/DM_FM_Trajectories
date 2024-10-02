@@ -44,7 +44,7 @@ class WideAndDeep(nn.Module):
         super(WideAndDeep, self).__init__()
 
         # Wide part (linear model for continuous attributes)
-        self.wide_fc = nn.Linear(continuous_len*4408, embedding_dim)
+        self.wide_fc = nn.Linear(continuous_len, embedding_dim)
 
         #self.embeddings = nn.ModuleList([
         #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)

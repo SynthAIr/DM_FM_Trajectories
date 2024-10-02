@@ -19,8 +19,10 @@ data:
   conditional_features:
     hour:
       type: 'cyclic'
+      max_value: 24
     month:
       type: 'cyclic'
+      max_value: 12
     ADEP:
       type: 'categorical'
     ADES:
