@@ -87,7 +87,8 @@ class CyclicCondition(Condition):
         return "cyclic"
 
     def get_feature_names(self) -> List[str]:
-        return [self.label + "_sin", self.label + "_cos"]
+        return [self.label]
+        #return [self.label + "_sin", self.label + "_cos"]
 
 
 class CategoricalCondition(Condition):
