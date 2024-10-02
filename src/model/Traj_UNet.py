@@ -439,7 +439,7 @@ class Guide_UNet(nn.Module):
 
 def gather(consts: torch.Tensor, t: torch.Tensor):
     """Gather consts for $t$ and reshape to feature map shape"""
-    t.to(consts.device)
+    t = t.to(consts.device)
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
 
