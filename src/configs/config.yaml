@@ -46,7 +46,7 @@ model:
   num_res_blocks: 2
   attn_resolutions: [ 16 ]
   dropout: 0.1
-  traj_length: 4408
+  traj_length: 4633
   lr: 0.0002
   resamp_with_conv: True
   diffusion:
