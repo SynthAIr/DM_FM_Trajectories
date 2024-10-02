@@ -68,6 +68,8 @@ class WideAndDeep(nn.Module):
         print(categorical_attrs.shape)
         print(categorical_attrs[:, 0].shape)
         print(categorical_attrs[:, 1].shape)
+        print(categorical_attrs[:, 0].dtype)
+        print(categorical_attrs[:, 1].dtype)
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
 
