@@ -497,7 +497,7 @@ class Guide_UNet2(L.LightningModule):
         """
         guide_emb = self.guide_emb(con, cat)
         place_vector_con = torch.zeros(con.shape, device=con.device)
-        place_vector_cat = torch.zeros(cat.shape, device=cat.device)
+        place_vector_cat = torch.zeros(cat.shape, device=cat.device, dtype=torch.int)
 
         place_emb = self.place_emb(place_vector_con, place_vector_cat)
 
