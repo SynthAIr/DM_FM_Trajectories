@@ -62,11 +62,6 @@ class WideAndDeep(nn.Module):
     def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
         #print(continuous_attrs.shape, categorical_attrs.shape)
-        self.wide_fc = self.wide_fc.to(continuous_attrs.device)
-        self.adep_embedding = self.adep_embedding.to(categorical_attrs.device)
-        self.ades_embedding = self.ades_embedding.to(categorical_attrs.device)
-        self.deep_fc1 = self.deep_fc1.to(categorical_attrs.device)
-        self.deep_fc2 = self.deep_fc2.to(categorical_attrs.device)
 
         wide_out = self.wide_fc(continuous_attrs)
 
@@ -445,7 +440,6 @@ class Guide_UNet(nn.Module):
 
 def gather(consts: torch.Tensor, t: torch.Tensor):
     """Gather consts for $t$ and reshape to feature map shape"""
-    t = t.to(consts.device)
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
 
@@ -483,10 +477,7 @@ class Guide_UNet2(L.LightningModule):
     q(x_t| x_0) = N(mean, var)
     """
     def q_xt_x0(self, x0, t, debug=False):
-        #mean = gather(self.alpha_bar, t) ** 0.5 * x0
-        mean = gather(self.alpha_bar, t)
-        x0 = x0.to(mean.device)
-        mean = mean ** 0.5 * x0
+        mean = gather(self.alpha_bar, t) ** 0.5 * x0
         var = 1 - gather(self.alpha_bar, t)
         eps = torch.randn_like(x0, device=x0.device)
         return mean + (var ** 0.5) * eps, eps  # also returns noise
@@ -507,9 +498,6 @@ class Guide_UNet2(L.LightningModule):
         :param t: Timestep
         :return:
         """
-        t = t.to(x_t.device)
-        con = con.to(x_t.device)
-        cat = cat.to(x_t.device)
         guide_emb = self.guide_emb(con, cat)
         place_vector_con = torch.zeros(con.shape, device=con.device)
         place_vector_cat = torch.zeros(cat.shape, device=cat.device)
