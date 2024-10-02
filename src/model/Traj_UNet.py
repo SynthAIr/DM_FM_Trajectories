@@ -65,6 +65,9 @@ class WideAndDeep(nn.Module):
         wide_out = self.wide_fc(continuous_attrs)
 
         # Deep part: Processing categorical features
+        print(categorical_attrs.shape)
+        print(categorical_attrs[:, 0].shape)
+        print(categorical_attrs[:, 1].shape)
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
 

@@ -280,7 +280,7 @@ class TrafficDataset(Dataset):
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
-            self.cat_conditions = torch.FloatTensor(self.cat_conditions)
+            self.cat_conditions = torch.IntTensor(self.cat_conditions)
 
             print(self.con_conditions.shape, self.cat_conditions.shape)
 

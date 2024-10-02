@@ -76,8 +76,9 @@ class CyclicCondition(Condition):
             sin = np.sin(2*np.pi * self.bins[data] / self.max_val)
             cos = np.cos(2*np.pi * self.bins[data] / self.max_val)
 
-        sin = np.sin(2*np.pi * data / self.max_val)[:, 0]
-        cos = np.cos(2*np.pi * data / self.max_val)[:, 0]
+        data = data[:, 0]
+        sin = np.sin(2*np.pi * data / self.max_val)
+        cos = np.cos(2*np.pi * data / self.max_val)
         return torch.tensor([sin, cos]*n_repeat, dtype=torch.float).T
     
     def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
