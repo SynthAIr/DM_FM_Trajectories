@@ -115,7 +115,6 @@ def run(args: argparse.Namespace) -> None:
     model_config["traj_length"] = dataset.parameters['seq_len']
     model = Guide_UNet2(model_config)
     print("Model built!")
-    exit()
 
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = configs["train"]
