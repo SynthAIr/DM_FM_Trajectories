@@ -336,7 +336,6 @@ class TrafficDataset(Dataset):
             feature_type = feature.get_type()
             feature_names = feature.get_feature_names()
             feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
-            print(feature_names,feature_type, feature_data.shape)
 
             if feature_type == "continuous":
                 #feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
@@ -353,7 +352,6 @@ class TrafficDataset(Dataset):
                 feature_data = feature.to_tensor(feature_data)
                 condition_categorical.append(feature_data)
 
-            print(feature_data.shape)
 
         print("Continuous conditions: ", len(condition_continuous))
         print("Categorical conditions: ", len(condition_categorical))

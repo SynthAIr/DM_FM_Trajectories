@@ -18,7 +18,7 @@ from utils.data_utils import TrafficDataset
 from traffic.core import Traffic
 from traffic.algorithms.generation import Generation
 from sklearn.preprocessing import MinMaxScaler
-from utils.conditions import load_conditions
+from utils.condition_utils import load_conditions
 
 
 
@@ -36,7 +36,8 @@ def load_and_prepare_data(configs):
             "features": dataset_config["info_features"],
             "index": dataset_config["info_index"],
         },
-        conditional_features = load_conditions(dataset_config) if configs["model"]["conditional"] else []
+        conditional_features = load_conditions(dataset_config) ,
+        down_sample_factor=dataset_config["down_sample_factor"],
     )
     traffic = Traffic.from_file(dataset_config["data_path"])
 
@@ -105,22 +106,18 @@ def generate_samples(model, n, c_, t):
     raise NotImplementedError("Juhu")
 
 def run(args):
+    config = load_config(args.config_file)
     args.checkpoint = f"./artifacts/AirDiffTraj/best_model.ckpt"
-    checkpoint_path = get_checkpoint_path(config["logger"])
+    #checkpoint_path = get_checkpoint_path(config["logger"])
     config, dataset, traffic, conditions = get_config_data(args.config_file, args.data_path, args.artifact_location)
 
-    model = get_models(config["model"], dataset.parameters, args.checkpoint, dataset.scaler)
+    #model = get_models(config["model"], dataset.parameters, args.checkpoint, dataset.scaler)
 
-    # Download and load the training dataset
-    dataset_config = config["data"]
-    batch_size = dataset_config["batch_size"]
-    #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
-    
-    #x = x.view(-1, 1, 28, 28)
-    samples = model.sample(n, c_, t).reshape(n, 1, 28, 28)
-    print(samples.shape)
+    _, con, cat = dataset[0]
+    print(con.shape, cat.shape)
 
-    
+
+
 
 if __name__ == "__main__":
 
@@ -130,7 +127,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.config_file = "./configs/config.yaml"
-    args.data_path = "./data/traffic.pkl"
+    args.data_path = "./data/OpenSky_EHAM_LIMC.pkl"
     args.artifact_location= "./artifacts"
     args.checkpoint = "./artifacts/diffusion_1/best_model.ckpt"
 

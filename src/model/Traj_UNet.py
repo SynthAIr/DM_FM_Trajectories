@@ -530,7 +530,9 @@ class Guide_UNet2(L.LightningModule):
         return x_t, noise, x_hat
 
 
-    def sample(self, n, c, t=None):
+    def sample(self, n, con, cat, t=None):
+
+
         #raise NotImplementedError("Womp Womp")
         pass
 
