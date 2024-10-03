@@ -255,7 +255,7 @@ class TrafficDataset(Dataset):
         self.infos: List[Any]
         # self.target_transform = target_transform
         # data = extract_features(traffic, features, info_params["features"])
-        data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
+        data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))[:, ::2][:, 1:]
 
         condition_fs = []
         self.con_cond_scaler = None

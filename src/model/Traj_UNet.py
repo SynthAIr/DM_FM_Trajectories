@@ -65,11 +65,11 @@ class WideAndDeep(nn.Module):
         wide_out = self.wide_fc(continuous_attrs)
 
         # Deep part: Processing categorical features
-        print(categorical_attrs.shape)
-        print(categorical_attrs[:, 0].shape)
-        print(categorical_attrs[:, 1].shape)
-        print(categorical_attrs[:, 0].dtype)
-        print(categorical_attrs[:, 1].dtype)
+        #print(categorical_attrs.shape)
+        #print(categorical_attrs[:, 0].shape)
+        #print(categorical_attrs[:, 1].shape)
+        #print(categorical_attrs[:, 0].dtype)
+        #print(categorical_attrs[:, 1].dtype)
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
 
@@ -439,6 +439,11 @@ class Guide_UNet(nn.Module):
 
 def gather(consts: torch.Tensor, t: torch.Tensor):
     """Gather consts for $t$ and reshape to feature map shape"""
+    #print("consts")
+    #print(consts.device)
+    #print("t")
+    #print(t.device)
+    #t = t.to(consts.device)
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
 
@@ -466,6 +471,7 @@ class Guide_UNet2(L.LightningModule):
         #self.register_buffer("alpha", self.alpha)
 
         self.alpha_bar = torch.cumprod(self.alpha, dim=0)
+        #self.alpha_bar = self.alpha_bar.to(self.device)
         #self.register_buffer("alpha_bar", self.alpha_bar)
 
         self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
@@ -482,6 +488,7 @@ class Guide_UNet2(L.LightningModule):
     q(x_t| x_0) = N(mean, var)
     """
     def q_xt_x0(self, x0, t, debug=False):
+        self.alpha_bar = self.alpha_bar.to(x0.device)
         mean = gather(self.alpha_bar, t) ** 0.5 * x0
         var = 1 - gather(self.alpha_bar, t)
         eps = torch.randn_like(x0, device=x0.device)
