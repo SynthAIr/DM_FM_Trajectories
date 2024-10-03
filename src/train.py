@@ -94,6 +94,7 @@ def run(args: argparse.Namespace) -> None:
             "index": dataset_config["info_index"],
         },
         conditional_features= conditional_features,
+        down_sample_factor=dataset_config["down_sample_factor"],
     )
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
@@ -111,8 +112,10 @@ def run(args: argparse.Namespace) -> None:
     print("Dataset loaded!")
     model_config = configs["model"]
     # print(f"*******dataset parameters: {dataset.parameters}")
+    model_config["traj_length"] = dataset.parameters['seq_len']
     model = Guide_UNet2(model_config)
     print("Model built!")
+    exit()
 
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = configs["train"]

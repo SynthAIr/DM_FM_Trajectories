@@ -194,6 +194,7 @@ class DatasetParams(TypedDict):
     seq_len: int
     shape: str
     conditional_features: List[Condition]
+    down_sample_factor: int
 
 
 class TrafficDataset(Dataset):
@@ -233,7 +234,8 @@ class TrafficDataset(Dataset):
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
         info_params: Infos = Infos(features=[], index=None),
-        conditional_features = []
+        conditional_features = [],
+        down_sample_factor = 1,
     ) -> None:
 
         assert shape in self._available_shapes, (
@@ -250,14 +252,25 @@ class TrafficDataset(Dataset):
         self.data: torch.Tensor
         self.continuous_conditions: torch.Tensor
         self.categorical_conditions: torch.Tensor
-
+        self.down_sample_factor = down_sample_factor
         self.lengths: List[int]
         self.infos: List[Any]
         # self.target_transform = target_transform
         # data = extract_features(traffic, features, info_params["features"])
-        data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))[:, ::2][:, 1:]
 
-        condition_fs = []
+        data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
+        data = data.reshape(data.shape[0], -1, len(self.features))
+
+        if data.shape[1] % 2 != 0:
+            # Remove the first time step to ensure `x` is even
+            data = data[:, 1:, :]
+
+        data = data[:, ::down_sample_factor, :]
+        data = data.reshape(data.shape[0], -1)
+
+        print(data.shape)
+
+
         self.con_cond_scaler = None
         self.cat_cond_scaler = None
 
@@ -315,6 +328,7 @@ class TrafficDataset(Dataset):
             )
 
 
+
     def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]: 
         condition_continuous = []
         condition_categorical = []
@@ -354,11 +368,12 @@ class TrafficDataset(Dataset):
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
         info_params: Infos = Infos(features=[], index=None),
-        conditional_features = []
+        conditional_features = [],
+        down_sample_factor = 1,
     ) -> "TrafficDataset":
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
         traffic = Traffic.from_file(file_path)
-        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features)
+        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor)
         dataset.file_path = file_path
         return dataset
 
@@ -431,7 +446,8 @@ class TrafficDataset(Dataset):
             scaler=self.scaler,
             seq_len=self.seq_len,
             shape=self.shape,
-            conditional_features = self.conditional_features
+            conditional_features = self.conditional_features,
+            down_sample_factor = self.down_sample_factor,
         )
 
     def __repr__(self) -> str:

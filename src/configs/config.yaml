@@ -32,6 +32,7 @@ data:
   val_ratio: 0.2
   batch_size: 32
   test_batch_size: 32
+  down_sample_factor: 4
   info_features: [ ] # These are useless
   info_index: -1 # Useless
   
@@ -47,7 +48,7 @@ model:
   attn_resolutions: [ 16 ]
   dropout: 0.1
   #traj_length: 4633
-  traj_length: 2316
+  #traj_length: 2316
   lr: 0.0002
   resamp_with_conv: True
   diffusion:
