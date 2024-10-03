@@ -460,13 +460,13 @@ class Guide_UNet2(L.LightningModule):
         self.n_steps = diff_config["num_diffusion_timesteps"]
         self.beta = torch.linspace(diff_config["beta_start"],
                               diff_config["beta_end"], self.n_steps, device=self.device)
-        self.register_buffer("beta", self.beta)
+        #self.register_buffer("beta", self.beta)
 
         self.alpha = 1. - self.beta
-        self.register_buffer("alpha", self.alpha)
+        #self.register_buffer("alpha", self.alpha)
 
         self.alpha_bar = torch.cumprod(self.alpha, dim=0)
-        self.register_buffer("alpha_bar", self.alpha_bar)
+        #self.register_buffer("alpha_bar", self.alpha_bar)
 
         self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
 
