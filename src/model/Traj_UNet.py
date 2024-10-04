@@ -530,11 +530,24 @@ class Guide_UNet2(L.LightningModule):
         return x_t, noise, x_hat
 
 
-    def sample(self, n, con, cat, t=None):
+    def sample(self, n,con, cat):
+        self.eval()
+        with torch.no_grad():
+            #Fix this
+            x_t = torch.randn(n, *(1, 28, 28), device="cuda")
+            for i in range(self.num_steps-1, -1, -1):
+                x_t = self.sample_step(x_t,con, cat, i)
+        return x_t
 
-
-        #raise NotImplementedError("Womp Womp")
-        pass
+    def sample_step(self, x, con, cat, t):
+        # From DDPM
+        # z = z * lamba
+        z = torch.randn_like(x, device=x.device) if t > 1 else 0
+        tt =  torch.tensor([t]).to(device=x.device)
+        eps_t = self.reverse_process(x, tt, con, cat)
+        #print(eps_t.shape, x.shape, z.shape, self.alpha[t], self.beta[t])
+        x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t])/(torch.sqrt(1-self.alpha[t])) * eps_t) + torch.sqrt(self.beta[t]) * z
+        return x_tminusone
 
     def step(self, batch, batch_idx):
         x, con, cat = batch
