@@ -530,14 +530,14 @@ class Guide_UNet2(L.LightningModule):
         return x_t, noise, x_hat
 
 
-    def sample(self, n,con, cat):
+    def sample(self, n,con, cat, length = 155):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
         
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(4, 232), device=self.device)
+            x_t = torch.randn(n, *(4, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat, i)
         return x_t

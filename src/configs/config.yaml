@@ -1,5 +1,5 @@
 train:
-  epochs: 20
+  epochs: 40
   accelerator: 'auto'
   devices: '1'
   seed: 42
@@ -30,9 +30,9 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 512
+  batch_size: 256
   test_batch_size: 32
-  down_sample_factor: 20
+  down_sample_factor: 30
   info_features: [ ] # These are useless
   info_index: -1 # Useless
   
