@@ -117,6 +117,15 @@ def run(args):
     print(con.shape, cat.shape)
 
 
+    # Download and load the training dataset
+    dataset_config = config["data"]
+    batch_size = dataset_config["batch_size"]
+    #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
+    
+    #x = x.view(-1, 1, 28, 28)
+    samples = model.sample(n, c_, t)
+    print(samples)
+    print(samples.shape)
 
 
 if __name__ == "__main__":
@@ -129,6 +138,6 @@ if __name__ == "__main__":
     args.config_file = "./configs/config.yaml"
     args.data_path = "./data/OpenSky_EHAM_LIMC.pkl"
     args.artifact_location= "./artifacts"
-    args.checkpoint = "./artifacts/diffusion_1/best_model.ckpt"
+    args.checkpoint = "./artifacts/AirDiffTraj_3/best_model.ckpt"
 
     run(args)

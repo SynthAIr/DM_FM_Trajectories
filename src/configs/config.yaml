@@ -30,9 +30,9 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 128
+  batch_size: 512
   test_batch_size: 32
-  down_sample_factor: 8
+  down_sample_factor: 20
   info_features: [ ] # These are useless
   info_index: -1 # Useless
   
