@@ -532,10 +532,13 @@ class Guide_UNet2(L.LightningModule):
 
     def sample(self, n,con, cat):
         self.eval()
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(1, 28, 28), device="cuda")
-            for i in range(self.num_steps-1, -1, -1):
+            x_t = torch.randn(n, *(4, 232), device=self.device)
+            for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat, i)
         return x_t
 

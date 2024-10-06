@@ -5,8 +5,6 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
-import torchvision
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
@@ -71,7 +69,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
     Load the trained model and create the trajectory generation model.
     """
     #model = Guide_UNet2.load_from_checkpoint(checkpoint_path, map_location=torch.device('cuda'))
-    model = Guide_UNet2.load_from_checkpoint(checkpoint_path, dataset_params = dataset_params)
+    model = Guide_UNet2.load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
     
@@ -110,8 +108,9 @@ def run(args):
     args.checkpoint = f"./artifacts/AirDiffTraj/best_model.ckpt"
     #checkpoint_path = get_checkpoint_path(config["logger"])
     config, dataset, traffic, conditions = get_config_data(args.config_file, args.data_path, args.artifact_location)
+    config['model']["traj_length"] = dataset.parameters['seq_len']
 
-    #model = get_models(config["model"], dataset.parameters, args.checkpoint, dataset.scaler)
+    model = get_models(config["model"], dataset.parameters, args.checkpoint, dataset.scaler)
 
     _, con, cat = dataset[0]
     print(con.shape, cat.shape)
@@ -120,12 +119,15 @@ def run(args):
     # Download and load the training dataset
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
-    #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
-    
+   #train_dataset = FashionMNIST(root='./data', train=True, transform=transform)
+    x, con, cat = dataset[0]
+    con = con.reshape(1, -1)
+    cat = cat.reshape(1, -1)
     #x = x.view(-1, 1, 28, 28)
-    samples = model.sample(n, c_, t)
-    print(samples)
-    print(samples.shape)
+    n = 10
+    samples = model.sample(n, con, cat)
+
+
 
 
 if __name__ == "__main__":

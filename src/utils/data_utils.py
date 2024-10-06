@@ -285,10 +285,10 @@ class TrafficDataset(Dataset):
                     return torch.empty(len(data)), None
 
                 conditions = np.concatenate(conditions_fs, axis=1)
-                scaler = MinMaxScaler(feature_range=(-1, 1))
-                conditions = scaler.fit_transform(conditions)
+                s = MinMaxScaler(feature_range=(-1, 1))
+                conditions = s.fit_transform(conditions)
                 conditions = torch.FloatTensor(conditions)
-                return conditions, scaler
+                return conditions, s
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
@@ -297,7 +297,6 @@ class TrafficDataset(Dataset):
 
             print(self.con_conditions.shape, self.cat_conditions.shape)
 
-        self.scaler = scaler
         if self.scaler is not None:
             try:
                 # If scaler already fitted, only transform
