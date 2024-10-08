@@ -534,13 +534,15 @@ class Guide_UNet2(L.LightningModule):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
-        
+        steps = []
         with torch.no_grad():
             #Fix this
             x_t = torch.randn(n, *(4, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat, i)
-        return x_t
+                if i % 50 == 0:
+                    steps.append(x_t.clone().detach())
+        return x_t, steps
 
     def sample_step(self, x, con, cat, t):
         # From DDPM
