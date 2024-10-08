@@ -14,7 +14,7 @@ from traffic.data import airports
 from utils import (calculate_consecutive_distances,
                            calculate_final_distance,
                            calculate_initial_distance, plot_training_data,
-                           plot_training_data_with_altitude, add_weather_data_gcsfs)
+                           plot_training_data_with_altitude)
 
 print(os.getcwd())
 
@@ -450,7 +450,7 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
 
 
     print("Adding weather data")
-    flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
+    #flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
 
     # Create Traffic object from flight points
     trajectories = get_trajectories(flights_points)
