@@ -570,7 +570,7 @@ class Guide_UNet2(L.LightningModule):
         """This is called after the optimizer step, at the end of the batch."""
         #print("Called this on train batch end hooks")
         if self.config['diffusion']['ema']:
-            self.ema_helper.update(self.unet)
+            self.ema_helper.update(self)
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
