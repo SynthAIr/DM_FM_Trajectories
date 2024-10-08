@@ -23,8 +23,8 @@ def main(args):
 
     logging.info(f"Data downloaded. Saving to {args.output_dir}")
 
-
     save_path = args.output_dir + "/opensky_" + args.departure_airport + "_" + args.arrival_airport + "_" + args.start + "_" + args.end + ".csv"
+
     downloaded_traffic.to_csv(save_path)
     logging.info(f"Data saved to {save_path}")
 

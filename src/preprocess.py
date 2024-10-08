@@ -48,22 +48,24 @@ def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd
     day_of_week = timestamps.dt.dayofweek
 
     # Calculate sine and cosine for months (12 months in a year)
-    month_sin = np.sin(2 * np.pi * months / 12)
-    month_cos = np.cos(2 * np.pi * months / 12)
+    #month_sin = np.sin(2 * np.pi * months / 12)
+    #month_cos = np.cos(2 * np.pi * months / 12)
 
     # Calculate sine and cosine for hours (24 hours in a day)
-    hour_sin = np.sin(2 * np.pi * hours / 24)
-    hour_cos = np.cos(2 * np.pi * hours / 24)
+    #hour_sin = np.sin(2 * np.pi * hours / 24)
+    #hour_cos = np.cos(2 * np.pi * hours / 24)
 
-    day_of_week_sin = np.sin(2 * np.pi * day_of_week / 7)
-    day_of_week_cos = np.cos(2 * np.pi * day_of_week / 7)
+    #day_of_week_sin = np.sin(2 * np.pi * day_of_week / 7)
+    #day_of_week_cos = np.cos(2 * np.pi * day_of_week / 7)
 
-    df['hour_sin'] = hour_sin
-    df['hour_cos'] = hour_cos
-    df['month_sin'] = month_sin
-    df['month_cos'] = month_cos
-    df['day_of_week_sin'] = day_of_week_sin
-    df['day_of_week_cos'] = day_of_week_cos
+    df['hour'] =  hours
+    df['month'] = months
+    df['day_of_week'] = day_of_week
+    #df['hour_cos'] = hour_cos
+    #df['month_sin'] = month_sin
+    #df['month_cos'] = month_cos
+    #df['day_of_week_sin'] = day_of_week_sin
+    #df['day_of_week_cos'] = day_of_week_cos
     return df
 
 
@@ -330,6 +332,7 @@ def load_OpenSky_flights_points(
 
     print(f"Processing file: {file}")
     opensky_data = pd.read_csv(file)
+    print(opensky_data.columns)
     # drop Unnamed: 0 column
     opensky_data = opensky_data.drop(columns=["Unnamed: 0"])
     # opensky_data = opensky_data.drop(columns=['groundspeed', 'track', 'geoaltitude'])

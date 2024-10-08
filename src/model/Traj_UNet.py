@@ -49,8 +49,8 @@ class WideAndDeep(nn.Module):
         #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
         #])
 
-        self.adep_embedding = nn.Embedding(2, hidden_dim)
-        self.ades_embedding = nn.Embedding(2, hidden_dim)
+        self.adep_embedding = nn.Embedding(3, hidden_dim)
+        self.ades_embedding = nn.Embedding(3, hidden_dim)
 
         #self.depature_embedding = nn.Embedding(288, hidden_dim)
         #self.sid_embedding = nn.Embedding(257, hidden_dim)
@@ -528,6 +528,22 @@ class Guide_UNet2(L.LightningModule):
         x_t, noise, t = self.forward_process(x)
         x_hat = self.reverse_process(x_t, t, con, cat)
         return x_t, noise, x_hat
+
+    def reconstruct(self, x, con, cat):
+        self.eval()
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        steps = []
+        with torch.no_grad():
+            #Fix this
+            t = torch.tensor([self.n_steps-1], device=x.device)
+            x_t, noise = self.q_xt_x0(x, t)
+            for i in range(self.n_steps-1, -1, -1):
+                x_t = self.sample_step(x_t,con, cat, i)
+                if i % 50 == 0:
+                    steps.append(x_t.clone().detach())
+
+        return x_t, steps
 
 
     def sample(self, n,con, cat, length = 155):
