@@ -317,60 +317,65 @@ def load_OpenSky_flights_points(
     base_path: str, ADEP_code: str, ADES_code: str
 ) -> pd.DataFrame:
 
-    # look for any .csv files in the base_path
+    # Look for any .csv files in the base_path
     files = glob.glob(os.path.join(base_path, "*.csv"))
     print(f"Found {len(files)} files in the directory: {base_path}")
 
-    # select only the files that contain the ADEP and ADES codes: e.g. opensky_EHAM_LIMC_2019-01-01_2023-01-01.csv
-
+    # Select only the files that contain the ADEP and ADES codes
     files = [file for file in files if ADEP_code in file and ADES_code in file]
-    print(
-        f"Found {len(files)} files with ADEP and ADES codes in the directory: {base_path}"
-    )
-    # select the first file
-    file = files[0]  # TODO: process all files
+    print(f"Found {len(files)} files with ADEP and ADES codes in the directory: {base_path}")
 
-    print(f"Processing file: {file}")
-    opensky_data = pd.read_csv(file)
-    print(opensky_data.columns)
-    # drop Unnamed: 0 column
-    opensky_data = opensky_data.drop(columns=["Unnamed: 0"])
-    # opensky_data = opensky_data.drop(columns=['groundspeed', 'track', 'geoaltitude'])
+    all_data = []  # List to collect DataFrames for each file
+    avg_seq_len = 0
+    # Process each file
+    for file in files:
+        print(f"Processing file: {file}")
+        opensky_data = pd.read_csv(file)
+        print(opensky_data.columns)
 
-    # drop the rows with Nan values and reset the index
-    opensky_data = opensky_data.dropna().reset_index(drop=True)
+        # Drop the 'Unnamed: 0' column if it exists
+        if 'Unnamed: 0' in opensky_data.columns:
+            opensky_data = opensky_data.drop(columns=["Unnamed: 0"])
 
-    # drop rows with negative values in the 'altitude' column
-    opensky_data = opensky_data[opensky_data["altitude"] >= 0]
+        # Drop rows with NaN values and reset the index
+        opensky_data = opensky_data.dropna().reset_index(drop=True)
 
-    # change the column names to match the ectrl data: estdepartureairport	estarrivalairport, to ADEP and ADES
-    opensky_data = opensky_data.rename(
-        columns={"estdepartureairport": "ADEP", "estarrivalairport": "ADES"}
-    )
+        # Drop rows with negative values in the 'altitude' column
+        opensky_data = opensky_data[opensky_data["altitude"] >= 0]
 
-    # Convert the 'timestamp' column to datetime
-    opensky_data["timestamp"] = pd.to_datetime(opensky_data["timestamp"])
-    # df.sort_values('timestamp', inplace=True)
-    opensky_data.sort_values("timestamp", inplace=True)
+        # Rename columns to match the expected format: ADEP and ADES
+        opensky_data = opensky_data.rename(
+            columns={"estdepartureairport": "ADEP", "estarrivalairport": "ADES"}
+        )
 
-    #opensky_data = opensky_data[(opensky_data['timestamp'].dt.year == 2019) & ((opensky_data['timestamp'].dt.month == 10) | (opensky_data['timestamp'].dt.month == 11)) & ((opensky_data['timestamp'].dt.day == 2) | (opensky_data['timestamp'].dt.day == 4))]
+        # Convert the 'timestamp' column to datetime and sort by 'timestamp'
+        opensky_data["timestamp"] = pd.to_datetime(opensky_data["timestamp"])
+        opensky_data.sort_values("timestamp", inplace=True)
 
-    # assign flight ids
-    opensky_data = assign_flight_ids(opensky_data, window=6)
+        # Assign flight IDs
+        opensky_data = assign_flight_ids(opensky_data, window=6)
 
-    # remove outliers
-    opensky_data, avg_sequence_length = remove_outliers(
-        opensky_data, thresholds=[50, 2.2, -1.4]
-    )  # [consecutive_distance_threshold, altitude_threshold, lowest_sequence_length_threshold]
-    print("Removed outliers, now getting trajectories...")
+        # Remove outliers
+        opensky_data, avg_sequence_length = remove_outliers(
+            opensky_data, thresholds=[50, 2.2, -1.4]
+        )
+        avg_seq_len += avg_sequence_length
+        print("Removed outliers, now getting trajectories...")
 
-    # drop z_score column
-    opensky_data.drop(columns=["z_score"], inplace=True)
+        # Drop the 'z_score' column if it exists
+        if 'z_score' in opensky_data.columns:
+            opensky_data.drop(columns=["z_score"], inplace=True)
 
-    # add time-based features
-    opensky_data = add_time_based_features(opensky_data, time_col='timestamp')
+        # Add time-based features
+        opensky_data = add_time_based_features(opensky_data, time_col='timestamp')
 
-    return opensky_data, avg_sequence_length
+        # Append the cleaned DataFrame to the list
+        all_data.append(opensky_data)
+
+    # Concatenate all DataFrames in the list into a single DataFrame
+    combined_df = pd.concat(all_data, ignore_index=True)
+
+    return opensky_data, int(avg_seq_len/len(files))
 
 
 def get_trajectories(flights_points: pd.DataFrame) -> Traffic:
@@ -476,10 +481,10 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
     del trajectories
 
     # Plot the training data
-    plot_training_data(training_data_path=save_path)
+    #plot_training_data(training_data_path=save_path)
 
     # Plot the training data with altitude
-    plot_training_data_with_altitude(training_data_path=save_path)
+    #plot_training_data_with_altitude(training_data_path=save_path)
 
 
 if __name__ == "__main__":
