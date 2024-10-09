@@ -261,11 +261,11 @@ class TrafficDataset(Dataset):
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
 
-        if data.shape[1] % 2 != 0:
+        #if data.shape[1] % 2 != 0:
             # Remove the first time step to ensure `x` is even
-            data = data[:, 1:, :]
+        #    data = data[:, 1:, :]
 
-        data = data[:, ::down_sample_factor, :]
+        #data = data[:, ::down_sample_factor, :]
         data = data.reshape(data.shape[0], -1)
 
         print(data.shape)
