@@ -49,8 +49,8 @@ class WideAndDeep(nn.Module):
         #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
         #])
 
-        self.adep_embedding = nn.Embedding(5, hidden_dim)
-        self.ades_embedding = nn.Embedding(5, hidden_dim)
+        self.adep_embedding = nn.Embedding(7, hidden_dim)
+        self.ades_embedding = nn.Embedding(7, hidden_dim)
 
         #self.depature_embedding = nn.Embedding(288, hidden_dim)
         #self.sid_embedding = nn.Embedding(257, hidden_dim)
