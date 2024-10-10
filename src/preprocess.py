@@ -375,7 +375,7 @@ def load_OpenSky_flights_points(
     # Concatenate all DataFrames in the list into a single DataFrame
     combined_df = pd.concat(all_data, ignore_index=True)
 
-    return opensky_data, int(avg_seq_len/len(files))
+    return combined_df, int(avg_seq_len/len(files))
 
 
 def get_trajectories(flights_points: pd.DataFrame) -> Traffic:
