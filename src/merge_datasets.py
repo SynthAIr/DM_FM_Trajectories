@@ -37,10 +37,9 @@ def main(directory, target_length, output_filepath):
                 big_traffic = traffic_obj
             else:
                 big_traffic = big_traffic + traffic_obj  # Combine Traffic objects
-            
+
             print(f"Processed {filename}")
 
-    big_traffic = big_traffic.drop_duplicates()
     
     # Save the combined Traffic object
     if big_traffic is not None:

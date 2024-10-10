@@ -98,7 +98,7 @@ class CategoricalCondition(Condition):
     """
     def __init__(self, label):
         super().__init__(label)
-        self.to_index = {"EHAM" : 0, "LIMC" : 1, "LFPG":2}
+        self.to_index = {"EHAM" : 0, "LIMC" : 1, "LFPG":2, "EGKK":3, "LIRF": 4}
 
     def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
         data = data[:,0]
