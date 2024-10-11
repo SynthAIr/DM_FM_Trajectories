@@ -66,6 +66,10 @@ def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd
     #df['month_cos'] = month_cos
     #df['day_of_week_sin'] = day_of_week_sin
     #df['day_of_week_cos'] = day_of_week_cos
+    if 'track' in df.columns:
+        print("Adding Track sine and cosine")
+        df['track_cos'] = np.cos(2 * np.pi * df['track'] / 360)
+        df['track_sin'] = np.sin(2 * np.pi * df['track'] / 360)
     return df
 
 

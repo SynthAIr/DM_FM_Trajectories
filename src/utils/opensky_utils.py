@@ -64,7 +64,12 @@ if __name__ == '__main__':
     parser.add_argument('departure_airport', type=str, help='Departure airport')
     parser.add_argument('arrival_airport', type=str, help='Arrival airport')
     parser.add_argument('--output_dir', type=str, default="./", help='Output directory')
-    parser.add_argument('--selected_columns', nargs='+', default=["StateVectorsData4.time", "icao24", "callsign", "lat", "lon", "baroaltitude", "FlightsData4.estdepartureairport", "FlightsData4.estarrivalairport"], help='Selected columns')
+    parser.add_argument('--selected_columns', nargs='+', default=["StateVectorsData4.time", "icao24", "callsign", 
+                                                                  "lat", "lon", "baroaltitude", 
+                                                                  "FlightsData4.estdepartureairport", "FlightsData4.estarrivalairport",
+                                                                  "StateVectorsData4.velocity", "StateVectorsData4.heading", "StateVectorsData4.vertrate",
+                                                                  #"VelocityData4.ewvelocity", "VelocityData4.nsvelocity"
+                                                                  ], help='Selected columns')
 
     args = parser.parse_args()
     main(args)
