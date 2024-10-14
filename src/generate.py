@@ -128,8 +128,6 @@ def run(args):
     samples = model.sample(n, con, cat)
 
 
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(

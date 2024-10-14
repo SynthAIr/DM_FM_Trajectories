@@ -16,6 +16,7 @@ data:
   dataset: opensky
   data_path: ./data/traffic.pkl
   features: [ 'latitude', 'longitude', 'altitude', 'timedelta' ]
+  #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
   conditional_features:
     hour:
       type: 'cyclic'
@@ -50,7 +51,7 @@ model:
   dropout: 0.3
   #traj_length: 4633
   #traj_length: 2316
-  lr: 0.0002
+  lr: 0.0001
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'linear'
