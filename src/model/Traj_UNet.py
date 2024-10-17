@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import lightning as L
 
 from utils import EMAHelper
+from utils import helper
 
 """
 Code from https://github.com/Yasoz/DiffTraj
@@ -463,8 +464,9 @@ class Guide_UNet2(L.LightningModule):
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
-        self.beta = torch.linspace(diff_config["beta_start"],
-                              diff_config["beta_end"], self.n_steps, device=self.device)
+        #self.beta = torch.linspace(diff_config["beta_start"],
+                              #diff_config["beta_end"], self.n_steps, device=self.device)
+        self.beta = helper.make_beta_schedule(diff_config['beta_schedule'], self.n_steps, diff_config["beta_start"], diff_config["beta_end"], self.device)
         #self.register_buffer("beta", self.beta)
 
         self.alpha = 1. - self.beta
