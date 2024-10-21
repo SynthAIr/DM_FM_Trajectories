@@ -421,7 +421,7 @@ def prepare_trajectories(
     np.random.seed(
         199
     )  # random seed for reproducibility (has big impact on the clustering shape)
-    trajectoriesj = trajectories.clustering(
+    trajectories = trajectories.clustering(
         nb_samples=n_samples,
         projection=EuroPP(),
         features=["latitude", "longitude"],
