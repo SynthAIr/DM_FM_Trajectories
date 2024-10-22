@@ -28,6 +28,9 @@ data:
       type: 'categorical'
     ADES:
       type: 'categorical'
+  weather_grid:
+    variables : ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
+    resolution: 1
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2

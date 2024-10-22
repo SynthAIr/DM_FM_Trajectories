@@ -95,6 +95,7 @@ def run(args: argparse.Namespace) -> None:
         },
         conditional_features= conditional_features,
         down_sample_factor=dataset_config["down_sample_factor"],
+        variables = dataset_config["weather_grid"]["variables"]
     )
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)

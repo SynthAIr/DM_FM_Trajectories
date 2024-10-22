@@ -39,7 +39,7 @@ class Attention(nn.Module):
         return weights
 
 class WeatherGrid(nn.Module):
-    def __init__(self, lat_len, long_len, channels, embedding_dim=128):
+    def __init__(self,channels, lat_len, long_len, embedding_dim=128):
         super(WeatherGrid, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=channels, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
@@ -54,8 +54,11 @@ class WeatherGrid(nn.Module):
         
     def forward(self, x):
         # Apply convolutions and pooling
+        #print(x.shape)
         x = self.pool(torch.relu(self.conv1(x)))  # (batch_size, 32, lat_len/2, long_len/2)
+        #print(x.shape)
         x = self.pool(torch.relu(self.conv2(x)))  # (batch_size, 64, lat_len/4, long_len/4)
+        #print(x.shape)
         x = self.pool(torch.relu(self.conv3(x)))  # (batch_size, 128, lat_len/8, long_len/8)
 
         # Flatten the output for the dense layer
@@ -81,6 +84,10 @@ class WideAndDeep(nn.Module):
 
         self.adep_embedding = nn.Embedding(7, hidden_dim)
         self.ades_embedding = nn.Embedding(7, hidden_dim)
+        self.temperature_emb = WeatherGrid(12, 105, 81, embedding_dim)
+        self.wind_u_emb = WeatherGrid(12, 105, 81, embedding_dim)
+        self.wind_v_emb = WeatherGrid(12, 105, 81, embedding_dim)
+        self.vertical_vel_emb = WeatherGrid(12, 105, 81, embedding_dim)
 
         #self.depature_embedding = nn.Embedding(288, hidden_dim)
         #self.sid_embedding = nn.Embedding(257, hidden_dim)
@@ -88,7 +95,7 @@ class WideAndDeep(nn.Module):
         self.deep_fc1 = nn.Linear(hidden_dim*2, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
-    def forward(self, continuous_attrs, categorical_attrs):
+    def forward(self, continuous_attrs, categorical_attrs, grid):
         # Continuous attributes
         #print(continuous_attrs.shape, categorical_attrs.shape)
 
@@ -107,7 +114,18 @@ class WideAndDeep(nn.Module):
             (adep_embedding, ades_embedding), dim=1)
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
-        combined_embed = wide_out + deep_out
+        
+        #print(grid.shape)
+        #print(grid[:,0].shape)
+        wind_v = self.wind_v_emb(grid[:,0])
+        wind_u = self.wind_u_emb(grid[:,1])
+        temp_out = self.temperature_emb(grid[:,2])
+        vertical_vel_emb = self.vertical_vel_emb(grid[:,3])
+        
+        #print(temp_out.shape)
+        #print(wide_out.shape, deep_out.shape, temp_out.shape)
+        combined_embed = wide_out + deep_out + temp_out
+
 
         # Combine wide (continuous) and deep (categorical) outputs
         #combined_embed = wide_out
@@ -491,7 +509,6 @@ class Guide_UNet2(L.LightningModule):
         # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
         self.guide_emb = WideAndDeep(4, 0, self.ch)
         self.place_emb = WideAndDeep(4, 0, self.ch)
-        self.temperature_emb = WeatherGrid(12, 81, 105)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
@@ -535,7 +552,7 @@ class Guide_UNet2(L.LightningModule):
         xt, noise = self.q_xt_x0(x0, t)
         return xt, noise, t
 
-    def reverse_process(self, x_t, t, con, cat):
+    def reverse_process(self, x_t, t, con, cat, grid):
         """
         :param cat: Cateogrical attributes
         :param con: Continuous attributes
@@ -543,13 +560,16 @@ class Guide_UNet2(L.LightningModule):
         :param t: Timestep
         :return:
         """
-        guide_emb = self.guide_emb(con, cat)
+        #print(con.shape, cat.shape, grid.shape)
+        guide_emb = self.guide_emb(con, cat, grid)
         place_vector_con = torch.zeros(con.shape, device=self.device)
         place_vector_cat = torch.zeros(cat.shape, device=self.device)
         place_vector_con = place_vector_con.type_as(con)
         place_vector_cat = place_vector_cat.type_as(cat)
+        place_vector_grid = torch.zeros(grid.shape, device=self.device)
+        place_vector_grid = place_vector_grid.type_as(grid)
 
-        place_emb = self.place_emb(place_vector_con, place_vector_cat)
+        place_emb = self.place_emb(place_vector_con, place_vector_cat, place_vector_grid)
 
         cond_noise = self.unet(x_t, t, guide_emb)
         uncond_noise = self.unet(x_t, t, place_emb)
@@ -562,7 +582,7 @@ class Guide_UNet2(L.LightningModule):
         x_hat = self.reverse_process(x_t, t, con, cat)
         return x_t, noise, x_hat
 
-    def reconstruct(self, x, con, cat):
+    def reconstruct(self, x, con, cat, grid):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
@@ -572,14 +592,14 @@ class Guide_UNet2(L.LightningModule):
             t = torch.tensor([self.n_steps-1], device=x.device)
             x_t, noise = self.q_xt_x0(x, t)
             for i in range(self.n_steps-1, -1, -1):
-                x_t = self.sample_step(x_t,con, cat, i)
+                x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
                     steps.append(x_t.clone().detach())
 
         return x_t, steps
 
 
-    def sample(self, n,con, cat, length = 155):
+    def sample(self, n,con, cat, grid, length = 155):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
@@ -588,25 +608,25 @@ class Guide_UNet2(L.LightningModule):
             #Fix this
             x_t = torch.randn(n, *(4, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
-                x_t = self.sample_step(x_t,con, cat, i)
+                x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
                     steps.append(x_t.clone().detach())
         return x_t, steps
 
-    def sample_step(self, x, con, cat, t):
+    def sample_step(self, x, con, cat, grid, t):
         # From DDPM
         # z = z * lamba
         z = torch.randn_like(x, device=x.device) if t > 1 else 0
         tt =  torch.tensor([t]).to(device=x.device)
-        eps_t = self.reverse_process(x, tt, con, cat)
+        eps_t = self.reverse_process(x, tt, con, cat, grid)
         #print(eps_t.shape, x.shape, z.shape, self.alpha[t], self.beta[t])
         x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t])/(torch.sqrt(1-self.alpha[t])) * eps_t) + torch.sqrt(self.beta[t]) * z
         return x_tminusone
 
     def step(self, batch, batch_idx):
-        x, con, cat = batch
+        x, con, cat, grid = batch
         x_t, noise, t = self.forward_process(x)
-        pred_noise = self.reverse_process(x_t, t, con, cat)
+        pred_noise = self.reverse_process(x_t, t, con, cat, grid)
         loss = F.mse_loss(noise.float(), pred_noise)
         return loss
 

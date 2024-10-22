@@ -1,4 +1,5 @@
 import abc
+import xarray
 import logging
 import os
 from argparse import ArgumentParser
@@ -195,6 +196,7 @@ class DatasetParams(TypedDict):
     shape: str
     conditional_features: List[Condition]
     down_sample_factor: int
+    variables: List[str]
 
 
 class TrafficDataset(Dataset):
@@ -236,6 +238,7 @@ class TrafficDataset(Dataset):
         info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
         down_sample_factor = 1,
+        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> None:
 
         assert shape in self._available_shapes, (
@@ -279,26 +282,64 @@ class TrafficDataset(Dataset):
         self.cat_conditions = torch.empty(len(data))
         self.grid_conditions = torch.empty(len(data))
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
-        ds = xarray.open_dataset(save_path + 'era5_subset_2020-01_flight_filtered.nc')
-        self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
-        print(self.grid_conditions.shape)
-        exit()
+        ds = xarray.open_dataset(save_path + 'era5_subset_2020-01.nc')
+
+        pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+
+        ds = ds[variables].sel(level=pressure_levels)
+        #self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
+        self.grid_conditions = []
+
+        for flight in traffic:
+            t = flight.mean("timestamp").round('h')
+            formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
+            sub = ds.sel(time=formatted_timestamp)
+            self.grid_conditions.append(torch.FloatTensor(sub.to_array().values))
+            #self.grid_conditions.append(torch.tensor(sub.values - 273.15))
+
+        assert len(traffic) == len(self.grid_conditions)
+
+        print(len(self.grid_conditions))
+        print(self.grid_conditions[0].shape)
+
+        print(ds)
+        print(data.shape)
 
         if self.conditional_features is not None and len(self.conditional_features) > 0:
 
-            def scale_conditions(conditions_fs: List[torch.Tensor]):
+            def scale_conditions(conditions_fs: List[torch.Tensor], axis=1):
 
                 if len(conditions_fs) == 0:
                     return torch.empty(len(data)), None
 
-                conditions = np.concatenate(conditions_fs, axis=1)
+                conditions = np.concatenate(conditions_fs, axis=axis)
+
+                original_shape = conditions.shape
+                print(original_shape)
+                if len(conditions.shape) != 2:
+                    # Reshape to 2D (preserving the first dimension, flatten the rest)
+                    conditions = conditions.reshape(conditions.shape[0], -1)
+                    print(conditions.shape)
+                
+
                 s = MinMaxScaler(feature_range=(-1, 1))
                 conditions = s.fit_transform(conditions)
                 conditions = torch.FloatTensor(conditions)
+
+                    # Reshape back to the original shape if necessary (e.g., return to 3D)
+                if len(original_shape) != 2:
+                    conditions = conditions.reshape(*original_shape)
+
                 return conditions, s
 
+            self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 0)
+            self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
+            print(self.grid_conditions.shape)
+
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
+
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
+
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
 
@@ -372,10 +413,15 @@ class TrafficDataset(Dataset):
         info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
         down_sample_factor = 1,
+        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> "TrafficDataset":
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
         traffic = Traffic.from_file(file_path)
-        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor)
+
+        ##### REMOVE THIS
+        traffic = traffic.between("2020-01-01", "2020-01-31")
+
+        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path
         return dataset
 
@@ -397,7 +443,7 @@ class TrafficDataset(Dataset):
         # TODO: Added for easier Diffusion, should be removed
         #return self.pad_to_32(self.data[index]), self.conditions[index], infos
         # Data, continuous conditions, categorical conditions
-        return self.data[index], self.con_conditions[index], self.cat_conditions[index]
+        return self.data[index], self.con_conditions[index], self.cat_conditions[index], self.grid_conditions[index]
 
     @property
     def input_dim(self) -> int:
@@ -450,6 +496,7 @@ class TrafficDataset(Dataset):
             shape=self.shape,
             conditional_features = self.conditional_features,
             down_sample_factor = self.down_sample_factor,
+            variables = self.variables
         )
 
     def __repr__(self) -> str:
