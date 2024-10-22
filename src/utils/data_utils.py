@@ -273,9 +273,16 @@ class TrafficDataset(Dataset):
 
         self.con_cond_scaler = None
         self.cat_cond_scaler = None
+        self.grid_cond_scaler = None
 
         self.con_conditions = torch.empty(len(data))
         self.cat_conditions = torch.empty(len(data))
+        self.grid_conditions = torch.empty(len(data))
+        save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
+        ds = xarray.open_dataset(save_path + 'era5_subset_2020-01_flight_filtered.nc')
+        self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
+        print(self.grid_conditions.shape)
+        exit()
 
         if self.conditional_features is not None and len(self.conditional_features) > 0:
 
@@ -325,8 +332,6 @@ class TrafficDataset(Dataset):
                     ]
                 )
             )
-
-
 
     def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]: 
         condition_continuous = []

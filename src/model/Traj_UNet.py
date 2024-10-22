@@ -491,6 +491,7 @@ class Guide_UNet2(L.LightningModule):
         # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
         self.guide_emb = WideAndDeep(4, 0, self.ch)
         self.place_emb = WideAndDeep(4, 0, self.ch)
+        self.temperature_emb = WeatherGrid(12, 81, 105)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]

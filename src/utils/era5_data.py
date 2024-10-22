@@ -4,6 +4,25 @@ import pandas as pd
 import argparse
 import os
 
+class ERA5Dataset:
+    def __init__(self, data_path):
+        self.data_path = data_path
+        self.dataset = xr.open_dataset(data_path)
+
+    def get_data(self, start_time, end_time, lat_min, lat_max, lon_min, lon_max):
+        # Subset spatial region
+        latitude_range = slice(lat_max, lat_min)  # lat_max first since latitude decreases from north to south
+        longitude_range = slice(lon_min, lon_max)
+
+        # Slice the dataset by time, latitude, and longitude
+        subset = self.dataset.sel(
+            time=slice(start_time, end_time),
+            latitude=latitude_range,
+            longitude=longitude_range
+        )
+
+        return subset
+
 def download_data(start_time, end_time, lat_min, lat_max, lon_min, lon_max, save_path):
     # Load the dataset from Google Cloud Storage (GCS)
     era5 = xr.open_zarr(

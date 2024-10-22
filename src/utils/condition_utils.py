@@ -7,9 +7,6 @@ from typing import Dict, Any, List
 from enum import Enum
 import pandas as pd
 
-#WIND_DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-WIND_DIRECTIONS = ['N', 'E', 'S',  'W']
-
 class Condition(abc.ABC):
     """
     Abstract class for conditions
@@ -108,6 +105,23 @@ class CategoricalCondition(Condition):
 
     def get_type(self) -> str:
         return "categorical"
+
+    def get_feature_names(self) -> List[str]:
+        return [self.label]
+
+class WeatherGridCondition(Condition):
+    """
+    Class for weather grid conditions
+    """
+    def __init__(self, label, levels = 12):
+        super().__init__(label)
+        self.levels = levels
+    
+    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+        return torch.tensor(data, dtype=torch.float)
+
+    def get_type(self) -> str:
+        return "weather_grid"
 
     def get_feature_names(self) -> List[str]:
         return [self.label]
