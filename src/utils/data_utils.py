@@ -1,4 +1,5 @@
 import abc
+from tqdm import tqdm
 import xarray as xr
 import logging
 import os
@@ -258,6 +259,7 @@ class TrafficDataset(Dataset):
         self.down_sample_factor = down_sample_factor
         self.lengths: List[int]
         self.infos: List[Any]
+        self.variables = variables
         # self.target_transform = target_transform
         # data = extract_features(traffic, features, info_params["features"])
 
@@ -283,24 +285,28 @@ class TrafficDataset(Dataset):
         self.grid_conditions = torch.empty(len(data))
 
         pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+        def preprocess(ds):
+            return ds[variables].sel(level=pressure_levels)
+
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "12" in f]
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "2021" in f]
 
         # Open all the .nc files in the directory as a single dataset
-        ds = xr.open_mfdataset(nc_files, combine='by_coords')
+        ds = xr.open_mfdataset(nc_files, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
+        print("loaded_data")
 
-
-        ds = ds[variables].sel(level=pressure_levels)
+        #ds = ds[variables].sel(level=pressure_levels)
         #self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
         self.grid_conditions = []
 
-        for flight in traffic:
+        for flight in tqdm(traffic):
             t = flight.mean("timestamp").round('h')
             formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
             sub = ds.sel(time=formatted_timestamp)
             self.grid_conditions.append(torch.FloatTensor(sub.to_array().values))
             #self.grid_conditions.append(torch.tensor(sub.values - 273.15))
+        
 
         assert len(traffic) == len(self.grid_conditions)
 
@@ -424,7 +430,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2020-04-01", "2020-12-01")
+        traffic = traffic.between("2020-04-01", "2020-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path

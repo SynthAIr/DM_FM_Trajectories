@@ -121,10 +121,12 @@ class WideAndDeep(nn.Module):
         wind_u = self.wind_u_emb(grid[:,1])
         temp_out = self.temperature_emb(grid[:,2])
         vertical_vel_emb = self.vertical_vel_emb(grid[:,3])
+
+        weather = wind_v + wind_u + temp_out + vertical_vel_emb
         
         #print(temp_out.shape)
         #print(wide_out.shape, deep_out.shape, temp_out.shape)
-        combined_embed = wide_out + deep_out + temp_out
+        combined_embed = wide_out + deep_out + weather
 
 
         # Combine wide (continuous) and deep (categorical) outputs
@@ -457,33 +459,6 @@ class Model(nn.Module):
         h = nonlinearity(h)
         h = self.conv_out(h)
         return h
-
-
-class Guide_UNet(nn.Module):
-    def __init__(self, config):
-        super(Guide_UNet, self).__init__()
-        self.config = config
-        self.ch = config.model.ch * 4
-        self.attr_dim = config.model.attr_dim
-        self.guidance_scale = config.model.guidance_scale
-        self.unet = Model(config)
-        # self.guide_emb = Guide_Embedding(self.attr_dim, self.ch)
-        # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
-        self.guide_emb = WideAndDeep(4,0,self.ch)
-        self.place_emb = WideAndDeep(4,0, self.ch)
-
-    def forward(self, x, t, attr):
-        guide_emb = self.guide_emb(attr)
-        place_vector = torch.zeros(attr.shape, device=attr.device)
-        place_vector = place_vector.type_as(attr)
-
-        place_emb = self.place_emb(place_vector)
-        cond_noise = self.unet(x, t, guide_emb)
-        uncond_noise = self.unet(x, t, place_emb)
-        pred_noise = cond_noise + self.guidance_scale * (cond_noise -
-                                                         uncond_noise)
-        return pred_noise
-
 
 
 def gather(consts: torch.Tensor, t: torch.Tensor):
