@@ -1,5 +1,5 @@
 import abc
-import xarray
+import xarray as xr
 import logging
 import os
 from argparse import ArgumentParser
@@ -281,10 +281,15 @@ class TrafficDataset(Dataset):
         self.con_conditions = torch.empty(len(data))
         self.cat_conditions = torch.empty(len(data))
         self.grid_conditions = torch.empty(len(data))
-        save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
-        ds = xarray.open_dataset(save_path + 'era5_subset_2020-01.nc')
 
         pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+        save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
+        # List all .nc files in the directory
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "12" in f]
+
+        # Open all the .nc files in the directory as a single dataset
+        ds = xr.open_mfdataset(nc_files, combine='by_coords')
+
 
         ds = ds[variables].sel(level=pressure_levels)
         #self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
@@ -419,7 +424,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2020-01-01", "2020-01-31")
+        traffic = traffic.between("2020-04-01", "2020-12-01")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path
