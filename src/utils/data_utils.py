@@ -299,13 +299,26 @@ class TrafficDataset(Dataset):
         #ds = ds[variables].sel(level=pressure_levels)
         #self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
         self.grid_conditions = []
+        import pickle
+        
+        name = f"flight_processed_{len(traffic)}.pkl"
+        if not os.path.isfile(save_path + name):
 
-        for flight in tqdm(traffic):
-            t = flight.mean("timestamp").round('h')
-            formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
-            sub = ds.sel(time=formatted_timestamp)
-            self.grid_conditions.append(torch.FloatTensor(sub.to_array().values))
-            #self.grid_conditions.append(torch.tensor(sub.values - 273.15))
+            for flight in tqdm(traffic):
+                t = flight.mean("timestamp").round('h')
+                formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
+                sub = ds.sel(time=formatted_timestamp)
+                self.grid_conditions.append(torch.FloatTensor(sub.to_array().values))
+                #self.grid_conditions.append(torch.tensor(sub.values - 273.15))
+            
+            with open(save_path + name, "wb") as fp:   #Pickling
+                pickle.dump(self.grid_conditions, fp)
+
+        else:
+
+            with open(save_path + name, 'rb') as f:
+                self.grid_conditions = pickle.load(f)
+
         
 
         assert len(traffic) == len(self.grid_conditions)
