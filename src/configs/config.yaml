@@ -44,7 +44,7 @@ data:
 model:
   type: "simple"
   attr_dim: 8
-  guidance_scale: 5
+  guidance_scale: 2
   in_channels: 4
   out_ch: 4
   ch: 128

@@ -290,7 +290,7 @@ class TrafficDataset(Dataset):
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "2021" in f]
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "2019" in f]
 
         # Open all the .nc files in the directory as a single dataset
         ds = xr.open_mfdataset(nc_files, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
@@ -443,7 +443,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2020-04-01", "2020-12-31")
+        traffic = traffic.between("2020-04-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path
