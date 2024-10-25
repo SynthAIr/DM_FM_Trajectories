@@ -82,8 +82,8 @@ class WideAndDeep(nn.Module):
         #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
         #])
 
-        self.adep_embedding = nn.Embedding(7, hidden_dim)
-        self.ades_embedding = nn.Embedding(7, hidden_dim)
+        self.adep_embedding = nn.Embedding(8, hidden_dim)
+        self.ades_embedding = nn.Embedding(8, hidden_dim)
         self.temperature_emb = WeatherGrid(12, 105, 81, embedding_dim)
         self.wind_u_emb = WeatherGrid(12, 105, 81, embedding_dim)
         self.wind_v_emb = WeatherGrid(12, 105, 81, embedding_dim)
