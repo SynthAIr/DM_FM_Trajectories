@@ -570,7 +570,6 @@ class AirDiffTraj(L.LightningModule):
 
         cond_noise = self.unet(x_t, t, guide_emb)
         uncond_noise = self.unet(x_t, t, place_emb)
-        print(cond_noise.shape, uncond_noise.shape)
         pred_noise = cond_noise + self.guidance_scale * (cond_noise -
                                                              uncond_noise)
         return pred_noise
@@ -623,11 +622,9 @@ class AirDiffTraj(L.LightningModule):
 
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        print(x.shape, con.shape, cat.shape,grid.shape)
         x_t, noise, t = self.forward_process(x)
         pred_noise = self.reverse_process(x_t, t, con, cat, grid)
         loss = F.mse_loss(noise.float(), pred_noise)
-        print(loss)
         return loss
 
     def training_step(self, batch, batch_idx):
