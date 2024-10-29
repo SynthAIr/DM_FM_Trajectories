@@ -54,7 +54,7 @@ model:
   dropout: 0.3
   #traj_length: 4633
   #traj_length: 2316
-  lr: 0.0001
+  lr: 0.000001
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'quad'
