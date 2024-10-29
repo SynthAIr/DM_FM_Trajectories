@@ -83,10 +83,9 @@ class WideAndDeep(nn.Module):
 
         self.adep_embedding = nn.Embedding(10, hidden_dim)
         self.ades_embedding = nn.Embedding(10, hidden_dim)
-        
-        
+        self.cluster_embedding = nn.Embedding(5, hidden_dim)
 
-        self.deep_fc1 = nn.Linear(hidden_dim*2, embedding_dim)
+        self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
     def forward(self, continuous_attrs, categorical_attrs):
@@ -103,9 +102,10 @@ class WideAndDeep(nn.Module):
         #print(categorical_attrs[:, 1].dtype)
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
+        cluster_embedding = self.cluster_embedding(categorical_attrs[:, 2])
 
         categorical_embed = torch.cat(
-            (adep_embedding, ades_embedding), dim=1)
+            (adep_embedding, ades_embedding, cluster_embedding), dim=1)
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
@@ -145,7 +145,7 @@ class EmbeddingBlock(nn.Module):
         self.weather_grid = weather_grid
         
         if self.weather_grid:
-            self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
+            self.weather_block = WeatherBlock(num_blocks=6, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
 
         self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
 
@@ -157,9 +157,6 @@ class EmbeddingBlock(nn.Module):
             x = self.fc1(nn.functional.relu(x))
 
         return x
-
-
-
 
 def nonlinearity(x):
     # swish

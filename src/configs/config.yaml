@@ -26,10 +26,15 @@ data:
       max_value: 12
     ADEP:
       type: 'categorical'
+      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
     ADES:
       type: 'categorical'
+      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
+    cluster:
+      type: 'categorical'
+      categories: ['0', '1', '2', '3', '4']
   weather_grid:
-    variables : ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
+    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
     resolution: 1
   data_shape: 'image'
   train_ratio: 0.8

@@ -93,9 +93,11 @@ class CategoricalCondition(Condition):
     """
     Class for embedding conditions
     """
-    def __init__(self, label):
-        super().__init__(label)
-        self.to_index = {"EHAM" : 0, "LIMC" : 1, "LFPG":2, "EGKK":3, "LIRF": 4, "LOWW":5, "EGLL":6, "ESSA": 7, "EDDF": 8, "EDDT": 9}
+    def __init__(self, label, categories = []):
+        super().__init__(label) 
+        self.categories = categories
+        self.to_index = {c: i for i, c in enumerate(categories)}
+        #self.to_index = {"EHAM" : 0, "LIMC" : 1, "LFPG":2, "EGKK":3, "LIRF": 4, "LOWW":5, "EGLL":6, "ESSA": 7, "EDDF": 8, "EDDT": 9}
 
     def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
         data = data[:,0]
@@ -194,7 +196,7 @@ def load_conditions(config, dataset: pd.DataFrame = None) -> List[Condition]:
                 labels = condition.get("labels", None)
                 condtions.append(CyclicCondition(name, condition["max_value"], bins, labels))
             case "categorical":
-                condtions.append(CategoricalCondition(name))
+                condtions.append(CategoricalCondition(name, condition["categories"]))
             case _:
                 NotImplementedError("Condition type not implemented")
         
