@@ -290,7 +290,7 @@ class TrafficDataset(Dataset):
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and not "2018" in f]
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
 
         # Open all the .nc files in the directory as a single dataset
         ds = xr.open_mfdataset(nc_files, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
@@ -303,6 +303,7 @@ class TrafficDataset(Dataset):
         
         name = f"flight_processed_{len(traffic)}.pkl"
         if not os.path.isfile(save_path + name):
+            print("ERA5 file not found - creating new")
 
             for flight in tqdm(traffic):
                 t = flight.mean("timestamp").round('h')
@@ -315,7 +316,7 @@ class TrafficDataset(Dataset):
                 pickle.dump(self.grid_conditions, fp)
 
         else:
-
+            print("File found - Loading as pickle")
             with open(save_path + name, 'rb') as f:
                 self.grid_conditions = pickle.load(f)
 
@@ -443,7 +444,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2019-01-01", "2021-12-31")
+        traffic = traffic.between("2018-01-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path
