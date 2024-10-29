@@ -70,7 +70,6 @@ class WeatherGrid(nn.Module):
         return x
         
 
-
 class WideAndDeep(nn.Module):
     def __init__(self, continuous_len, categorical_len,embedding_dim=128, hidden_dim=256):
         super(WideAndDeep, self).__init__()
@@ -84,18 +83,13 @@ class WideAndDeep(nn.Module):
 
         self.adep_embedding = nn.Embedding(10, hidden_dim)
         self.ades_embedding = nn.Embedding(10, hidden_dim)
-        self.temperature_emb = WeatherGrid(12, 105, 81, embedding_dim)
-        self.wind_u_emb = WeatherGrid(12, 105, 81, embedding_dim)
-        self.wind_v_emb = WeatherGrid(12, 105, 81, embedding_dim)
-        self.vertical_vel_emb = WeatherGrid(12, 105, 81, embedding_dim)
+        
+        
 
-        #self.depature_embedding = nn.Embedding(288, hidden_dim)
-        #self.sid_embedding = nn.Embedding(257, hidden_dim)
-        #self.eid_embedding = nn.Embedding(257, hidden_dim)
         self.deep_fc1 = nn.Linear(hidden_dim*2, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
-    def forward(self, continuous_attrs, categorical_attrs, grid):
+    def forward(self, continuous_attrs, categorical_attrs):
         # Continuous attributes
         #print(continuous_attrs.shape, categorical_attrs.shape)
 
@@ -115,23 +109,56 @@ class WideAndDeep(nn.Module):
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
-        #print(grid.shape)
-        #print(grid[:,0].shape)
-        wind_v = self.wind_v_emb(grid[:,0])
-        wind_u = self.wind_u_emb(grid[:,1])
-        temp_out = self.temperature_emb(grid[:,2])
-        vertical_vel_emb = self.vertical_vel_emb(grid[:,3])
-
-        weather = wind_v + wind_u + temp_out + vertical_vel_emb
         
-        #print(temp_out.shape)
-        #print(wide_out.shape, deep_out.shape, temp_out.shape)
-        combined_embed = wide_out + deep_out + weather
+        combined_embed = wide_out + deep_out 
 
-
-        # Combine wide (continuous) and deep (categorical) outputs
         #combined_embed = wide_out
         return combined_embed
+
+class WeatherBlock(nn.Module):
+    def __init__(self, num_blocks, levels = 12, latitude = 105, longitude = 81, embedding_dim = 128) -> None:
+        super().__init__()
+        self.num_blocks = num_blocks
+        self.levels = levels
+        self.latitude = latitude
+        self.longitude = longitude
+        self.embedding_dim = embedding_dim
+
+        blocks = nn.ModuleList()
+        for i in range(num_blocks):
+            blocks.append(WeatherGrid(levels, latitude, longitude, embedding_dim))
+
+        self.fc1 = nn.Linear(embedding_dim*num_blocks, embedding_dim)
+
+    def forward(self, x):
+        x = torch.cat([block(x[:,i]) for i, block in enumerate(self.blocks)], dim=1)
+        x = nn.functional.relu(x)
+        x = self.fc1(x)
+        return x
+        
+
+class EmbeddingBlock(nn.Module):
+    def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_grid = True) -> None:
+        super().__init__()
+        self.weather_grid = weather_grid
+        self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
+        self.weather_grid = weather_grid
+        
+        if self.weather_grid:
+            self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
+
+        self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
+
+    def forward(self, continuous_attrs, categorical_attrs, grid):
+        x = self.wide_and_deep(continuous_attrs, categorical_attrs)
+
+        if self.weather_grid:
+            x = torch.cat([x, self.weather_block(grid)], dim=1)
+            x = self.fc1(nn.functional.relu(x))
+
+        return x
+
+
 
 
 def nonlinearity(x):
@@ -297,7 +324,7 @@ class AttnBlock(nn.Module):
         return x + h_
 
 
-class Model(nn.Module):
+class UNET(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -471,7 +498,7 @@ def gather(consts: torch.Tensor, t: torch.Tensor):
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
 
-class Guide_UNet2(L.LightningModule):
+class AirDiffTraj(L.LightningModule):
 
     def __init__(self, config):
         super().__init__()
@@ -479,16 +506,14 @@ class Guide_UNet2(L.LightningModule):
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
         self.guidance_scale = config["guidance_scale"]
-        self.unet = Model(config)
-        # self.guide_emb = Guide_Embedding(self.attr_dim, self.ch)
-        # self.place_emb = Place_Embedding(self.attr_dim, self.ch)
-        self.guide_emb = WideAndDeep(4, 0, self.ch)
-        self.place_emb = WideAndDeep(4, 0, self.ch)
+        self.unet = UNET(config)
+
+        self.weather_grid = config["weather_grid"]
+        self.guide_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
+        self.place_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
-        #self.beta = torch.linspace(diff_config["beta_start"],
-                              #diff_config["beta_end"], self.n_steps, device=self.device)
         self.beta = helper.make_beta_schedule(diff_config['beta_schedule'], self.n_steps, diff_config["beta_start"], diff_config["beta_end"], self.device)
         #self.register_buffer("beta", self.beta)
 
@@ -552,9 +577,9 @@ class Guide_UNet2(L.LightningModule):
                                                              uncond_noise)
         return pred_noise
 
-    def forward(self, x, con, cat):
+    def forward(self, x, con, cat, grid):
         x_t, noise, t = self.forward_process(x)
-        x_hat = self.reverse_process(x_t, t, con, cat)
+        x_hat = self.reverse_process(x_t, t, con, cat, grid)
         return x_t, noise, x_hat
 
     def reconstruct(self, x, con, cat, grid):
@@ -574,7 +599,7 @@ class Guide_UNet2(L.LightningModule):
         return x_t, steps
 
 
-    def sample(self, n,con, cat, grid, length = 155):
+    def sample(self, n,con, cat, grid, length = 200):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
@@ -628,3 +653,6 @@ class Guide_UNet2(L.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
+
+
+

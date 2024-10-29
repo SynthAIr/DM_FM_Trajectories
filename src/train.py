@@ -7,7 +7,7 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
-from model.Traj_UNet import Guide_UNet2
+from model.Traj_UNet import AirDiffTraj
 from utils import TrafficDataset
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
@@ -114,7 +114,7 @@ def run(args: argparse.Namespace) -> None:
     model_config = configs["model"]
     # print(f"*******dataset parameters: {dataset.parameters}")
     model_config["traj_length"] = dataset.parameters['seq_len']
-    model = Guide_UNet2(model_config)
+    model = AirDiffTraj(model_config)
     print("Model built!")
 
     # Initiate training with the setup configurations and prepared dataset and model.

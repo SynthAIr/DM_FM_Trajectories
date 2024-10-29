@@ -63,3 +63,4 @@ model:
     num_diffusion_timesteps: 500
     ema: True
     ema_rate: 0.9999
+  weather_grid: True
