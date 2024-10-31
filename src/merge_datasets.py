@@ -41,6 +41,9 @@ def main(directory, target_length, output_filepath):
             print(f"Processed {filename}")
 
     
+    big_traffic = big_traffic.cumulative_distance().eval()
+
+
     # Save the combined Traffic object
     if big_traffic is not None:
         big_traffic.to_pickle(output_filepath)

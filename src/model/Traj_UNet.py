@@ -95,11 +95,6 @@ class WideAndDeep(nn.Module):
         wide_out = self.wide_fc(continuous_attrs)
 
         # Deep part: Processing categorical features
-        #print(categorical_attrs.shape)
-        #print(categorical_attrs[:, 0].shape)
-        #print(categorical_attrs[:, 1].shape)
-        #print(categorical_attrs[:, 0].dtype)
-        #print(categorical_attrs[:, 1].dtype)
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
         cluster_embedding = self.cluster_embedding(categorical_attrs[:, 2])
@@ -499,6 +494,7 @@ def gather(consts: torch.Tensor, t: torch.Tensor):
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
 
+
 class AirDiffTraj(L.LightningModule):
 
     def __init__(self, config):
@@ -510,8 +506,8 @@ class AirDiffTraj(L.LightningModule):
         self.unet = UNET(config)
 
         self.weather_grid = config["weather_grid"]
-        self.guide_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
-        self.place_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
+        self.guide_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
+        self.place_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
