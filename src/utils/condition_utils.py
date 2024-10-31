@@ -43,7 +43,7 @@ class ContinuousCondition(Condition):
         super().__init__(label)
     
     def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
-        return torch.tensor([data]*n_repeat, dtype=torch.float)
+        return torch.tensor(data, dtype=torch.float)
 
     def get_type(self) -> str:
         return "continuous"

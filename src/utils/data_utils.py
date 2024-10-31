@@ -339,7 +339,7 @@ class TrafficDataset(Dataset):
 
                 if len(conditions_fs) == 0:
                     return torch.empty(len(data)), None
-
+                
                 conditions = np.concatenate(conditions_fs, axis=axis)
 
                 original_shape = conditions.shape
@@ -412,12 +412,16 @@ class TrafficDataset(Dataset):
 
             if feature_type == "continuous":
                 #feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
-                feature_data = feature.to_tensor(feature_data)
+                feature_data = feature.to_tensor(feature_data).squeeze()
+                print(feature_names)
+                print(feature_data.shape)
                 condition_continuous.append(feature_data)
 
             elif feature_type == "cyclic":
                 #feature_data = np.array([f.data[feature.label].values.ravel() for f in traffic])
                 feature_data = feature.to_tensor(feature_data)
+                print(feature_names)
+                print(feature_data.shape)
                 condition_continuous.append(feature_data)
 
             elif feature_type == "categorical":
