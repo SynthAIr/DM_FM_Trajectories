@@ -286,47 +286,17 @@ class TrafficDataset(Dataset):
 
         pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
         def preprocess(ds):
+            #print(ds.keys())
             return ds[variables].sel(level=pressure_levels)
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
         nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
         
-        
-        for file in nc_files:
-            # Load the dataset
-            ds = xr.open_dataset(file)[variables].sel(level=pressure_levels)
-            print(file, ds.dims)
 
         ds = xr.open_mfdataset(nc_files, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
-                
         # Open all the .nc files in the directory as a single dataset
-        """
-        has_nan = ds.isnull().any()
-
-        if has_nan:
-            print("NaN values found in the dataset!")
-            nan_locations = ds.isnull()
-            
-            # Print NaN information for each variable
-            for var in ds.data_vars:
-                if nan_locations[var].any():
-                    print(f"Variable '{var}' has NaN values.")
-                    nan_indices = np.argwhere(nan_locations[var].values)
-                    print(f"NaN indices in '{var}':", nan_indices)
-
-                    # Extract time corresponding to the NaN values
-                    time_indices = nan_indices[:, 0]  # Assuming time is the first dimension
-                    time_values = ds['time'].isel(time=time_indices).values
-                    print(f"Time values corresponding to NaNs in '{var}':", time_values)
-
-                    # Optionally, print the range of time values
-                    time_range = (time_values.min(), time_values.max())
-                    print(f"Time range of NaNs in '{var}': {time_range}")
-        else:
-            print("No NaN values found.")
         
-        """
         print("loaded_data")
 
         #ds = ds[variables].sel(level=pressure_levels)
@@ -477,7 +447,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2018-03-01", "2021-12-31")
+        traffic = traffic.between("2018-01-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path

@@ -128,12 +128,15 @@ class WeatherBlock(nn.Module):
         for i in range(num_blocks):
             self.blocks.append(WeatherGrid(levels, latitude, longitude, embedding_dim))
 
-        self.fc1 = nn.Linear(embedding_dim*num_blocks, embedding_dim)
+        self.fc1 = nn.Linear(embedding_dim*num_blocks, embedding_dim*num_blocks*2)
+        self.fc2 = nn.Linear(embedding_dim*num_blocks*2, embedding_dim)
 
     def forward(self, x):
         x = torch.cat([block(x[:,i]) for i, block in enumerate(self.blocks)], dim=1)
         x = nn.functional.relu(x)
         x = self.fc1(x)
+        x = nn.functional.relu(x)
+        x = self.fc2(x)
         return x
         
 
@@ -145,16 +148,17 @@ class EmbeddingBlock(nn.Module):
         self.weather_grid = weather_grid
         
         if self.weather_grid:
-            self.weather_block = WeatherBlock(num_blocks=6, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
+            self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
 
-        self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
+        #self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
 
     def forward(self, continuous_attrs, categorical_attrs, grid):
         x = self.wide_and_deep(continuous_attrs, categorical_attrs)
 
         if self.weather_grid:
-            x = torch.cat([x, self.weather_block(grid)], dim=1)
-            x = self.fc1(nn.functional.relu(x))
+            #x = torch.cat([x, self.weather_block(grid)], dim=1)
+            x = x + self.weather_block(grid)
+            #x = self.fc1(nn.functional.relu(x))
 
         return x
 

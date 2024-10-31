@@ -105,7 +105,7 @@ def get_config_data(config_path: str, data_path: str, artifact_location: str):
     return configs, dataset, traffic, conditions
 
 
-def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000):
+def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model"):
     # Select random samples from the dataset
     rnd = np.random.randint(0, len(dataset), (n,))
     X2, con, cat, grid = dataset[rnd]
@@ -119,7 +119,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000):
     print("Shapes:", con.shape, cat.shape, X_.shape)
     
     # Set model guidance scale and perform reconstruction
-    model.unet.guidance_scale = 3
+    #model.unet.guidance_scale = 3
     x_rec, steps = model.reconstruct(X_, con_, cat_, grid)
     
     # Plotting setup
@@ -162,11 +162,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000):
     
     # Show the plot
     plt.show()
-    plt.savefig("reconstructed_data.png")
+    plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
     return reconstructions, mse
 
-def jensenshannon_distance(reconstructions):
+def jensenshannon_distance(reconstructions, model_name="model"):
     import numpy as np
     from scipy.stats import gaussian_kde
     from scipy.special import rel_entr
@@ -228,9 +228,9 @@ def jensenshannon_distance(reconstructions):
     ax[1].set_title("Subset 2 Density")
 
     plt.tight_layout()
-    plt.savefig("kde_comparison.png")
+    plt.savefig(f"./figures/{model_name}_comparison.png")
 
-def density(reconstructions):
+def density(reconstructions, model_name="model"):
     import matplotlib.pyplot as plt
 
     from matplotlib.offsetbox import AnchoredText
@@ -288,7 +288,7 @@ def density(reconstructions):
 
         fig.set_tight_layout(True)
 
-        plt.savefig("density.png")
+        plt.savefig(f"./figures/{model_name}_density.png")
 
 
 def generate_samples(model, n, c_, t):
@@ -298,7 +298,8 @@ if __name__ == "__main__":
     config_file = "./configs/config.yaml"
     data_path = "./data/resampled/combined_traffic_resampled_200.pkl"
     artifact_location= "./artifacts"
-    checkpoint = "./artifacts/AirDiffTraj_3/best_model.ckpt"
+    model_name = "AirDiffTraj_18"
+    checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
 
     config = load_config(config_file)
@@ -309,8 +310,8 @@ if __name__ == "__main__":
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000)
-    jensenshannon_distance(reconstructions)
-    density(reconstructions)
+    reconstructions, mse = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = model_name)
+    jensenshannon_distance(reconstructions, model_name = model_name)
+    density(reconstructions, model_name = model_name)
 
     
