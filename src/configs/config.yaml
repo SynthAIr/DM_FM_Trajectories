@@ -67,9 +67,9 @@ model:
   lr: 0.0001
   resamp_with_conv: True
   diffusion:
-    beta_schedule: 'quad'
-    beta_start: 0.0001
-    beta_end: 0.02
+    beta_schedule: 'cosine'
+    beta_start: 0.000001
+    beta_end: 0.005
     num_diffusion_timesteps: 200
     ema: True
     ema_rate: 0.9999

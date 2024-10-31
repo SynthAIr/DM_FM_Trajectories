@@ -24,7 +24,7 @@ def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2
     elif schedule == "cosine":
         # Cosine schedule from DDPM++
         s = 0.004  # Small constant to adjust the starting point
-        steps = torch.arange(n_timesteps + 1, device=device, dtype=torch.float64)
+        steps = torch.arange(n_timesteps + 1, device=device, dtype=torch.float32)
         alphas = torch.cos(((steps / n_timesteps) + s) / (1 + s) * torch.pi / 2) ** 2
         alphas = alphas / alphas[0]  # Normalize to ensure alphas[0] = 1
         betas = 1 - (alphas[1:] / alphas[:-1])  # Derive beta_t from alpha_t values

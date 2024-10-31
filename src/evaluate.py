@@ -298,7 +298,7 @@ if __name__ == "__main__":
     config_file = "./configs/config.yaml"
     data_path = "./data/resampled/combined_traffic_resampled_200.pkl"
     artifact_location= "./artifacts"
-    model_name = "AirDiffTraj_18"
+    model_name = "AirDiffTraj"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
 
