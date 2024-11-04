@@ -113,7 +113,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     # Move data to GPU if available
     grid = grid.to("cuda")
-    X_ = X2.reshape(n, 4, -1).to("cuda")
+    X_ = X2.reshape(n, 6, -1).to("cuda")
     con_ = con.reshape(n, -1)
     cat_ = cat.reshape(n, -1)
     
@@ -151,7 +151,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         # Inverse scaling and traffic reconstruction
         decoded = dataset.scaler.inverse_transform(reco_x)
         reconstructed_traf = trajectory_generation_model.build_traffic(
-            decoded.reshape(n, -1, 4),
+            decoded.reshape(n, -1, 6),
             coordinates=dict(latitude=48.5, longitude=8.4),
             forward=False
         )
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     config_file = "./configs/config.yaml"
     data_path = "./data/resampled/combined_traffic_resampled_200.pkl"
     artifact_location= "./artifacts"
-    model_name = "AirDiffTraj"
+    model_name = "AirDiffTraj_5"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
 
@@ -373,12 +373,12 @@ if __name__ == "__main__":
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=100, model_name = model_name)
+    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=300, model_name = model_name)
     jensenshannon_distance(reconstructions, model_name = model_name)
     density(reconstructions, model_name = model_name)
 
     samples, steps = generate_samples(dataset, model, rnd, n = 10)
-    detached_samples = detach_to_tensor(samples).reshape(-1, 4, 200)
+    detached_samples = detach_to_tensor(samples).reshape(-1, 6, 200)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
     reconstructed_traf = trajectory_generation_model.build_traffic(
@@ -386,4 +386,4 @@ if __name__ == "__main__":
     coordinates=dict(latitude=48.5, longitude=8.4),
     forward=False,
     )
-    plot_from_array(reconstructed_traf)
+    plot_from_array(reconstructed_traf, model_name)

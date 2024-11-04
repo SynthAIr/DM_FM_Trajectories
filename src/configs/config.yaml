@@ -15,7 +15,7 @@ logger:
 data:
   dataset: opensky
   data_path: ./data/traffic.pkl
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta' ]
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta' , 'groundspeed', 'track']
   #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
   conditional_features:
     hour:
@@ -33,10 +33,10 @@ data:
     cluster:
       type: 'categorical'
       categories: [0, 1, 2, 3, 4]
-    groundspeed:
-      type: 'continuous'
-    track:
-      type: 'continuous'
+      #groundspeed:
+      #type: 'continuous'
+      #track:
+      #type: 'continuous'
   weather_grid:
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
@@ -55,8 +55,8 @@ model:
   type: "simple"
   attr_dim: 8
   guidance_scale: 3
-  in_channels: 4
-  out_ch: 4
+  in_channels: 6
+  out_ch: 6
   ch: 256
   ch_mult: [ 1, 2, 2, 4 ]
   num_res_blocks: 2

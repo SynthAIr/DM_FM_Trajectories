@@ -506,8 +506,8 @@ class AirDiffTraj(L.LightningModule):
         self.unet = UNET(config)
 
         self.weather_grid = config["weather_grid"]
-        self.guide_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
-        self.place_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
+        self.guide_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
+        self.place_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
@@ -603,7 +603,7 @@ class AirDiffTraj(L.LightningModule):
         steps = []
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(4, length), device=self.device)
+            x_t = torch.randn(n, *(6, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
