@@ -11,7 +11,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import load_config
-from model.Traj_UNet import Guide_UNet2
+from model.AirDiffTraj import AirDiffTraj
 from utils.data_utils import TrafficDataset
 from traffic.core import Traffic
 from traffic.algorithms.generation import Generation

@@ -506,6 +506,7 @@ class AirDiffTraj(L.LightningModule):
         self.unet = UNET(config)
 
         self.weather_grid = config["weather_grid"]
+
         self.guide_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
         self.place_emb = EmbeddingBlock(404, 0, self.ch, weather_grid=self.weather_grid)
 
