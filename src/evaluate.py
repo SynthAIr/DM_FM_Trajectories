@@ -23,29 +23,9 @@ from traffic.algorithms.generation import Generation
 from sklearn.preprocessing import MinMaxScaler
 from utils.condition_utils import load_conditions
 from tqdm import tqdm
+from utils.helper import load_and_prepare_data
 
 
-
-def load_and_prepare_data(configs):
-    """
-    Load and prepare the dataset for the model.
-    """
-    dataset_config = configs['data']
-    dataset = TrafficDataset.from_file(
-        dataset_config["data_path"],
-        features=dataset_config["features"],
-        shape=dataset_config["data_shape"],
-        scaler=MinMaxScaler(feature_range=(-1, 1)),
-        info_params={
-            "features": dataset_config["info_features"],
-            "index": dataset_config["info_index"],
-        },
-        conditional_features = load_conditions(dataset_config) ,
-        down_sample_factor=dataset_config["down_sample_factor"],
-    )
-    traffic = Traffic.from_file(dataset_config["data_path"])
-
-    return dataset, traffic
 
 def get_checkpoint_path(logger_config: Dict[str, Any]):
     """
@@ -369,6 +349,7 @@ if __name__ == "__main__":
 
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     config['model']["traj_length"] = dataset.parameters['seq_len']
+    config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]

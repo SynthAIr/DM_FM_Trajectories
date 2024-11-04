@@ -11,7 +11,7 @@ from model.AirDiffTraj import AirDiffTraj
 from utils import TrafficDataset
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
-from utils.helper import load_config, save_config
+from utils.helper import load_config, save_config, load_and_prepare_data
 from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
 
@@ -82,8 +82,9 @@ def run(args: argparse.Namespace) -> None:
 
     # Dataset preparation and loading.
     dataset_config = configs["data"]
-    conditional_features = load_conditions(dataset_config)
-
+    dataset, traffic = load_and_prepare_data(configs)
+    #conditional_features = load_conditions(dataset_config)
+    """
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
         features=dataset_config["features"],
@@ -97,6 +98,7 @@ def run(args: argparse.Namespace) -> None:
         down_sample_factor=dataset_config["down_sample_factor"],
         variables = dataset_config["weather_grid"]["variables"]
     )
+    """
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
 
@@ -114,6 +116,8 @@ def run(args: argparse.Namespace) -> None:
     model_config = configs["model"]
     # print(f"*******dataset parameters: {dataset.parameters}")
     model_config["traj_length"] = dataset.parameters['seq_len']
+    model_config["continuous_len"] = dataset.con_conditions.shape[1]
+    print(f"*******model parameters: {model_config}")
     model = AirDiffTraj(model_config)
     print("Model built!")
 

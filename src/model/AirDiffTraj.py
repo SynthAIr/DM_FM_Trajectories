@@ -506,8 +506,9 @@ class AirDiffTraj(L.LightningModule):
         self.unet = UNET(config)
 
         self.weather_grid = config["weather_grid"]
-        self.guide_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
-        self.place_emb = EmbeddingBlock(4, 0, self.ch, weather_grid=self.weather_grid)
+        self.continuous_len = config["continuous_len"]
+        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_grid=self.weather_grid)
+        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_grid=self.weather_grid)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]

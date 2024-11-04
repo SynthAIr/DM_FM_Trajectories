@@ -1,7 +1,10 @@
 import torch
 import yaml
 from sklearn.datasets import make_swiss_roll
-
+from utils.condition_utils import load_conditions
+from traffic.core import Traffic
+from sklearn.preprocessing import MinMaxScaler
+from utils.datasets import TrafficDataset
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -43,3 +46,26 @@ def load_config(config_file):
 def save_config(config, config_file):
     with open(config_file, "w") as f:
         yaml.dump(config, f)
+
+def load_and_prepare_data(configs):
+    """
+    Load and prepare the dataset for the model.
+    """
+    dataset_config = configs['data']
+    dataset = TrafficDataset.from_file(
+        dataset_config["data_path"],
+        features=dataset_config["features"],
+        shape=dataset_config["data_shape"],
+        scaler=MinMaxScaler(feature_range=(-1, 1)),
+        info_params={
+            "features": dataset_config["info_features"],
+            "index": dataset_config["info_index"],
+        },
+        conditional_features = load_conditions(dataset_config) ,
+        down_sample_factor=dataset_config["down_sample_factor"],
+    )
+    traffic = Traffic.from_file(dataset_config["data_path"])
+
+    return dataset, traffic
+
+
