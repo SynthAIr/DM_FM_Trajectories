@@ -60,6 +60,7 @@ data:
   
 model:
   type: "simple"
+  sampling: "DDIM"
   attr_dim: 8
   guidance_scale: 3
   in_channels: 6

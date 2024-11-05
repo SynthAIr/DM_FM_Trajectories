@@ -5,6 +5,7 @@ import numpy as np
 from types import SimpleNamespace
 import torch.nn.functional as F
 import lightning as L
+from tqdm import tqdm
 
 from utils import EMAHelper
 from utils import helper
@@ -589,7 +590,7 @@ class AirDiffTraj(L.LightningModule):
             #Fix this
             t = torch.tensor([self.n_steps-1], device=x.device)
             x_t, noise = self.q_xt_x0(x, t)
-            for i in range(self.n_steps-1, -1, -1):
+            for i in tqdm(range(self.n_steps-1, -1, -1)):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
                     steps.append(x_t.clone().detach())
@@ -598,28 +599,10 @@ class AirDiffTraj(L.LightningModule):
 
 
     def sample(self, n,con, cat, grid, length = 200):
-        self.eval()
-        con = con.to(self.device)
-        cat = cat.to(self.device)
-        steps = []
-        with torch.no_grad():
-            #Fix this
-            x_t = torch.randn(n, *(6, length), device=self.device)
-            for i in range(self.n_steps-1, -1, -1):
-                x_t = self.sample_step(x_t,con, cat,grid, i)
-                if i % 50 == 0:
-                    steps.append(x_t.clone().detach())
-        return x_t, steps
+        pass
 
     def sample_step(self, x, con, cat, grid, t):
-        # From DDPM
-        # z = z * lamba
-        z = torch.randn_like(x, device=x.device) if t > 1 else 0
-        tt =  torch.tensor([t]).to(device=x.device)
-        eps_t = self.reverse_process(x, tt, con, cat, grid)
-        #print(eps_t.shape, x.shape, z.shape, self.alpha[t], self.beta[t])
-        x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t])/(torch.sqrt(1-self.alpha[t])) * eps_t) + torch.sqrt(self.beta[t]) * z
-        return x_tminusone
+        pass
 
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch

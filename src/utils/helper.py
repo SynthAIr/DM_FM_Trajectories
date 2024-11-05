@@ -5,6 +5,7 @@ from utils.condition_utils import load_conditions
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from utils.data_utils import TrafficDataset
+from model.AirDiffTraj import AirDiffTraj, AirDiffTrajDDIM ,AirDiffTrajDDPM
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -67,5 +68,14 @@ def load_and_prepare_data(configs):
     traffic = Traffic.from_file(dataset_config["data_path"])
 
     return dataset, traffic
+
+def get_model(configs):
+    match configs["sampling"]:
+        case "DDPM":
+            return AirDiffTrajDDPM
+        case "DDIM":
+            return AirDiffTrajDDIM
+        case _:
+            return AirDiffTrajDDPM
 
 

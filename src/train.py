@@ -11,7 +11,7 @@ from model.AirDiffTraj import AirDiffTraj
 from utils import TrafficDataset
 #from utils.helper import create_model, load_config, get_dataset
 #from utils.datasets import MNIST
-from utils.helper import load_config, save_config, load_and_prepare_data
+from utils.helper import load_config, save_config, load_and_prepare_data, get_model
 from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
 
@@ -118,7 +118,7 @@ def run(args: argparse.Namespace) -> None:
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]
     print(f"*******model parameters: {model_config}")
-    model = AirDiffTraj(model_config)
+    model = get_model(model_config)(model_config)
     print("Model built!")
 
     # Initiate training with the setup configurations and prepared dataset and model.

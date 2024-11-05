@@ -16,14 +16,14 @@ from lightning.pytorch.loggers import MLFlowLogger
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import load_config
-from model.AirDiffTraj import AirDiffTraj
+from model.AirDiffTraj import AirDiffTraj, AirDiffTrajDDPM, AirDiffTrajDDIM
 from utils.data_utils import TrafficDataset
 from traffic.core import Traffic
 from traffic.algorithms.generation import Generation
 from sklearn.preprocessing import MinMaxScaler
 from utils.condition_utils import load_conditions
 from tqdm import tqdm
-from utils.helper import load_and_prepare_data
+from utils.helper import load_and_prepare_data, get_model
 
 
 
@@ -54,7 +54,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
     """
     Load the trained model and create the trajectory generation model.
     """
-    model = AirDiffTraj.load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
+    model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 
