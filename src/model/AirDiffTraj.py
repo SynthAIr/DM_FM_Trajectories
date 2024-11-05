@@ -653,4 +653,59 @@ class AirDiffTraj(L.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
 
+class AirDiffTrajDDPM(AirDiffTraj):
+    def __init__(self, config):
+        super().__init__(config)
 
+    def sample(self, n,con, cat, grid, length = 200):
+        self.eval()
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        steps = []
+        with torch.no_grad():
+            #Fix this
+            x_t = torch.randn(n, *(6, length), device=self.device)
+            for i in range(self.n_steps-1, -1, -1):
+                x_t = self.sample_step(x_t,con, cat,grid, i)
+                if i % 50 == 0:
+                    steps.append(x_t.clone().detach())
+        return x_t, steps
+
+    def sample_step(self, x, con, cat, grid, t):
+        # From DDPM
+        # z = z * lamba
+        z = torch.randn_like(x, device=x.device) if t > 1 else 0
+        tt =  torch.tensor([t]).to(device=x.device)
+        eps_t = self.reverse_process(x, tt, con, cat, grid)
+        #print(eps_t.shape, x.shape, z.shape, self.alpha[t], self.beta[t])
+        x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t])/(torch.sqrt(1-self.alpha[t])) * eps_t) + torch.sqrt(self.beta[t]) * z
+        return x_tminusone
+
+class AirDiffTrajDDIM(AirDiffTraj):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def sample(self, n,con, cat, grid, length = 200):
+        self.eval()
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        steps = []
+        with torch.no_grad():
+            #Fix this
+            x_t = torch.randn(n, *(6, length), device=self.device)
+            for i in range(self.n_steps-1, -1, -1):
+                x_t = self.sample_step(x_t,con, cat,grid, i)
+                if i % 50 == 0:
+                    steps.append(x_t.clone().detach())
+        return x_t, steps
+
+    def sample_step(self, x, con, cat, grid, t):
+        l = 1
+        if t <= 1:
+            l = 0
+
+        tt =  torch.tensor([t]).to(device=x.device)
+        eps_t = self.reverse_process(x, tt, con, cat, grid)
+
+        x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t]) * eps_t) + l * torch.sqrt(1 - self.alpha[t-1]) * eps_t
+        return x_tminusone
