@@ -4,7 +4,7 @@ from sklearn.datasets import make_swiss_roll
 from utils.condition_utils import load_conditions
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
-from utils.datasets import TrafficDataset
+from utils.data_utils import TrafficDataset
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
