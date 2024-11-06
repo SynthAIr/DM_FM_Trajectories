@@ -6,13 +6,30 @@ from types import SimpleNamespace
 import torch.nn.functional as F
 import lightning as L
 from tqdm import tqdm
+from utils.EMA import EMAHelper
 
-from utils import EMAHelper
-from utils import helper
 
 """
 Code from https://github.com/Yasoz/DiffTraj
 """
+def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2, device = None):
+    if schedule == 'linear':
+        betas = torch.linspace(start, end, n_timesteps, device=device)
+    elif schedule == "quad":
+        betas = torch.linspace(start ** 0.5, end ** 0.5, n_timesteps, device=device) ** 2
+    elif schedule == "sigmoid":
+        betas = torch.linspace(-6, 6, n_timesteps, device=device)
+        betas = torch.sigmoid(betas) * (end - start) + start
+    elif schedule == "cosine":
+        # Cosine schedule from DDPM++
+        s = 0.004  # Small constant to adjust the starting point
+        steps = torch.arange(n_timesteps + 1, device=device, dtype=torch.float32)
+        alphas = torch.cos(((steps / n_timesteps) + s) / (1 + s) * torch.pi / 2) ** 2
+        alphas = alphas / alphas[0]  # Normalize to ensure alphas[0] = 1
+        betas = 1 - (alphas[1:] / alphas[:-1])  # Derive beta_t from alpha_t values
+        betas = torch.clip(betas, start, end)  # Ensure betas are in the [start, end] range
+
+    return betas
 
 def get_timestep_embedding(timesteps, embedding_dim):
     assert len(timesteps.shape) == 1
@@ -513,7 +530,7 @@ class AirDiffTraj(L.LightningModule):
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
-        self.beta = helper.make_beta_schedule(diff_config['beta_schedule'], self.n_steps, diff_config["beta_start"], diff_config["beta_end"], self.device)
+        self.beta = make_beta_schedule(diff_config['beta_schedule'], self.n_steps, diff_config["beta_start"], diff_config["beta_end"], self.device)
         #self.register_buffer("beta", self.beta)
 
         self.alpha = 1. - self.beta

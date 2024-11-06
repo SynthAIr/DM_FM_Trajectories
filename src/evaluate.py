@@ -135,7 +135,16 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             coordinates=dict(latitude=48.5, longitude=8.4),
             forward=False
         )
+        def convert_sin_cos_to_lat_lon(traffic):
+            df = traffic.data
+            # Calculate latitude from sine and cosine
+            df["latitude"] = np.degrees(np.arctan2(df["latitude_sin"], df["latitude_cos"]))
+            
+            # Calculate longitude from sine and cosine
+            df["longitude"] = np.degrees(np.arctan2(df["longitude_sin"], df["longitude_cos"]))
+            return Traffic(df)
         
+        #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
         reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
@@ -365,6 +374,7 @@ if __name__ == "__main__":
     batch_size = dataset_config["batch_size"]
     
     reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=600, model_name = model_name)
+    print(reconstructions[1].data)
     jensenshannon_distance(reconstructions, model_name = model_name)
     density(reconstructions, model_name = model_name)
 
@@ -372,6 +382,8 @@ if __name__ == "__main__":
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), 200)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
+
+
     reconstructed_traf = trajectory_generation_model.build_traffic(
     decoded,
     coordinates=dict(latitude=48.5, longitude=8.4),

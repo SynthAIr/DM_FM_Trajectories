@@ -7,10 +7,7 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
-from model.AirDiffTraj import AirDiffTraj
 from utils import TrafficDataset
-#from utils.helper import create_model, load_config, get_dataset
-#from utils.datasets import MNIST
 from utils.helper import load_config, save_config, load_and_prepare_data, get_model
 from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
