@@ -63,7 +63,7 @@ model:
   type: "simple"
   sampling: "DDIM"
   attr_dim: 8
-  guidance_scale: 8
+  guidance_scale: 20
   in_channels: 6
   out_ch: 6
   ch: 128
