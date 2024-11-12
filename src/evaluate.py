@@ -439,8 +439,10 @@ if __name__ == "__main__":
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
     
-    data_diversity(dataset[rnd][0][:,:2,:], reco_x.reshape(-1, len(dataset.features), 200)[:,:2,:], 'PCA', 'sequence')
-    data_diversity(dataset[rnd][0][:,:2,:], reco_x.reshape(-1, len(dataset.features), 200)[:,:2,:], 't-SNE')
+    X = dataset[rnd][0][:,:2,:].reshape(-1, 200, len(dataset.features))
+    X_gen = reco_x.reshape(-1, 200, len(dataset.features))
+    data_diversity(X, X_gen, 'PCA', 'sequence')
+    data_diversity(X, X_gen, 't-SNE')
 
     reconstructed_traf = trajectory_generation_model.build_traffic(
     decoded,
