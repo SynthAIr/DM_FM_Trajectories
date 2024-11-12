@@ -24,6 +24,7 @@ from sklearn.preprocessing import MinMaxScaler
 from utils.condition_utils import load_conditions
 from tqdm import tqdm
 from utils.helper import load_and_prepare_data, get_model
+from evaluation.diversity import data_diversity
 
 
 
@@ -426,20 +427,20 @@ if __name__ == "__main__":
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=600, model_name = model_name)
+    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
     #print(reconstructions[1].data)
     #jensenshannon_distance(reconstructions, model_name = model_name)
     #density(reconstructions, model_name = model_name)
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
 
-    exit()
-
     samples, steps = generate_samples(dataset, model, rnd, n = 10)
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), 200)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
-
+    
+    data_diversity(dataset[rnd][0][:,:2,:], reco_x.reshape(-1, len(dataset.features), 200)[:,:2,:], 'PCA', 'sequence')
+    data_diversity(dataset[rnd][0][:,:2,:], reco_x.reshape(-1, len(dataset.features), 200)[:,:2,:], 't-SNE')
 
     reconstructed_traf = trajectory_generation_model.build_traffic(
     decoded,
