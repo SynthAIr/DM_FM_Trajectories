@@ -378,7 +378,7 @@ if __name__ == "__main__":
     decoded = dataset.scaler.inverse_transform(reco_x)
     
     X = dataset[rnd][0][:,:2,:].reshape(-1, 200, len(dataset.features))
-    X_gen = reco_x.reshape(-1, 200, len(dataset.features))
+    X_gen = reco_x.reshape(-1, 200, len(dataset.features))[:,:2,:]
     data_diversity(X, X_gen, 'PCA', 'sequence')
     data_diversity(X, X_gen, 't-SNE')
 
