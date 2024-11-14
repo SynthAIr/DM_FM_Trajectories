@@ -20,6 +20,7 @@ from torch.utils.data import Dataset
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from .condition_utils import Condition
+from .weather_utils import load_weather_data
 
 
 logger = logging.getLogger(__name__)
@@ -285,52 +286,29 @@ class TrafficDataset(Dataset):
         self.grid_conditions = torch.empty(len(data))
 
         pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+
         def preprocess(ds):
-            #print(ds.keys())
-            return ds[variables].sel(level=pressure_levels)
+            if 'level' in ds.coords:
+                # Ensure all pressure levels are present; missing levels will be filled with NaN
+                ds = ds.reindex(level=pressure_levels, fill_value=np.nan)
+                return ds.sel(level=pressure_levels)
+            else:
+                # Return the dataset unchanged if no 'level' coordinate is present
+                print("No level dimension found, processing single-level dataset.")
+                return ds
+            #return ds[variables].sel(level=pressure_levels)
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
         nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
         
-
-        ds = xr.open_mfdataset(nc_files, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
-        # Open all the .nc files in the directory as a single dataset
-        
-        print("loaded_data")
-
-        #ds = ds[variables].sel(level=pressure_levels)
-        #self.grid_conditions = torch.tensor(ds['temperature'].values) - 273.15
-        self.grid_conditions = []
-        import pickle
-        
-        name = f"flight_processed_{len(traffic)}.pkl"
-        if not os.path.isfile(save_path + name):
-            print("ERA5 file not found - creating new")
-
-            for flight in tqdm(traffic):
-                t = flight.mean("timestamp").round('h')
-                formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
-                sub = ds.sel(time=formatted_timestamp)
-                self.grid_conditions.append(torch.FloatTensor(sub.to_array().values))
-                #self.grid_conditions.append(torch.tensor(sub.values - 273.15))
-            
-            with open(save_path + name, "wb") as fp:   #Pickling
-                pickle.dump(self.grid_conditions, fp)
-
-        else:
-            print("File found - Loading as pickle")
-            with open(save_path + name, 'rb') as f:
-                self.grid_conditions = pickle.load(f)
-
-        
+        self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
+                
 
         assert len(traffic) == len(self.grid_conditions)
 
         print(len(self.grid_conditions))
         print(self.grid_conditions[0].shape)
-
-        print(ds)
         print(data.shape)
 
         if self.conditional_features is not None and len(self.conditional_features) > 0:
