@@ -627,7 +627,7 @@ class AirDiffTraj(L.LightningModule):
         steps = []
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(6, length), device=self.device)
+            x_t = torch.randn(n, *(4, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
