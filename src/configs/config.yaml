@@ -8,14 +8,15 @@ train:
   early_stop_patience: 10
   precision: 'high'
 logger:
-  mlflow_uri: http://100.64.0.15:5000
+  mlflow_uri: http://100.64.0.15:7979
   experiment_name: AirDiffTraj
   run_name: AirDiffTraj
   tags: {'model': 'diffusion', 'dataset': 'opensky'}
 data:
   dataset: opensky
   data_path: ./data/traffic.pkl
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track']
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track']
   #features: [ 'latitude_sin', 'latitude_cos', 'longitude_sin', 'longitude_cos', 'altitude', 'timedelta', 'groundspeed', 'track']
   #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
   conditional_features:
@@ -41,10 +42,10 @@ data:
       #type: 'continuous'
     cumdist:
       type: 'continuous'
-      #groundspeed:
-      #type: 'continuous'
-      #track:
-      #type: 'continuous'
+    groundspeed:
+      type: 'continuous'
+    track:
+      type: 'continuous'
   weather_grid:
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
@@ -62,18 +63,16 @@ data:
   
 model:
   type: "simple"
-  sampling: "DDIM"
+  sampling: "DDPM"
   attr_dim: 8
-  guidance_scale: 20
-  in_channels: 6
-  out_ch: 6
+  guidance_scale: 40
+  in_channels: 4
+  out_ch: 4
   ch: 128
   ch_mult: [ 1, 2, 2, 4 ]
   num_res_blocks: 2
   attn_resolutions: [ 16]
   dropout: 0.1
-  #traj_length: 4633
-  #traj_length: 2316
   lr: 0.0001
   resamp_with_conv: True
   diffusion:
