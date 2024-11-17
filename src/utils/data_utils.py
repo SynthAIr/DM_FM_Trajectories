@@ -20,7 +20,7 @@ from torch.utils.data import Dataset
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from .condition_utils import Condition
-from .weather_utils import load_weather_data
+from .weather_utils import load_weather_data, load_weather_data_function
 
 
 logger = logging.getLogger(__name__)
@@ -301,9 +301,11 @@ class TrafficDataset(Dataset):
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
         nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
-        
-        self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
-                
+            
+
+        #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
+        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = 5, num_levels=3)
+
 
         assert len(traffic) == len(self.grid_conditions)
 
