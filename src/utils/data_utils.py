@@ -294,12 +294,12 @@ class TrafficDataset(Dataset):
         def preprocess(ds):
             if 'level' in ds.coords:
                 # Ensure all pressure levels are present; missing levels will be filled with NaN
-                ds = ds.reindex(level=pressure_levels, fill_value=np.nan)
-                return ds.sel(level=pressure_levels)
+                #ds = ds.reindex(level=pressure_levels, fill_value=np.nan)
+                return ds[variables].sel(level=pressure_levels)
             else:
                 # Return the dataset unchanged if no 'level' coordinate is present
                 print("No level dimension found, processing single-level dataset.")
-                return ds
+                return ds[variables]
             #return ds[variables].sel(level=pressure_levels)
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"

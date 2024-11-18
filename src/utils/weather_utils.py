@@ -117,6 +117,10 @@ def find_nearest_pressure_levels(altitude, num_levels, pressure_levels=np.array(
     
     return selected_levels
 
+def round_to_nearest_0_25(value):
+    """Round the input value to the nearest 0.25."""
+    return round(value * 4) / 4
+
 def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3, 
                                pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])):
     """
@@ -155,11 +159,16 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
                 lon, lat, alt = point['longitude'], point['latitude'], point['altitude']
                 
                 nearest_levels = find_nearest_pressure_levels(alt, num_levels)
-                half_grid = grid_size // 2
+                rounded_lon = round_to_nearest_0_25(lon)
+                rounded_lat = round_to_nearest_0_25(lat)
+
+                half_grid = grid_size // 2 * 0.25
+                print(slice(rounded_lon - half_grid, rounded_lon + half_grid))
+                print(slice(rounded_lat - half_grid, rounded_lat + half_grid))
                 grid = sub.sel(
-                    longitude=slice(lon - half_grid, lon + half_grid), 
-                    latitude=slice(lat - half_grid, lat + half_grid), 
-                    level=nearest_levels  # This will select the appropriate levels directly
+                    longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+                    latitude=slice(rounded_lat - half_grid, rounded_lat + half_grid), 
+                    level=nearest_levels  # Use the pressure levels obtained from the previous step
                 ).to_array().fillna(0).values  # Filling NaNs with 0
 
                 print("GRID SHAPE:", grid.shape)
