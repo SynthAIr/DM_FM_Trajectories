@@ -307,6 +307,8 @@ class TrafficDataset(Dataset):
         self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = 5, num_levels=3)
 
 
+
+
         assert len(traffic) == len(self.grid_conditions)
 
         print(len(self.grid_conditions))

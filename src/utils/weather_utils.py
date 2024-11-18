@@ -99,7 +99,8 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
             sub = ds.sel(time=formatted_timestamp)
             
             flight_grids = []
-            for i in range(len(flight)):
+
+            for i in tqdm(range(len(flight))):
                 point = flight.data.loc[i]
                 lon, lat, alt = point['longitude'], point['latitude'], point['altitude']
                 
