@@ -286,6 +286,10 @@ class TrafficDataset(Dataset):
         self.grid_conditions = torch.empty(len(data))
 
         pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+        """pressure_levels = np.array([   1,    2,    3,    5,    7,   10,   20,   30,   50,   70,  100,  125,
+        150,  175,  200,  225,  250,  300,  350,  400,  450,  500,  550,  600,
+        650,  700,  750,  775,  800,  825,  850,  875,  900,  925,  950,  975,
+       1000]])"""
 
         def preprocess(ds):
             if 'level' in ds.coords:
@@ -304,7 +308,7 @@ class TrafficDataset(Dataset):
             
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
-        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = 5, num_levels=3)
+        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = 5, num_levels=3, pressure_levels = pressure_levels)
 
 
 
@@ -433,7 +437,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2018-01-01", "2021-12-31")
+        traffic = traffic.between("2021-06-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path

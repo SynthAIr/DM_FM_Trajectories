@@ -68,7 +68,57 @@ def pad_or_crop_grid(grid, target_shape):
 
     return grid
 
-def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3):
+def retrieve_closest_pressure(pressure_hPa, pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000] ):
+    """ Retrieve the closest pressure level in the ERA5 dataset to the given pressure
+    Args:
+        pressure_hPa: float
+    """
+    return min(pressure_levels, key=lambda x:abs(x-pressure_hPa))
+
+def hPa_to_m(pressure_hPa):
+    """ Convert pressure in hPa to meters
+    Args:
+        pressure_hPa: float
+    """
+    return 145366.45 * (1 - (pressure_hPa / 1013.25)**0.190284)
+
+def m_to_hPa(altitude_m):
+    """ Convert altitude in meters to hPa
+    Args:
+        altitude_m: float
+    """
+    return 1013.25 * (1 - 2.2577e-5 * altitude_m )**5.25588
+
+def find_nearest_pressure_levels(altitude, num_levels, pressure_levels=np.array([100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000])):
+    """ 
+    Map an altitude to the nearest available pressure level and return surrounding levels.
+    
+    Args:
+        altitude: float, altitude in meters
+        num_levels: int, number of levels to retrieve (total number, so num_levels // 2 above and below)
+        pressure_levels: numpy array of available pressure levels in hPa
+    
+    Returns:
+        list: Sorted list of pressure levels including the nearest and surrounding levels.
+    """
+    # Convert altitude to pressure (if needed), here using a placeholder conversion for example
+    pressure_hPa = m_to_hPa(altitude)  # Convert altitude (meters) to pressure in hPa
+    
+    # Find the index of the nearest pressure level
+    closest_index = np.abs(pressure_levels - pressure_hPa).argmin()
+    
+    # Calculate the range of indices to select surrounding levels
+    half_num_levels = num_levels // 2
+    start_index = max(0, closest_index - half_num_levels)
+    end_index = min(len(pressure_levels), closest_index + half_num_levels + 1)  # +1 to include the end index
+    
+    # Select surrounding pressure levels
+    selected_levels = pressure_levels[start_index:end_index]
+    
+    return selected_levels
+
+def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3, 
+                               pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000]):
     """
     Load and process weather data with adjustable grid size and levels.
 
@@ -104,14 +154,15 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
                 point = flight.data.loc[i]
                 lon, lat, alt = point['longitude'], point['latitude'], point['altitude']
                 
-                # Extract a grid_size x grid_size grid around the point for num_levels
+                nearest_levels = find_nearest_pressure_levels(alt, num_levels)
                 half_grid = grid_size // 2
                 grid = sub.sel(
                     longitude=slice(lon - half_grid, lon + half_grid), 
                     latitude=slice(lat - half_grid, lat + half_grid), 
-                    level=slice(alt - (num_levels // 2), alt + (num_levels // 2))
+                    level=nearest_levels  # This will select the appropriate levels directly
                 ).to_array().fillna(0).values  # Filling NaNs with 0
 
+                print("GRID SHAPE:", grid.shape)
                 # Ensure the grid shape is (num_levels, grid_size, grid_size)
                 if grid.shape[1:3] != (grid_size, grid_size) or grid.shape[0] != num_levels:
                     # Handle cases where grid extraction may be smaller due to boundaries
