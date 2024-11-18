@@ -118,7 +118,7 @@ def find_nearest_pressure_levels(altitude, num_levels, pressure_levels=np.array(
     return selected_levels
 
 def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3, 
-                               pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000]):
+                               pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])):
     """
     Load and process weather data with adjustable grid size and levels.
 
