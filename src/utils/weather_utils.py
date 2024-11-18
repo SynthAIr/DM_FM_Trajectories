@@ -68,7 +68,7 @@ def pad_or_crop_grid(grid, target_shape):
 
     return grid
 
-def retrieve_closest_pressure(pressure_hPa, pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000] ):
+def retrieve_closest_pressure(pressure_hPa, pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000] )):
     """ Retrieve the closest pressure level in the ERA5 dataset to the given pressure
     Args:
         pressure_hPa: float
