@@ -41,30 +41,46 @@ def load_weather_data(file_paths, traffic, preprocess, save_path):
     return grid_conditions
 
 def pad_or_crop_grid(grid, target_shape):
-    """Pads or crops the grid to match the target shape (num_levels, grid_size, grid_size)."""
-    target_channels, target_rows, target_cols = target_shape
-    current_channels, current_rows, current_cols = grid.shape
+    """
+    Pads or crops the grid to match the target shape (variables, levels, grid_size, grid_size).
+    
+    Args:
+        grid (numpy.ndarray): Input array of shape (variables, levels, grid_size, grid_size).
+        target_shape (tuple): Target shape (target_vars, target_levels, target_grid_size, target_grid_size).
+        
+    Returns:
+        numpy.ndarray: The padded or cropped grid.
+    """
+    target_vars, target_levels, target_rows, target_cols = target_shape
+    current_vars, current_levels, current_rows, current_cols = grid.shape
 
-    # Pad or crop channels
-    if current_channels < target_channels:
-        pad_channels = target_channels - current_channels
-        grid = np.pad(grid, ((0, pad_channels), (0, 0), (0, 0)), mode='constant')
-    elif current_channels > target_channels:
-        grid = grid[:target_channels]
+    # Pad or crop variables
+    if current_vars < target_vars:
+        pad_vars = target_vars - current_vars
+        grid = np.pad(grid, ((0, pad_vars), (0, 0), (0, 0), (0, 0)), mode='constant')
+    elif current_vars > target_vars:
+        grid = grid[:target_vars, :, :, :]
+
+    # Pad or crop levels
+    if current_levels < target_levels:
+        pad_levels = target_levels - current_levels
+        grid = np.pad(grid, ((0, 0), (0, pad_levels), (0, 0), (0, 0)), mode='constant')
+    elif current_levels > target_levels:
+        grid = grid[:, :target_levels, :, :]
 
     # Pad or crop rows
     if current_rows < target_rows:
         pad_rows = target_rows - current_rows
-        grid = np.pad(grid, ((0, 0), (0, pad_rows), (0, 0)), mode='constant')
+        grid = np.pad(grid, ((0, 0), (0, 0), (0, pad_rows), (0, 0)), mode='constant')
     elif current_rows > target_rows:
-        grid = grid[:, :target_rows]
+        grid = grid[:, :, :target_rows, :]
 
     # Pad or crop columns
     if current_cols < target_cols:
         pad_cols = target_cols - current_cols
-        grid = np.pad(grid, ((0, 0), (0, 0), (0, pad_cols)), mode='constant')
+        grid = np.pad(grid, ((0, 0), (0, 0), (0, 0), (0, pad_cols)), mode='constant')
     elif current_cols > target_cols:
-        grid = grid[:, :, :target_cols]
+        grid = grid[:, :, :, :target_cols]
 
     return grid
 
@@ -145,7 +161,6 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
         print("ERA5 file not found - creating new")
 
         for flight in tqdm(traffic):
-            # Extracting the average time for the flight and rounding it to the nearest hour
             t = flight.mean("timestamp").round('h')
             formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
             
@@ -163,19 +178,20 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
                 rounded_lat = round_to_nearest_0_25(lat)
 
                 half_grid = grid_size // 2 * 0.25
-                print(slice(rounded_lon - half_grid, rounded_lon + half_grid))
-                print(slice(rounded_lat - half_grid, rounded_lat + half_grid))
+                #print(slice(rounded_lon - half_grid, rounded_lon + half_grid, 0.25))
+                #print(slice(rounded_lat - half_grid, rounded_lat + half_grid, 0.25))
+                #print(sub)
                 grid = sub.sel(
                     longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
-                    latitude=slice(rounded_lat - half_grid, rounded_lat + half_grid), 
+                    latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid), 
                     level=nearest_levels  # Use the pressure levels obtained from the previous step
                 ).to_array().fillna(0).values  # Filling NaNs with 0
 
-                print("GRID SHAPE:", grid.shape)
+                #print("GRID SHAPE:", grid.shape)
                 # Ensure the grid shape is (num_levels, grid_size, grid_size)
-                if grid.shape[1:3] != (grid_size, grid_size) or grid.shape[0] != num_levels:
+                if grid.shape[2:4] != (grid_size, grid_size) or grid.shape[1] != num_levels:
                     # Handle cases where grid extraction may be smaller due to boundaries
-                    grid = pad_or_crop_grid(grid, target_shape=(num_levels, grid_size, grid_size))
+                    grid = pad_or_crop_grid(grid, target_shape=(4, num_levels, grid_size, grid_size))
 
                 flight_grids.append(torch.FloatTensor(grid))
             

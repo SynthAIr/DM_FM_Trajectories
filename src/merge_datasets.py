@@ -42,6 +42,8 @@ def main(directory, target_length, output_filepath):
 
     
     big_traffic = big_traffic.cumulative_distance().eval()
+    # Feet to meters
+    big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
 
 
     # Save the combined Traffic object
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     #directory = "./data"
     
     # Desired target length for all trajectories
-    target_length = 200
+    target_length = 400
     # Change as per your requirements
     
     # Output file for the combined Traffic object

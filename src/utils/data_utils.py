@@ -308,7 +308,9 @@ class TrafficDataset(Dataset):
             
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
-        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = 5, num_levels=3, pressure_levels = pressure_levels)
+        grid_size = 5
+        num_levels = 3
+        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
 
 
 
@@ -348,7 +350,8 @@ class TrafficDataset(Dataset):
 
             self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 0)
             #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
-            self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
+            #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
+            self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 
@@ -437,7 +440,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2021-06-01", "2021-12-31")
+        traffic = traffic.between("2021-11-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path
