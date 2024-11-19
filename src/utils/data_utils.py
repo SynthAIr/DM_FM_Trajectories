@@ -20,7 +20,7 @@ from torch.utils.data import Dataset
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from .condition_utils import Condition
-from .weather_utils import load_weather_data, load_weather_data_function
+from .weather_utils import load_weather_data, load_weather_data_function, load_weather_data_arrival_airport
 
 
 logger = logging.getLogger(__name__)
@@ -310,10 +310,8 @@ class TrafficDataset(Dataset):
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
         grid_size = 5
         num_levels = 3
-        self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
-
-
-
+        #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
+        self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
 
         assert len(traffic) == len(self.grid_conditions)
 
@@ -440,7 +438,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2021-11-01", "2021-12-31")
+        traffic = traffic.between("2018-01-01", "2021-12-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
         dataset.file_path = file_path

@@ -137,6 +137,60 @@ def round_to_nearest_0_25(value):
     """Round the input value to the nearest 0.25."""
     return round(value * 4) / 4
 
+def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path, grid_size=5, num_levels=3,
+        pressure_levels = np.array([ 850,  925, 1000])):
+
+    f = traffic[0].data.loc[len(traffic[0])-1]
+    lon = f['longitude']
+    lat = f['latitude']
+    rounded_lon = round_to_nearest_0_25(lon)
+    rounded_lat = round_to_nearest_0_25(lat)
+    half_grid = grid_size // 2 * 0.25
+    
+    def preprocess(ds):
+        return ds[variables].sel(
+            level=pressure_levels, 
+            longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+            latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid), 
+            )
+
+    ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
+    print("Data loaded")
+
+    grid_conditions = []
+
+    name = f"flight_processed_{len(traffic)}_ADES.pkl"
+    if not os.path.isfile(save_path + name):
+        print("ERA5 file not found - creating new")
+
+        for flight in tqdm(traffic):
+            # Extracting the average time for the flight and rounding it to the nearest hour
+            t = flight.mean("timestamp").round('h')
+            formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
+            
+            
+            # Select sub-dataset for the timestamp
+            sub = ds.sel(time=formatted_timestamp)
+            
+            # Convert the selected subset to a PyTorch FloatTensor, filling NaN values if necessary
+            #data_array = sub.to_array().fillna(0).values  # Filling NaNs with 0 or another appropriate value
+            data_array = sub.to_array().values
+            grid_conditions.append(torch.FloatTensor(data_array))
+        
+
+        # Save the processed grid_conditions as a pickle file
+        with open(save_path + name, "wb") as fp:
+            pickle.dump(grid_conditions, fp)
+    else:
+        # Load existing pickle file if available
+        print("File found - Loading from pickle")
+        with open(save_path + name, 'rb') as f:
+            grid_conditions = pickle.load(f)
+
+    return grid_conditions
+
+
+
 def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3, 
                                pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])):
     """

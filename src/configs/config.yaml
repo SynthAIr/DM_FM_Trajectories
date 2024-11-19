@@ -65,7 +65,7 @@ model:
   type: "simple"
   sampling: "DDPM"
   attr_dim: 8
-  guidance_scale: 40
+  guidance_scale: 8
   in_channels: 4
   out_ch: 4
   ch: 128
@@ -78,8 +78,8 @@ model:
   diffusion:
     beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.01                # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 150
+    beta_end: 0.015                # Slightly increased for faster diffusion
+    num_diffusion_timesteps: 200
     ema: True
     ema_rate: 0.9999
-  weather_grid: False
+  weather_grid: True

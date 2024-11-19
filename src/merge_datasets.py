@@ -45,7 +45,6 @@ def main(directory, target_length, output_filepath):
     # Feet to meters
     big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
 
-
     # Save the combined Traffic object
     if big_traffic is not None:
         big_traffic.to_pickle(output_filepath)
