@@ -78,8 +78,8 @@ model:
   diffusion:
     beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.015                # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 200
+    beta_end: 0.02                # Slightly increased for faster diffusion
+    num_diffusion_timesteps: 500
     ema: True
     ema_rate: 0.9999
   weather_grid: True

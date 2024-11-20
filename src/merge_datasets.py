@@ -2,6 +2,7 @@ import os
 import pickle
 from traffic.core import Traffic
 from argparse import ArgumentParser
+from preprocess import clean_trajectory_data, clean_and_smooth_flight_with_tight_threshold
 
 
 def load_traffic_object(filepath):
@@ -12,6 +13,8 @@ def load_traffic_object(filepath):
 def interpolate_trajectory(traffic_obj, target_length):
     """Interpolates the trajectory of a Traffic object to a target length."""
     return traffic_obj.resample(target_length)
+
+
 
 def main(directory, target_length, output_filepath):
     """Loads all .pkl files in the directory, interpolates each Traffic object, combines them, and saves as one."""
@@ -44,6 +47,13 @@ def main(directory, target_length, output_filepath):
     big_traffic = big_traffic.cumulative_distance().eval()
     # Feet to meters
     big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
+    
+    for n in range(target_length):
+        big_traffic.data.loc[n,'altitude'] = clean_trajectory_data(big_traffic.data.loc[n], 'altitude',n, 3)
+
+    cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, 200) for flight in big_traffic]
+    
+    big_traffic = Traffic.from_flights(cleaned_flights)
 
     # Save the combined Traffic object
     if big_traffic is not None:
@@ -57,7 +67,7 @@ if __name__ == "__main__":
     #directory = "./data"
     
     # Desired target length for all trajectories
-    target_length = 400
+    target_length = 200
     # Change as per your requirements
     
     # Output file for the combined Traffic object

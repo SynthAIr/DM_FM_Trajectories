@@ -57,27 +57,27 @@ class Attention(nn.Module):
         return weights
 
 class WeatherGrid(nn.Module):
-    def __init__(self,channels, lat_len, long_len, embedding_dim=128):
+    def __init__(self, channels, lat_len, long_len, embedding_dim=128):
         super(WeatherGrid, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=channels, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        # Calculate the size of the output after convolutions and pooling
-        # Assuming the input size is (lat_len, long_len)
-        self.output_size = (lat_len // 2 // 2 // 2, long_len // 2 // 2 // 2)  # 3 pooling layers
         
+        # Updated pooling layer with a kernel size and stride of 1 to prevent excessive reduction
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=1, padding=0)
+
+        # Adjust output size calculation for 5x5 input
+        # Each pooling layer reduces spatial dimensions by 1 due to stride=1
+        self.output_size = (lat_len - 3, long_len - 3)  # Approximated reduction through layers
+
         # Define the fully connected layer
         self.fc = nn.Linear(128 * self.output_size[0] * self.output_size[1], embedding_dim)
-        
+
     def forward(self, x):
         # Apply convolutions and pooling
-        #print(x.shape)
-        x = self.pool(torch.relu(self.conv1(x)))  # (batch_size, 32, lat_len/2, long_len/2)
-        #print(x.shape)
-        x = self.pool(torch.relu(self.conv2(x)))  # (batch_size, 64, lat_len/4, long_len/4)
-        #print(x.shape)
-        x = self.pool(torch.relu(self.conv3(x)))  # (batch_size, 128, lat_len/8, long_len/8)
+        x = self.pool(torch.relu(self.conv1(x)))  # (batch_size, 32, lat_len - 1, long_len - 1)
+        x = self.pool(torch.relu(self.conv2(x)))  # (batch_size, 64, lat_len - 2, long_len - 2)
+        x = self.pool(torch.relu(self.conv3(x)))  # (batch_size, 128, lat_len - 3, long_len - 3)
 
         # Flatten the output for the dense layer
         x = x.view(x.size(0), -1)  # Flatten to (batch_size, 128 * output_height * output_width)

@@ -15,6 +15,9 @@ from utils import (calculate_consecutive_distances,
                            calculate_final_distance,
                            calculate_initial_distance, plot_training_data,
                            plot_training_data_with_altitude)
+import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
+import scipy.stats as stats
 
 print(os.getcwd())
 
@@ -28,6 +31,128 @@ info_handler.setLevel(level=logging.DEBUG)
 logger.addHandler(info_handler)
 logger.info("Imports completed")
 logger.debug("Debugging")
+
+def enforce_non_increasing(points):
+    """
+    Adjust points to ensure a non-increasing sequence from the first to the last.
+    
+    Parameters:
+    points (array-like): A sequence of n altitude points.
+    
+    Returns:
+    np.ndarray: Adjusted sequence with no upward trends from the first to the last point.
+    """
+    points = np.array(points)  # Ensure input is a NumPy array for easy manipulation
+    
+    # Initialize an array to hold adjusted points
+    adjusted_points = points.copy()
+    
+    # Traverse the points from start to end
+    for i in range(1, len(points)):
+        # Ensure the current point is not greater than the previous point
+        if adjusted_points[i] > adjusted_points[i - 1]:
+            adjusted_points[i] = adjusted_points[i - 1]
+    
+    return adjusted_points
+
+def enforce_increasing_with_limit(points, max_growth=1000):
+    """
+    Adjust points to ensure an increasing sequence from the first to the last,
+    with a constraint on maximum growth between consecutive points.
+    
+    Parameters:
+    points (array-like): A sequence of n altitude points.
+    max_growth (float): Maximum allowable difference between consecutive points.
+    
+    Returns:
+    np.ndarray: Adjusted sequence with no downward trends and controlled growth.
+    """
+    points = np.array(points)  # Ensure input is a NumPy array for easy manipulation
+    
+    # Initialize an array to hold adjusted points
+    adjusted_points = points.copy()
+    
+    # Traverse the points from start to end
+    for i in range(1, len(points)):
+        # Enforce non-decreasing trend
+        if adjusted_points[i] < adjusted_points[i - 1]:
+            adjusted_points[i] = adjusted_points[i - 1]
+        # Enforce maximum growth limit
+        elif adjusted_points[i] > adjusted_points[i - 1] + max_growth:
+            adjusted_points[i] = adjusted_points[i - 1]
+    
+    return adjusted_points
+
+
+def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
+    """
+    Removes outliers and smooths the altitude for a single flight with a tighter threshold.
+    """
+    df = flight.data.copy()
+
+    if df.loc[0, 'altitude'] > 500:
+        df.loc[0, 'altitude'] = 0
+
+    df.loc[int(target_length*0.935):, 'altitude'] = enforce_non_increasing(df.loc[int(target_length*0.935):, 'altitude'])
+    df.loc[:int(target_length*0.12), 'altitude'] = enforce_increasing_with_limit(df.loc[:int(target_length*0.12), 'altitude'])
+    
+    if 'altitude' not in df.columns:
+        return flight  # Skip if no altitude data available
+
+    # First Pass: Initial cleaning using a rolling median and standard deviation
+    rolling_median = df['altitude'].rolling(window=5, center=True).median()
+    rolling_std = df['altitude'].rolling(window=5, center=True).std()
+    threshold = 2 * rolling_std
+    df['is_outlier'] = np.abs(df['altitude'] - rolling_median) > threshold
+    df['altitude_cleaned'] = np.where(df['is_outlier'], rolling_median, df['altitude'])
+
+    # Second Pass: Tighter threshold for persistent outliers
+    rolling_median_2 = df['altitude_cleaned'].rolling(window=5, center=True).median()
+    rolling_std_2 = df['altitude_cleaned'].rolling(window=5, center=True).std()
+    tighter_threshold = 1.5 * rolling_std_2
+    df['is_outlier_2'] = np.abs(df['altitude_cleaned'] - rolling_median_2) > tighter_threshold
+    df['altitude_cleaned'] = np.where(df['is_outlier_2'], rolling_median_2, df['altitude_cleaned'])
+
+    # Smooth the final cleaned altitude data using a Savitzky-Golay filter
+    df['altitude_smoothed'] = savgol_filter(df['altitude_cleaned'].bfill().ffill(),
+                                            window_length=11, polyorder=2)
+
+    # Replace the original flight's altitude data with cleaned and smoothed data
+    flight.data['altitude_cleaned'] = df['altitude_cleaned']
+    flight.data['altitude_smoothed'] = df['altitude_smoothed']
+    flight.data['altitude'] = df['altitude_smoothed']
+    
+    return flight
+
+def clean_trajectory_data(df, column, n, threshold=3):
+    """
+    Clean trajectory data by:
+    1. Identifying and replacing outliers with NaN.
+    2. Capping the last n values to a maximum height if needed.
+    3. Interpolating missing values at the end.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame containing trajectory data.
+    column (str): Column name to clean.
+    n (int): Number of points at the end to be capped.
+    threshold (float): Number of standard deviations for outlier detection.
+    
+    Returns:
+    pd.Series: Cleaned data series.
+    """
+    # Calculate z-scores to identify outliers
+    z_scores = np.abs(stats.zscore(df[column]))
+    
+    # Create a copy of the data to modify
+    cleaned_data = df[column].copy()
+    
+    # Replace outliers with NaN
+    cleaned_data[z_scores > threshold] = np.nan
+    
+    # Perform interpolation across the entire trajectory
+    cleaned_data = cleaned_data.interpolate(method='linear')
+    
+    return cleaned_data
 
 def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd.DataFrame:
     """
