@@ -197,7 +197,6 @@ class DatasetParams(TypedDict):
     seq_len: int
     shape: str
     conditional_features: List[Condition]
-    down_sample_factor: int
     variables: List[str]
 
 
@@ -239,7 +238,6 @@ class TrafficDataset(Dataset):
         scaler: Optional[TransformerProtocol] = None,
         info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
-        down_sample_factor = 1,
         variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> None:
 
@@ -257,7 +255,6 @@ class TrafficDataset(Dataset):
         self.data: torch.Tensor
         self.continuous_conditions: torch.Tensor
         self.categorical_conditions: torch.Tensor
-        self.down_sample_factor = down_sample_factor
         self.lengths: List[int]
         self.infos: List[Any]
         self.variables = variables
@@ -271,7 +268,6 @@ class TrafficDataset(Dataset):
             # Remove the first time step to ensure `x` is even
         #    data = data[:, 1:, :]
 
-        #data = data[:, ::down_sample_factor, :]
         data = data.reshape(data.shape[0], -1)
 
         print(data.shape)
@@ -434,7 +430,6 @@ class TrafficDataset(Dataset):
         scaler: Optional[TransformerProtocol] = None,
         info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
-        down_sample_factor = 1,
         variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> "TrafficDataset":
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
@@ -443,7 +438,7 @@ class TrafficDataset(Dataset):
         ##### REMOVE THIS
         traffic = traffic.between("2018-01-01", "2021-12-31")
 
-        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, down_sample_factor, variables)
+        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, variables)
         dataset.file_path = file_path
         return dataset
 
@@ -517,7 +512,6 @@ class TrafficDataset(Dataset):
             seq_len=self.seq_len,
             shape=self.shape,
             conditional_features = self.conditional_features,
-            down_sample_factor = self.down_sample_factor,
             variables = self.variables
         )
 

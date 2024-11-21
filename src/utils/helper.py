@@ -46,7 +46,7 @@ def load_and_prepare_data(configs):
             "index": dataset_config["info_index"],
         },
         conditional_features = load_conditions(dataset_config) ,
-        down_sample_factor=dataset_config["down_sample_factor"],
+        variables = dataset_config["weather_grid"]["variables"]
     )
     traffic = Traffic.from_file(dataset_config["data_path"])
 

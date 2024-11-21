@@ -151,20 +151,23 @@ class WeatherBlock(nn.Module):
         x = nn.functional.relu(x)
         x = self.fc2(x)
         return x
-        
+       
 
 class EmbeddingBlock(nn.Module):
-    def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_grid = True, weather_function = True) -> None:
+    def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_config = None) -> None:
         super().__init__()
-        self.weather_grid = weather_grid
         self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
-        self.weather_function = weather_function
+        self.weather_config = weather_config
         
-        if self.weather_grid:
-            if self.weather_function:
-                self.weather_block = WeatherBlock(num_blocks=4, levels=3, latitude=5, longitude=5, embedding_dim = embedding_dim)
-            else:
-                self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
+        #if self.weather_grid:
+        if weather_config:
+            variables = weather_config['variables']
+            lat = weather_config['lat']
+            lon = weather_config['lon']
+            levels = weather_config['levels']
+            w_type = weather_config['type']
+            self.weather_block = WeatherBlock(num_blocks=variables, levels=levels, latitude=lat, longitude=lon, embedding_dim = embedding_dim)
+            #self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
 
         #self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
 
@@ -526,11 +529,11 @@ class AirDiffTraj(L.LightningModule):
         self.guidance_scale = config["guidance_scale"]
         self.unet = UNET(config)
 
-        self.weather_grid = config["weather_grid"]
+        self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
-        self.weather_function = True
-        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_grid=self.weather_grid, weather_function=self.weather_function)
-        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_grid=self.weather_grid, weather_function=self.weather_function)
+
+        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, self.weather_config)
+        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, self.weather_config)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
