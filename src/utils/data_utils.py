@@ -285,8 +285,11 @@ class TrafficDataset(Dataset):
         self.cat_conditions = torch.empty(len(data))
         self.grid_conditions = torch.empty(len(data))
 
-        pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
-        """pressure_levels = np.array([   1,    2,    3,    5,    7,   10,   20,   30,   50,   70,  100,  125,
+        #pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
+        pressure_levels = np.array([ 925,  950,  975, 1000])[::-1]
+
+        """
+        pressure_levels = np.array([   1,    2,    3,    5,    7,   10,   20,   30,   50,   70,  100,  125,
         150,  175,  200,  225,  250,  300,  350,  400,  450,  500,  550,  600,
         650,  700,  750,  775,  800,  825,  850,  875,  900,  925,  950,  975,
        1000]])"""
@@ -309,7 +312,7 @@ class TrafficDataset(Dataset):
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
         grid_size = 5
-        num_levels = 3
+        num_levels = 4
         #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
         self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
 

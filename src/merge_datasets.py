@@ -16,7 +16,7 @@ def interpolate_trajectory(traffic_obj, target_length):
 
 
 
-def main(directory, target_length, output_filepath):
+def main(directory, target_length, output_filepath, filter_alt = False):
     """Loads all .pkl files in the directory, interpolates each Traffic object, combines them, and saves as one."""
     big_traffic = None
 
@@ -48,12 +48,16 @@ def main(directory, target_length, output_filepath):
     # Feet to meters
     big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
     
-    for n in range(target_length):
-        big_traffic.data.loc[n,'altitude'] = clean_trajectory_data(big_traffic.data.loc[n], 'altitude',n, 3)
+    if filter_alt:
+        print("Filtering Altitude")
+        for n in range(target_length):
+            big_traffic.data.loc[n,'altitude'] = clean_trajectory_data(big_traffic.data.loc[n], 'altitude',n, 2.5)
 
-    cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, 200) for flight in big_traffic]
-    
-    big_traffic = Traffic.from_flights(cleaned_flights)
+
+        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length) for flight in big_traffic]
+        
+        big_traffic = Traffic.from_flights(cleaned_flights)
+        print("Columns:", big_traffic.data.columns)
 
     # Save the combined Traffic object
     if big_traffic is not None:
@@ -68,6 +72,7 @@ if __name__ == "__main__":
     
     # Desired target length for all trajectories
     target_length = 200
+    filter_alt = True
     # Change as per your requirements
     
     # Output file for the combined Traffic object
@@ -76,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir", dest="base_path", type=str, default="./data"
     )
-    output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl"
+    output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"./data/resampled/combined_traffic_resampled_no_filter_{target_length}.pkl" 
     # source of data: Either Eurocontrol or OpenSky
     parser.add_argument(
         "--data_source", dest="data_source", type=str, default=output_filepath
@@ -85,5 +90,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Process, interpolate, and combine all Traffic objects
-    main(args.base_path, args.length, args.data_source)
+    main(args.base_path, args.length, args.data_source, filter_alt)
 

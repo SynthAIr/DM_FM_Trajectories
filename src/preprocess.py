@@ -32,6 +32,31 @@ logger.addHandler(info_handler)
 logger.info("Imports completed")
 logger.debug("Debugging")
 
+def enforce_increasing(points):
+    """
+    Adjust points to ensure an increasing sequence from the first to the last,
+    with a constraint on maximum growth between consecutive points.
+    
+    Parameters:
+    points (array-like): A sequence of n altitude points.
+    max_growth (float): Maximum allowable difference between consecutive points.
+    
+    Returns:
+    np.ndarray: Adjusted sequence with no downward trends and controlled growth.
+    """
+    points = np.array(points)  # Ensure input is a NumPy array for easy manipulation
+    
+    # Initialize an array to hold adjusted points
+    adjusted_points = points.copy()
+    
+    # Traverse the points from start to end
+    for i in range(1, len(points)):
+        # Enforce non-decreasing trend
+        if adjusted_points[i] < adjusted_points[i - 1]:
+            adjusted_points[i] = adjusted_points[i - 1]
+    
+    return adjusted_points
+
 def enforce_non_increasing(points):
     """
     Adjust points to ensure a non-increasing sequence from the first to the last.
@@ -82,8 +107,7 @@ def enforce_increasing_with_limit(points, max_growth=1000):
             adjusted_points[i] = adjusted_points[i - 1]
     
     return adjusted_points
-
-
+    
 def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
     """
     Removes outliers and smooths the altitude for a single flight with a tighter threshold.
@@ -93,8 +117,14 @@ def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
     if df.loc[0, 'altitude'] > 500:
         df.loc[0, 'altitude'] = 0
 
+    #if df.loc[1, 'altitude'] > 2000:
+        #df.loc[1, 'altitude'] = 600
+
+    #if df.loc[2, 'altitude'] > 4000:
+        #df.loc[2, 'altitude'] = 1200
+
     df.loc[int(target_length*0.935):, 'altitude'] = enforce_non_increasing(df.loc[int(target_length*0.935):, 'altitude'])
-    df.loc[:int(target_length*0.12), 'altitude'] = enforce_increasing_with_limit(df.loc[:int(target_length*0.12), 'altitude'])
+    df.loc[:int(target_length*0.30), 'altitude'] = enforce_increasing(df.loc[:int(target_length*0.30), 'altitude'])
     
     if 'altitude' not in df.columns:
         return flight  # Skip if no altitude data available
@@ -151,7 +181,7 @@ def clean_trajectory_data(df, column, n, threshold=3):
     
     # Perform interpolation across the entire trajectory
     cleaned_data = cleaned_data.interpolate(method='linear')
-    
+
     return cleaned_data
 
 def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd.DataFrame:

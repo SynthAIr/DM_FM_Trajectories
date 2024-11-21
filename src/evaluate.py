@@ -26,6 +26,7 @@ from tqdm import tqdm
 from utils.helper import load_and_prepare_data, get_model
 from evaluation.diversity import data_diversity
 from evaluation.similarity import jensenshannon_distance
+from evaluation.time_series import duration_and_speed, timeseries_plot
 
 
 
@@ -388,3 +389,27 @@ if __name__ == "__main__":
     forward=False,
     )
     plot_from_array(reconstructed_traf, model_name)
+
+    training_trajectories = reconstructions[0]
+    synthetic_trajectories = reconstructions[1]
+
+    duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name):
+
+    features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
+    units = {
+        'latitude': '°',
+        'longitude': '°',
+        'altitude': 'ft',
+        'timedelta': 's'
+    }
+
+    timeseries_plot(
+        training_trajectories,
+        synthetic_trajectories,
+        features=features_to_plot,
+        units=units,
+        model_name=model_name
+    )
+
+
+    
