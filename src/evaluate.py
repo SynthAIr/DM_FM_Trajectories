@@ -27,6 +27,7 @@ from utils.helper import load_and_prepare_data, get_model
 from evaluation.diversity import data_diversity
 from evaluation.similarity import jensenshannon_distance
 from evaluation.time_series import duration_and_speed, timeseries_plot
+from lightning.pytorch.loggers import MLFlowLogger
 
 
 
@@ -340,7 +341,7 @@ def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename:
 # Detach and stack samples into a single tensor
 import argparse
 
-def run(args, logger):
+def run(args, logger = None):
     model_name = args.model_name
 
     config_file = "./configs/config.yaml"
@@ -349,6 +350,15 @@ def run(args, logger):
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
     config = load_config(config_file)
+    if logger is None:
+        logger_config = config["logger"]
+        logger = MLFlowLogger(
+            experiment_name=logger_config["experiment_name"],
+            run_name=args.model_name,
+            tracking_uri=logger_config["mlflow_uri"],
+            tags=logger_config["tags"],
+            artifact_location=args.artifact_location,
+        )
 
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     config['model']["traj_length"] = dataset.parameters['seq_len']
