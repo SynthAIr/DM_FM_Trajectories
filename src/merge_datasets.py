@@ -31,7 +31,11 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             print("object loaded")
             traffic_obj = traffic_obj.drop_duplicates()
             print("duplicates dropped")
-            traffic_obj = traffic_obj.resample(target_length).eval()
+            traffic_obj = traffic_obj.filter(altitude=(17, 53))
+            print("Filtering Altitude")
+            traffic_obj = traffic_obj.drop_duplicates()
+            print("duplicates dropped")
+            traffic_obj = traffic_obj.resample(target_length).phases().eval()
             print("resampled")
             
             
@@ -43,21 +47,24 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
             print(f"Processed {filename}")
 
-    
-    big_traffic = big_traffic.cumulative_distance().eval()
     # Feet to meters
     big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
+
     
     if filter_alt:
         print("Filtering Altitude")
         for n in range(target_length):
             big_traffic.data.loc[n,'altitude'] = clean_trajectory_data(big_traffic.data.loc[n], 'altitude',n, 2.5)
+            big_traffic.data.loc[n,'groundspeed'] = clean_trajectory_data(big_traffic.data.loc[n], 'groundspeed',n, 2.5)
 
 
-        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length) for flight in big_traffic]
+        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in big_traffic]
+        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'groundspeed') for flight in big_traffic]
         
         big_traffic = Traffic.from_flights(cleaned_flights)
         print("Columns:", big_traffic.data.columns)
+
+    big_traffic = big_traffic.cumulative_distance().eval()
 
     # Save the combined Traffic object
     if big_traffic is not None:

@@ -108,7 +108,7 @@ def enforce_increasing_with_limit(points, max_growth=1000):
     
     return adjusted_points
     
-def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
+def clean_and_smooth_flight_with_tight_threshold(flight, target_length, column):
     """
     Removes outliers and smooths the altitude for a single flight with a tighter threshold.
     """
@@ -123,18 +123,18 @@ def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
     #if df.loc[2, 'altitude'] > 4000:
         #df.loc[2, 'altitude'] = 1200
 
-    df.loc[int(target_length*0.935):, 'altitude'] = enforce_non_increasing(df.loc[int(target_length*0.935):, 'altitude'])
-    df.loc[:int(target_length*0.30), 'altitude'] = enforce_increasing(df.loc[:int(target_length*0.30), 'altitude'])
+    df.loc[int(target_length*0.935):, column] = enforce_non_increasing(df.loc[int(target_length*0.935):, column])
+    df.loc[:int(target_length*0.30), column] = enforce_increasing(df.loc[:int(target_length*0.30),column])
     
     if 'altitude' not in df.columns:
         return flight  # Skip if no altitude data available
 
     # First Pass: Initial cleaning using a rolling median and standard deviation
-    rolling_median = df['altitude'].rolling(window=5, center=True).median()
-    rolling_std = df['altitude'].rolling(window=5, center=True).std()
+    rolling_median = df[column].rolling(window=5, center=True).median()
+    rolling_std = df[column].rolling(window=5, center=True).std()
     threshold = 2 * rolling_std
-    df['is_outlier'] = np.abs(df['altitude'] - rolling_median) > threshold
-    df['altitude_cleaned'] = np.where(df['is_outlier'], rolling_median, df['altitude'])
+    df['is_outlier'] = np.abs(df[column] - rolling_median) > threshold
+    df['altitude_cleaned'] = np.where(df['is_outlier'], rolling_median, df[column])
 
     # Second Pass: Tighter threshold for persistent outliers
     rolling_median_2 = df['altitude_cleaned'].rolling(window=5, center=True).median()
@@ -150,7 +150,7 @@ def clean_and_smooth_flight_with_tight_threshold(flight, target_length):
     # Replace the original flight's altitude data with cleaned and smoothed data
     flight.data['altitude_cleaned'] = df['altitude_cleaned']
     flight.data['altitude_smoothed'] = df['altitude_smoothed']
-    flight.data['altitude'] = df['altitude_smoothed']
+    flight.data[column] = df['altitude_smoothed']
     
     return flight
 

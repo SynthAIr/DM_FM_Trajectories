@@ -5,10 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pyproj import Geod
-
+from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
+from matplotlib.patches import Patch
+from traffic.core import Traffic
+
 
 def get_flight_durations(traffic):
     durations = []
@@ -66,8 +69,8 @@ def duration_and_speed(training_trajectories, synthetic_trajectories, model_name
     training_durations = get_flight_durations(training_trajectories)
     synthetic_durations = get_flight_durations(synthetic_trajectories)
 
-    training_speeds = get_flight_speeds(training_trajectories, method='calculate')
-    synthetic_speeds = get_flight_speeds(synthetic_trajectories, method='calculate')
+    training_speeds = get_flight_speeds(training_trajectories, method='groundspeed')
+    synthetic_speeds = get_flight_speeds(synthetic_trajectories, method='groundspeed')
 
     # Create a single figure with two rows and two columns
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -112,7 +115,7 @@ def duration_and_speed(training_trajectories, synthetic_trajectories, model_name
     # fig.suptitle('Comparison of Real and Synthetic Flight Data', fontsize=12, y=1.02)
 
     # Save the figure
-    plt.savefig(f"./figures/distribution_plots_{model_name}.png", bbox_inches='tight')
+    plt.savefig(f"./figures/{model_name}_distribution_plots.png", bbox_inches='tight')
 
 
 def timeseries_plot(
@@ -186,7 +189,7 @@ def timeseries_plot(
 
     # Adjust layout
     plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.savefig(f"./figures/timeseries_ci_{model_name}.png", bbox_inches='tight')
+    plt.savefig(f"./figures/{model_name}_timeseries_ci.png", bbox_inches='tight')
 
 # Usage
 

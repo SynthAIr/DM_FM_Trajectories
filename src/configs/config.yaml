@@ -15,7 +15,9 @@ logger:
 data:
   dataset: opensky
   data_path: ./data/traffic.pkl
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+  features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track']
+  #features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track_cos', 'track_sin']
   #features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track']
   #features: [ 'latitude_sin', 'latitude_cos', 'longitude_sin', 'longitude_cos', 'altitude', 'timedelta', 'groundspeed', 'track']
   #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
@@ -35,17 +37,20 @@ data:
     ADES:
       type: 'categorical'
       categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
+      #phase:
+      #type: 'categorical'
+      #categories: ['CLIMB', 'LEVEL', 'DESCENT', 'NA', 'CRUISE']
     cluster:
       type: 'categorical'
       categories: [0, 1, 2, 3, 4]
-      #timedelta:
-      #type: 'continuous'
+    timedelta:
+      type: 'continuous'
     cumdist:
       type: 'continuous'
-    groundspeed:
-      type: 'continuous'
-    track:
-      type: 'continuous'
+      #groundspeed:
+      #type: 'continuous'
+      #track:
+      #type: 'continuous'
   weather_grid:
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
@@ -54,8 +59,8 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 64
-  test_batch_size: 128
+  batch_size: 32
+  test_batch_size: 32
   length: 200
   down_sample_factor: 30
   info_features: [ ] # These are useless
@@ -64,22 +69,22 @@ data:
 model:
   type: "simple"
   sampling: "DDPM"
-  attr_dim: 8
-  guidance_scale: 8
-  in_channels: 4
-  out_ch: 4
-  ch: 128
+  attr_dim: 32
+  guidance_scale: 5
+  in_channels: 5
+  out_ch: 5
+  ch: 256
   ch_mult: [ 1, 2, 2, 4 ]
-  num_res_blocks: 2
-  attn_resolutions: [ 16]
-  dropout: 0.1
+  num_res_blocks: 3
+  attn_resolutions: [16]
+  dropout: 0.2
   lr: 0.0001
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.02                # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 500
+    beta_end: 0.04                # Slightly increased for faster diffusion
+    num_diffusion_timesteps: 1000
     ema: True
     ema_rate: 0.9999
   weather_config:

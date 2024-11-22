@@ -366,14 +366,14 @@ if __name__ == "__main__":
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
+    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=300, model_name = model_name)
     #print(reconstructions[1].data)
     #jensenshannon_distance(reconstructions, model_name = model_name)
     #density(reconstructions, model_name = model_name)
-    plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
-    plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
+    #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
+    #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
 
-    samples, steps = generate_samples(dataset, model, rnd, n = 10)
+    samples, steps = generate_samples(dataset, model, rnd, n = 2)
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), 200)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     training_trajectories = reconstructions[0]
     synthetic_trajectories = reconstructions[1]
 
-    duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name):
+    duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
 
     features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
     units = {

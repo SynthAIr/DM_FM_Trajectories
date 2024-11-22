@@ -102,8 +102,10 @@ class WideAndDeep(nn.Module):
         self.adep_embedding = nn.Embedding(10, hidden_dim)
         self.ades_embedding = nn.Embedding(10, hidden_dim)
         self.cluster_embedding = nn.Embedding(5, hidden_dim)
+        #self.phase_embedding = nn.Embedding(5, hidden_dim)
 
         self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
+        #self.deep_fc1 = nn.Linear(hidden_dim*4, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
     def forward(self, continuous_attrs, categorical_attrs):
@@ -119,6 +121,7 @@ class WideAndDeep(nn.Module):
 
         categorical_embed = torch.cat(
             (adep_embedding, ades_embedding, cluster_embedding), dim=1)
+            #(adep_embedding, ades_embedding, cluster_embedding, phase_embedding), dim=1)
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
@@ -159,7 +162,6 @@ class EmbeddingBlock(nn.Module):
         self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
         self.weather_config = weather_config
         
-        #if self.weather_grid:
         if weather_config:
             variables = weather_config['variables']
             lat = weather_config['lat']
@@ -174,7 +176,7 @@ class EmbeddingBlock(nn.Module):
     def forward(self, continuous_attrs, categorical_attrs, grid):
         x = self.wide_and_deep(continuous_attrs, categorical_attrs)
 
-        if self.weather_grid:
+        if self.weather_config:
             #x = torch.cat([x, self.weather_block(grid)], dim=1)
             x = x + self.weather_block(grid)
             #x = self.fc1(nn.functional.relu(x))
@@ -532,8 +534,8 @@ class AirDiffTraj(L.LightningModule):
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
 
-        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, self.weather_config)
-        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, self.weather_config)
+        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
+        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]
@@ -630,7 +632,7 @@ class AirDiffTraj(L.LightningModule):
         steps = []
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(4, length), device=self.device)
+            x_t = torch.randn(n, *(5, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:

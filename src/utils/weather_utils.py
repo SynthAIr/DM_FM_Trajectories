@@ -167,7 +167,7 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
 
         for flight in tqdm(traffic):
             # Extracting the average time for the flight and rounding it to the nearest hour
-            t = flight.mean("timestamp").round('h')
+            t = flight.max("timestamp").round('h')
             formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
             
             
