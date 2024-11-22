@@ -102,10 +102,10 @@ class WideAndDeep(nn.Module):
         self.adep_embedding = nn.Embedding(10, hidden_dim)
         self.ades_embedding = nn.Embedding(10, hidden_dim)
         self.cluster_embedding = nn.Embedding(5, hidden_dim)
-        #self.phase_embedding = nn.Embedding(5, hidden_dim)
+        self.phase_embedding = nn.Embedding(5, hidden_dim)
 
-        self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
-        #self.deep_fc1 = nn.Linear(hidden_dim*4, embedding_dim)
+        #self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
+        self.deep_fc1 = nn.Linear(hidden_dim*4, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
     def forward(self, continuous_attrs, categorical_attrs):
@@ -118,10 +118,11 @@ class WideAndDeep(nn.Module):
         adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
         ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
         cluster_embedding = self.cluster_embedding(categorical_attrs[:, 2])
+        phase_embedding = self.phase_embedding(categorical_attrs[:, 3])
 
         categorical_embed = torch.cat(
-            (adep_embedding, ades_embedding, cluster_embedding), dim=1)
-            #(adep_embedding, ades_embedding, cluster_embedding, phase_embedding), dim=1)
+            #(adep_embedding, ades_embedding, cluster_embedding), dim=1)
+            (adep_embedding, ades_embedding, cluster_embedding, phase_embedding), dim=1)
         deep_out = F.relu(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
@@ -632,7 +633,7 @@ class AirDiffTraj(L.LightningModule):
         steps = []
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(5, length), device=self.device)
+            x_t = torch.randn(n, *(6, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 50 == 0:
