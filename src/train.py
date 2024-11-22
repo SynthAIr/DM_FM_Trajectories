@@ -60,7 +60,7 @@ def train(
     trainer.test(model, test_loader, ckpt_path="best")
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
     configs["data"]["data_path"] = args.data_path
     configs["logger"]["artifact_location"] = args.artifact_location
@@ -123,6 +123,8 @@ def run(args: argparse.Namespace) -> None:
     train(train_config, model, train_loader, val_loader, test_loader, l_logger)
     # Save configuration used for the training in the logger's artifact location.
     save_config(configs, os.path.join(artifact_location, "config.yaml"))
+
+    return l_logger, run_name, artifact_location
 
 
 def get_unique_run_name_and_artile_location(

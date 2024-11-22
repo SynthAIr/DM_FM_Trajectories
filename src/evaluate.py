@@ -340,16 +340,7 @@ def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename:
 # Detach and stack samples into a single tensor
 import argparse
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the traffic model.")
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        default="AirDiffTraj_5",
-        help="Name of the model (e.g., 'AirDiffTraj_5')."
-    )
-    
-    args = parser.parse_args()
+def run(args, logger):
     model_name = args.model_name
 
     config_file = "./configs/config.yaml"
@@ -367,8 +358,10 @@ if __name__ == "__main__":
     batch_size = dataset_config["batch_size"]
     
     reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=300, model_name = model_name)
+    logger.log_metrics({"Eval_MSE": mse})
     #print(reconstructions[1].data)
-    #jensenshannon_distance(reconstructions, model_name = model_name)
+    JSD, KL = jensenshannon_distance(reconstructions, model_name = model_name)
+    logger.log_metrics({"Eval_JSD": JSD, "Eval_KL": KL})
     #density(reconstructions, model_name = model_name)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
@@ -412,4 +405,16 @@ if __name__ == "__main__":
     )
 
 
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the traffic model.")
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="AirDiffTraj_5",
+        help="Name of the model (e.g., 'AirDiffTraj_5')."
+    )
     
+    args = parser.parse_args()
+    run(args)
+        
