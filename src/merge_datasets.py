@@ -37,8 +37,22 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             print("duplicates dropped")
             traffic_obj = traffic_obj.resample(target_length).phases().eval()
             print("resampled")
+            traffic_obj.data['altitude'] = traffic_obj.data['altitude'] * 0.3048
             
-            
+            if filter_alt:
+                print("Filtering Altitude")
+                for n in range(target_length):
+                    traffic_obj.data.loc[n,'altitude'] = clean_trajectory_data(traffic_obj.data.loc[n], 'altitude',n, 2.5)
+                    traffic_obj.data.loc[n,'groundspeed'] = clean_trajectory_data(traffic_obj.data.loc[n], 'groundspeed',n, 2.5)
+
+
+                cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in traffic_obj]
+                cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'groundspeed') for flight in traffic_obj]
+                
+                traffic_obj = Traffic.from_flights(cleaned_flights)
+                print("Columns:", traffic_obj.data.columns)
+                    
+                    
             # Combine into a single Traffic object
             if big_traffic is None:
                 big_traffic = traffic_obj
@@ -48,21 +62,6 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             print(f"Processed {filename}")
 
     # Feet to meters
-    big_traffic.data['altitude'] = big_traffic.data['altitude'] * 0.3048
-
-    
-    if filter_alt:
-        print("Filtering Altitude")
-        for n in range(target_length):
-            big_traffic.data.loc[n,'altitude'] = clean_trajectory_data(big_traffic.data.loc[n], 'altitude',n, 2.5)
-            big_traffic.data.loc[n,'groundspeed'] = clean_trajectory_data(big_traffic.data.loc[n], 'groundspeed',n, 2.5)
-
-
-        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in big_traffic]
-        cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'groundspeed') for flight in big_traffic]
-        
-        big_traffic = Traffic.from_flights(cleaned_flights)
-        print("Columns:", big_traffic.data.columns)
 
     big_traffic = big_traffic.cumulative_distance().eval()
 
