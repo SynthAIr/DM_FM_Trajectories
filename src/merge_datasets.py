@@ -78,7 +78,7 @@ if __name__ == "__main__":
     #directory = "./data"
     
     # Desired target length for all trajectories
-    target_length = 200
+    target_length = 600
     filter_alt = True
     # Change as per your requirements
     

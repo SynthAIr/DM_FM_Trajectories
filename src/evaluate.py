@@ -66,7 +66,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
 
     trajectory_generation_model = Generation(
         generation=model,
-        features=dataset.parameters['features'],
+        features=dataset_params['features'],
         scaler=dataset_scaler,
     )
     
@@ -345,7 +345,7 @@ def run(args, logger = None):
     model_name = args.model_name
 
     config_file = "./configs/config.yaml"
-    data_path = "./data/resampled/combined_traffic_resampled_200.pkl"
+    data_path = "./data/resampled/combined_traffic_resampled_600.pkl"
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
@@ -357,7 +357,7 @@ def run(args, logger = None):
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
-            artifact_location=args.artifact_location,
+            artifact_location=artifact_location,
         )
 
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
@@ -367,7 +367,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=300, model_name = model_name)
+    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     #print(reconstructions[1].data)
     JSD, KL = jensenshannon_distance(reconstructions, model_name = model_name)
@@ -375,14 +375,14 @@ def run(args, logger = None):
     #density(reconstructions, model_name = model_name)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
-
-    samples, steps = generate_samples(dataset, model, rnd, n = 2)
-    detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), 200)
+    length = config['data']['length']
+    samples, steps = generate_samples(dataset, model, rnd, n = 2, length = length)
+    detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
     
-    X = dataset[rnd][0].reshape(-1, 200, len(dataset.features))[:,:,:2]
-    X_gen = reco_x.reshape(-1, 200, len(dataset.features))[:,:,:2]
+    X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
+    X_gen = reco_x.reshape(-1, length, len(dataset.features))[:,:,:2]
     data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
     data_diversity(X, X_gen, 't-SNE', model_name = model_name)
 
