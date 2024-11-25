@@ -90,9 +90,9 @@ def get_config_data(config_path: str, data_path: str, artifact_location: str):
     return configs, dataset, traffic, conditions
 
 
-def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model"):
+def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
     # Select random samples from the dataset
-    rnd = np.random.randint(0, len(dataset), (n,))
+    rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None
     X2, con, cat, grid = dataset[rnd]
     
     # Move data to GPU if available
@@ -158,7 +158,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     plt.show()
     plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
-    return reconstructions, mse, rnd
+    return reconstructions, mse, rnd, fig
 
 
 def density(reconstructions, model_name="model"):
@@ -283,6 +283,7 @@ def plot_from_array(t, model_name = "model"):
     plt.ylabel('Y values')
     plt.title('Generated Samples')
     plt.savefig(f"./figures/{model_name}_generated_samples.png")
+    return fig
 
 def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename: str = "traffic_comparison.png", landing = True):
     """
@@ -367,11 +368,13 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
+    logger.log_figure(fig_0, f"Eval_reconstruction.png")
     #print(reconstructions[1].data)
-    JSD, KL, e_distance = jensenshannon_distance(reconstructions, model_name = model_name)
+    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
+    logger.log_figure(fig_1, f"Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
@@ -391,12 +394,14 @@ def run(args, logger = None):
     coordinates=dict(latitude=48.5, longitude=8.4),
     forward=False,
     )
-    plot_from_array(reconstructed_traf, model_name)
+    fig_2 = plot_from_array(reconstructed_traf, model_name)
+    logger.log_figure(fig_2, f"Eval_generated_samples.png")
 
     training_trajectories = reconstructions[0]
     synthetic_trajectories = reconstructions[1]
 
-    duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
+    fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
+    logger.log_figure(fig_3, f"Eval_distribution_plots.png")
 
     features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
     units = {
@@ -406,13 +411,14 @@ def run(args, logger = None):
         'timedelta': 's'
     }
 
-    timeseries_plot(
+    fig_4 = timeseries_plot(
         training_trajectories,
         synthetic_trajectories,
         features=features_to_plot,
         units=units,
         model_name=model_name
     )
+    logger.log_figure(fig_4, f"Eval_timeseries_plots.png")
 
 
 

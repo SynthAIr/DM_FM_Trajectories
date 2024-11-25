@@ -101,7 +101,7 @@ def jensenshannon_distance(reconstructions, model_name="model"):
     plt.tight_layout()
     plt.savefig(f"./figures/{model_name}_comparison.png")
     
-    return js_distance, kl_divergence, energy_dist
+    return js_distance, kl_divergence, energy_dist, fig
 
 """
 def jensenshannon_distance(reconstructions, model_name="model"):

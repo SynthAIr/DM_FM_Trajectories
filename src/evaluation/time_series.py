@@ -116,6 +116,7 @@ def duration_and_speed(training_trajectories, synthetic_trajectories, model_name
 
     # Save the figure
     plt.savefig(f"./figures/{model_name}_distribution_plots.png", bbox_inches='tight')
+    return fig
 
 
 def timeseries_plot(
@@ -190,6 +191,7 @@ def timeseries_plot(
     # Adjust layout
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.savefig(f"./figures/{model_name}_timeseries_ci.png", bbox_inches='tight')
+    return fig
 
 # Usage
 
