@@ -5,7 +5,7 @@ import os
 import requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
-
+import argparse
 import re
 from typing import List, Optional
 
@@ -205,6 +205,28 @@ def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date:
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Download METAR data for an airport over a specified date range.")
+    parser.add_argument('start', type=str, help='Start date (YYYY-MM-DD HH:MM)')
+    parser.add_argument('end', type=str, help='End date (YYYY-MM-DD HH:MM)')
+    parser.add_argument('icao24', type=str, help='ICAO code for the airport (e.g., LIRF for Roma Fiumicino)')
+    parser.add_argument('--output_dir', type=str, default="./metar_data", help='Output directory for METAR files')
+    args = parser.parse_args()
+
+    # Convert the input date strings to datetime objects (now with time support)
+    start_date = datetime.strptime(args.start, '%Y-%m-%d %H:%M')
+    end_date = datetime.strptime(args.end, '%Y-%m-%d %H:%M')
+
+    # Call the METAR fetch function with provided arguments
+    fetch_metar_data(
+        base_url="https://www.ogimet.com/display_metars2.php",
+        icao24=args.icao24,
+        start_date=start_date,
+        end_date=end_date,
+        save_folder=args.output_dir
+    )
+    #python metar_utils.py "2018-01-01 08:00" "2018-01-03 10:00" LIRF --output_dir ./my_metar_data
+    """
     base_url = "https://www.ogimet.com/display_metars2.php"
     save_folder = "./metar_data/"
     icao24 = "LIRF"
@@ -213,3 +235,4 @@ if __name__ == "__main__":
 
     # Fetch and save METAR data
     fetch_metar_data(base_url, icao24, start_date, end_date, save_folder)
+    """
