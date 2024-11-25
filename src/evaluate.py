@@ -371,7 +371,7 @@ def run(args, logger = None):
     logger.log_metrics({"Eval_MSE": mse})
     #print(reconstructions[1].data)
     JSD, KL, e_distance = jensenshannon_distance(reconstructions, model_name = model_name)
-    logger.log_metrics({"Eval_edistance", e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
+    logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     #density(reconstructions, model_name = model_name)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
