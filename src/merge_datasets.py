@@ -25,8 +25,9 @@ def main(directory, target_length, output_filepath, filter_alt = False):
         if filename.endswith('.pkl'):
             filepath = os.path.join(directory, filename)
             
-            # Load the Traffic object
+            print(f"Processing {filename}")
             
+            # Load the Traffic object
             traffic_obj = load_traffic_object(filepath)
             print("object loaded")
             traffic_obj = traffic_obj.drop_duplicates()
@@ -35,7 +36,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             print("Filtering Altitude")
             traffic_obj = traffic_obj.drop_duplicates()
             print("duplicates dropped")
-            traffic_obj = traffic_obj.resample(target_length).phases().eval()
+            traffic_obj = traffic_obj.resample(target_length).eval()
             print("resampled")
             traffic_obj.data['altitude'] = traffic_obj.data['altitude'] * 0.3048
             
@@ -45,8 +46,9 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                     traffic_obj.data.loc[n,'altitude'] = clean_trajectory_data(traffic_obj.data.loc[n], 'altitude',n, 2.5)
                     traffic_obj.data.loc[n,'groundspeed'] = clean_trajectory_data(traffic_obj.data.loc[n], 'groundspeed',n, 2.5)
 
-
+                print("Cleaning Altitudes")
                 cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in traffic_obj]
+                traffic_obj = Traffic.from_flights(cleaned_flights)
                 cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'groundspeed') for flight in traffic_obj]
                 
                 traffic_obj = Traffic.from_flights(cleaned_flights)

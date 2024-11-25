@@ -310,7 +310,7 @@ class TrafficDataset(Dataset):
         grid_size = 5
         num_levels = 4
         #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
-        #self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
+        self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
 
         assert len(traffic) == len(self.grid_conditions)
 
@@ -346,8 +346,8 @@ class TrafficDataset(Dataset):
                 return conditions, s
             
             self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 0)
-            #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
-            #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
+                #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
+                #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
             self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)

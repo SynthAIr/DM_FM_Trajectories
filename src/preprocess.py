@@ -171,6 +171,7 @@ def clean_trajectory_data(df, column, n, threshold=3):
     pd.Series: Cleaned data series.
     """
     # Calculate z-scores to identify outliers
+    print(len(df[column]))
     z_scores = np.abs(stats.zscore(df[column]))
     
     # Create a copy of the data to modify
