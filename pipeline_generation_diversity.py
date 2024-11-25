@@ -37,6 +37,7 @@ def run(args, logger = None):
     
     rnd = None
     for w_i in w:
+        model.guidance_scale = w_i
         reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name, rnd = rnd)
         logger.log_metrics({f"Eval_MSE_{w_i}": mse})
         logger.log_figure(fig_0, f"Eval_{w_i}_reconstruction.png")
