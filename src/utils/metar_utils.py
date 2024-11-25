@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, List
+import os
+import requests
+from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
 
 import re
 from typing import List, Optional
@@ -133,16 +137,79 @@ class METAR:
             remarks=remarks
         )
 
-def download_monthly_metar(icao_code: str, year: int, month: int) -> str:
-    # Download METAR data from aviationweather.gov
-    pass
+def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date: datetime, save_folder: str) -> None:
+    """
+    Fetch METAR data from the API, remove HTML tags, and save the clean METAR data into files with dates in a folder.
+    The data is split by month into separate text files.
 
-def download_metar(icao_code: str, date_from: datetime, date_to: datetime) -> str:
-    
-    # Download METAR data from aviationweather.gov
-    pass
+    :param base_url: The base URL for the API query.
+    :param start_date: The starting datetime for the query.
+    :param end_date: The ending datetime for the query.
+    :param save_folder: The folder where the files will be saved.
+    """
+    # Ensure the folder exists
+    os.makedirs(save_folder, exist_ok=True)
+
+    # Loop through the date range month by month
+    current_start = start_date
+    while current_start <= end_date:
+        # Calculate the last date of the current month
+        next_month_start = (current_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        current_end = min(next_month_start - timedelta(days=1), end_date)
+
+        # Generate the API URL with parameters
+        query_params = {
+            'lang': 'en',
+            'lugar': icao24,
+            'tipo': 'ALL',
+            'ord': 'REV',
+            'nil': 'SI',
+            'fmt': 'txt',
+            'ano': current_start.year,
+            'mes': current_start.month,
+            'day': current_start.day,
+            'hora': current_start.hour,
+            'anof': current_end.year,
+            'mesf': current_end.month,
+            'dayf': current_end.day,
+            'horaf': current_end.hour,
+            'minf': current_end.minute,
+            'send': 'send'
+        }
+
+        # Fetch data
+        response = requests.get(base_url, params=query_params)
+        if response.status_code != 200:
+            print(f"Failed to fetch METAR data for {current_start.strftime('%Y-%m-%d')}: {response.status_code}")
+            current_start = next_month_start
+            continue
+
+        # Use BeautifulSoup to clean HTML tags
+        soup = BeautifulSoup(response.text, 'html.parser')
+        metar_data = soup.get_text()  # Extracts the text content from the HTML
+
+        # Remove leading/trailing whitespace
+        metar_data = metar_data.strip()
+
+        # Save to file with date
+        file_name = f"METAR_{icao24}_{current_start.strftime('%Y%m')}.txt"
+        file_path = os.path.join(save_folder, file_name)
+        
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(metar_data)
+
+        print(f"METAR data saved to {file_path}")
+
+        # Move to the next month
+        current_start = next_month_start
+
 
 if __name__ == "__main__":
-    metar_string = "METAR LIMC 151850Z VRB02KT 3000 MIFG NSC 04/03 Q1024 NOSIG="
-    metar = METAR.from_string(metar_string)
-    print(metar)
+    base_url = "https://www.ogimet.com/display_metars2.php"
+    save_folder = "./metar_data/"
+    icao24 = "LIRF"
+    start_date = datetime(2018, 1, 1, 0, 0)  # Example start date
+    end_date = datetime(2018, 3, 2, 0, 0)   # Example end date
+
+    # Fetch and save METAR data
+    fetch_metar_data(base_url, icao24, start_date, end_date, save_folder)

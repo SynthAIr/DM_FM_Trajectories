@@ -45,6 +45,7 @@ accelerate = "^0.32.1"
 dask = "^2024.8.0"
 zarr = "^2.18.2"
 netCDF4 = "^1.7.1"
+beautifulsoup4 = "^4.12.3"
 
 
 [tool.poetry.group.dev.dependencies]
