@@ -8,6 +8,9 @@ from bs4 import BeautifulSoup
 import argparse
 import re
 from typing import List, Optional
+import pandas as pd
+from metar import Metar
+import numpy as np
 
 @dataclass
 class METAR:
@@ -163,7 +166,7 @@ def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date:
             'lugar': icao24,
             'tipo': 'ALL',
             'ord': 'REV',
-            'nil': 'SI',
+            'nil': 'NO',
             'fmt': 'txt',
             'ano': current_start.year,
             'mes': current_start.month,
@@ -204,6 +207,59 @@ def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date:
         current_start = next_month_start
 
 
+# Function to load METAR data from files and store it in a DataFrame
+# Function to load METAR data from files and store it in a DataFrame
+def load_metar_data_from_files(folder_path):
+    metar_data = []
+
+    # Loop over files in the folder
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.txt'):
+            file_path = os.path.join(folder_path, filename)
+
+            with open(file_path, 'r') as file:
+                metar_lines = file.readlines()
+
+                # Process each line in the file
+                for line in metar_lines:
+                    # Skip the lines that contain headlines or other irrelevant information
+                    if line.startswith('#') or line.strip() == '':
+                        continue
+                    
+                    # Only process lines that start with 'METAR' (indicating METAR data)
+                    if "METAR" in line:
+                        # Parse the METAR string using the metar package
+                        try:
+                            time = line.strip()[:13]
+                            metar_entry = Metar.Metar(line.strip()[13:])  # Parse METAR line
+                            
+                            # Extract relevant METAR data and append to the list
+                            metar_data.append({
+                                'raw': line.strip(),
+                                'airport_code': metar_entry.station_id if metar_entry.station_id else np.nan,
+                                'observation_time': metar_entry.time if metar_entry.time else np.nan,
+                                'wind_direction': metar_entry.wind_dir_to if metar_entry.wind_dir_to else np.nan,
+                                'wind_speed': metar_entry.wind_speed if metar_entry.wind_speed else 0,  # Set to 0 if not available
+                                'visibility': metar_entry.visibility if metar_entry.visibility else np.nan,
+                                'temperature': metar_entry.temp if metar_entry.temp else np.nan,
+                                'dew_point': metar_entry.dewpt if metar_entry.dewpt else np.nan,
+                                'pressure': metar_entry.press if metar_entry.press else np.nan,
+                                'trend': metar_entry.trend if metar_entry.trend else False,
+                            })
+                        except Exception as e:
+                            print(f"Error parsing METAR line: {line.strip()} - {e}")
+
+    # Convert METAR data into a DataFrame
+    df = pd.DataFrame(metar_data)
+
+    # Ensure observation_time is in datetime format (useful for sorting or filtering)
+    df['observation_time'] = pd.to_datetime(df['observation_time'], errors='coerce')
+
+    # Set the observation_time as the index (for easier time-based operations)
+    df.set_index('observation_time', inplace=True)
+
+    return df
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Download METAR data for an airport over a specified date range.")
@@ -217,22 +273,20 @@ if __name__ == "__main__":
     start_date = datetime.strptime(args.start, '%Y-%m-%d %H:%M')
     end_date = datetime.strptime(args.end, '%Y-%m-%d %H:%M')
 
-    # Call the METAR fetch function with provided arguments
-    fetch_metar_data(
-        base_url="https://www.ogimet.com/display_metars2.php",
-        icao24=args.icao24,
-        start_date=start_date,
-        end_date=end_date,
-        save_folder=args.output_dir
-    )
-    #python metar_utils.py "2018-01-01 08:00" "2018-01-03 10:00" LIRF --output_dir ./my_metar_data
-    """
-    base_url = "https://www.ogimet.com/display_metars2.php"
-    save_folder = "./metar_data/"
-    icao24 = "LIRF"
-    start_date = datetime(2018, 1, 1, 0, 0)  # Example start date
-    end_date = datetime(2018, 3, 2, 0, 0)   # Example end date
 
-    # Fetch and save METAR data
-    fetch_metar_data(base_url, icao24, start_date, end_date, save_folder)
-    """
+    # Call the METAR fetch function with provided arguments
+    if False:
+        fetch_metar_data(
+            base_url="https://www.ogimet.com/display_metars2.php",
+            icao24=args.icao24,
+            start_date=start_date,
+            end_date=end_date,
+            save_folder=args.output_dir
+        )
+    else:
+        metar_df = load_metar_data_from_files(args.output_dir)
+
+        # Display the DataFrame
+        print(metar_df.head())
+
+    #python metar_utils.py "2018-01-01 08:00" "2018-01-03 10:00" LIRF --output_dir ./my_metar_data
