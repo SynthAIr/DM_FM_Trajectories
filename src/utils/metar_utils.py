@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional, List
 
 import re
@@ -131,6 +132,15 @@ class METAR:
             runway_condition=runway_condition,
             remarks=remarks
         )
+
+def download_monthly_metar(icao_code: str, year: int, month: int) -> str:
+    # Download METAR data from aviationweather.gov
+    pass
+
+def download_metar(icao_code: str, date_from: datetime, date_to: datetime) -> str:
+    
+    # Download METAR data from aviationweather.gov
+    pass
 
 if __name__ == "__main__":
     metar_string = "METAR LIMC 151850Z VRB02KT 3000 MIFG NSC 04/03 Q1024 NOSIG="

@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "AirDiffTraj"
+version = "0.1.0"
+description = "Synthetic Diffusion-based Aircraft Trajecotry Generation"
+authors = ["Olav Finne Præsteng Larsen <olav.larsen@sintef.no>"]
+readme = "README.md"
+repository = "https://github.com/Ofplarsen/syntraj_diffusion"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10,<3.13"
+torch = "^2.3.0"
+lightning = "^2.2.4"
+scikit-learn = "^1.5.0"
+numpy = "1.26.4"
+pandas = "^2.2.2"
+traffic = "^2.10.0"
+Cartopy = "^0.23.0"
+seaborn = "^0.13.2"
+altair = "^5.3.0"
+scipy = "1.13.0"
+einops = "^0.8.0"
+mlflow = "^2.13.0"
+jupyterlab = "^4.2.1"
+black = "^24.4.2"
+isort = "^5.13.2"
+wheel = "^0.43.0"
+msgpack = "^1.0.8"
+zmq = "^0.0.0"
+setuptools = "^70.0.0"
+matplotlib = "^3.8.0"
+bluesky-simdata = "^2022.9.15"
+basemap = "^1.4.1"
+geopy = "^2.4.1"
+cython = "^3.0.10"
+geohash2 = "^1.1"
+cdsapi = "^0.7.0"
+xarray = "^2024.6.0"
+streamlit = "^1.3.0"
+pydantic = "^2.8.0"
+outlines = "^0.0.46"
+transformers = "^4.42.0"
+datasets = "^2.20.0"
+accelerate = "^0.32.1"
+dask = "^2024.8.0"
+zarr = "^2.18.2"
+netCDF4 = "^1.7.1"
+
+
+[tool.poetry.group.dev.dependencies]
+make = "^0.1.6.post2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
