@@ -61,7 +61,7 @@ data:
   val_ratio: 0.2
   batch_size: 16
   test_batch_size: 32
-  length: 600
+  length: 400
   down_sample_factor: 30
   info_features: [ ] # These are useless
   info_index: -1 # Useless
