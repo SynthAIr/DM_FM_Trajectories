@@ -148,20 +148,45 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
     rounded_lon = round_to_nearest_0_25(lon)
     rounded_lat = round_to_nearest_0_25(lat)
     half_grid = grid_size // 2 * 0.25
-    
+
+    """
     def preprocess(ds):
         return ds[variables].sel(
             level=pressure_levels, 
             longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
             latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid), 
             )
+    """
+    def preprocess(ds):
+        # Check which variables have the 'level' dimension
+        variables_with_level = [var for var in variables if 'level' in ds[var].dims]
+        variables_without_level = [var for var in variables if 'level' not in ds[var].dims]
 
+        # Select data for variables with 'level'
+        ds_with_level = ds[variables_with_level].sel(
+            level=pressure_levels, 
+            longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+            latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
+        )
+
+        # Select data for variables without 'level' and add a dummy 'level' dimension
+        ds_without_level = ds[variables_without_level].sel(
+            longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+            latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
+        )
+        # Add a dummy 'level' dimension filled with zeros
+        ds_without_level = ds_without_level.expand_dims(dim={'level': pressure_levels}).assign_coords(level=pressure_levels)
+        ds_without_level = ds_without_level.fillna(0)  # Ensure new levels are filled with zeros
+
+        # Merge the two datasets
+        return xr.merge([ds_with_level, ds_without_level])
+    
     ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
     print("Data loaded")
 
     grid_conditions = []
 
-    name = f"flight_processed_{len(traffic)}_ADES.pkl"
+    name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
         print("ERA5 file not found - creating new")
 
