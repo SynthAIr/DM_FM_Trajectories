@@ -457,9 +457,6 @@ class TrafficDataset(Dataset):
             list: List of informations that could be needed like, labels or
                 original latitude and longitude values.
         """
-        # TODO: Added for easier Diffusion, should be removed
-        #return self.pad_to_32(self.data[index]), self.conditions[index], infos
-        # Data, continuous conditions, categorical conditions
         return self.data[index], self.con_conditions[index], self.cat_conditions[index], self.grid_conditions[index]
 
     @property

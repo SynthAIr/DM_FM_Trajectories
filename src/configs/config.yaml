@@ -47,6 +47,8 @@ data:
       #type: 'continuous'
     cumdist:
       type: 'continuous'
+      last: True
+      first: False
       #groundspeed:
       #type: 'continuous'
       #track:
@@ -59,7 +61,7 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 16
+  batch_size: 64
   test_batch_size: 32
   length: 400
   down_sample_factor: 30
@@ -74,9 +76,9 @@ model:
   in_channels: 7
   out_ch: 7
   ch: 256
-  ch_mult: [ 1, 2, 4, 4 ]
-  num_res_blocks: 7
-  attn_resolutions: [16, 32,64]
+  ch_mult: [ 1, 2, 2, 4 ]
+  num_res_blocks: 4
+  attn_resolutions: [16, 32]
   dropout: 0.2
   lr: 0.0001
   resamp_with_conv: True

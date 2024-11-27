@@ -55,5 +55,13 @@ if __name__ == "__main__":
         default="AirDiffTraj_5",
         help="Name of the model (e.g., 'AirDiffTraj_5')."
     )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        #required=True,
+        default="./data/resampled/combined_traffic_resampled_600.pkl",
+        help="Path to the training data file"
+    )
+
     args = parser.parse_args()
     run(args)

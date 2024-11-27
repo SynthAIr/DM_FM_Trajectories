@@ -15,7 +15,7 @@ class Condition(abc.ABC):
         self.label = label
 
     @abc.abstractmethod
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+    def to_tensor(self, data) -> torch.Tensor:
         """
         Convert the data to a tensor
         """
@@ -39,10 +39,20 @@ class ContinuousCondition(Condition):
     """
     Class for continuous conditions (single value)
     """
-    def __init__(self, label):
+    def __init__(self, label, first = False, last = False):
         super().__init__(label)
+        self.first = first
+        self.last = last
     
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+    def to_tensor(self, data) -> torch.Tensor:
+        if self.first:
+            data = data[:, 0]
+            data = data.reshape(-1, 1)
+        if self.last:
+            data = data[:, -1]
+            data = data.reshape(-1, 1)
+        if self.first and self.last:
+            data = data[:, [0, -1]]
         return torch.tensor(data, dtype=torch.float)
 
     def get_type(self) -> str:
@@ -65,7 +75,7 @@ class CyclicCondition(Condition):
         self.single = True
 
 
-    def _cyclic_to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+    def _cyclic_to_tensor(self, data) -> torch.Tensor:
         if self.labels is not None:
             index = self.labels.index(data)
             data = index
@@ -81,8 +91,8 @@ class CyclicCondition(Condition):
         cos = np.cos(2*np.pi * data / self.max_val)
         return torch.tensor(np.array([sin, cos]), dtype=torch.float).T
     
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
-        return self._cyclic_to_tensor(data, n_repeat)
+    def to_tensor(self, data) -> torch.Tensor:
+        return self._cyclic_to_tensor(data)
 
     def get_type(self) -> str:
         return "cyclic"
@@ -102,7 +112,7 @@ class CategoricalCondition(Condition):
         self.to_index = {c: i for i, c in enumerate(categories)}
         #self.to_index = {"EHAM" : 0, "LIMC" : 1, "LFPG":2, "EGKK":3, "LIRF": 4, "LOWW":5, "EGLL":6, "ESSA": 7, "EDDF": 8, "EDDT": 9}
 
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+    def to_tensor(self, data) -> torch.Tensor:
         data = data[:,0]
         data = [self.to_index[d] for d in data]
         data = torch.tensor([data], dtype=torch.int)
@@ -122,7 +132,7 @@ class WeatherGridCondition(Condition):
         super().__init__(label)
         self.levels = levels
     
-    def to_tensor(self, data, n_repeat = 1) -> torch.Tensor:
+    def to_tensor(self, data) -> torch.Tensor:
         return torch.tensor(data, dtype=torch.float)
 
     def get_type(self) -> str:
@@ -193,7 +203,9 @@ def load_conditions(config, dataset: pd.DataFrame = None) -> List[Condition]:
         condition = config["conditional_features"][name]
         match condition["type"]:
             case "continuous":
-                condtions.append(ContinuousCondition(name))
+                first = condition.get("first", False)
+                last = condition.get("last", False)
+                condtions.append(ContinuousCondition(name, first, last))
             case "cyclic":
                 bins = condition.get("bins", None)
                 labels = condition.get("labels", None)
