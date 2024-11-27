@@ -92,7 +92,7 @@ def get_config_data(config_path: str, data_path: str, artifact_location: str):
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
     # Select random samples from the dataset
-    rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None
+    rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None else rnd
     X2, con, cat, grid = dataset[rnd]
     
     # Move data to GPU if available
@@ -346,7 +346,7 @@ def run(args, logger = None):
     model_name = args.model_name
 
     config_file = "./configs/config.yaml"
-    data_path = "./data/resampled/combined_traffic_resampled_600.pkl"
+    data_path = args.data_path
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
 
@@ -370,14 +370,15 @@ def run(args, logger = None):
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
-    logger.log_figure(fig_0, f"Eval_reconstruction.png")
+    logger.experiment.log_figure(logger.run_id,fig_0, f"Eval_reconstruction.png")
+    logger.experiment.log_artifact(logger.run_id,f"./figures/{model_name}_reconstructed_data.png")
     #print(reconstructions[1].data)
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
-    logger.log_figure(fig_1, f"Eval_comparison.png")
+    logger.experiment.log_figure(logger.run_id, fig_1, f"Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
-    #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
-    #plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
+    plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
+    plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
     length = config['data']['length']
     samples, steps = generate_samples(dataset, model, rnd, n = 2, length = length)
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
@@ -395,13 +396,13 @@ def run(args, logger = None):
     forward=False,
     )
     fig_2 = plot_from_array(reconstructed_traf, model_name)
-    logger.log_figure(fig_2, f"Eval_generated_samples.png")
+    logger.experiment.log_figure(logger.run_id, fig_2, f"Eval_generated_samples.png")
 
     training_trajectories = reconstructions[0]
     synthetic_trajectories = reconstructions[1]
 
     fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
-    logger.log_figure(fig_3, f"Eval_distribution_plots.png")
+    logger.experiment.log_figure(logger.run_id,fig_3, f"Eval_distribution_plots.png")
 
     features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
     units = {
@@ -418,7 +419,7 @@ def run(args, logger = None):
         units=units,
         model_name=model_name
     )
-    logger.log_figure(fig_4, f"Eval_timeseries_plots.png")
+    logger.experiment.log_figure(logger.run_id,fig_4, f"Eval_timeseries_plots.png")
 
 
 
@@ -429,6 +430,13 @@ if __name__ == "__main__":
         type=str,
         default="AirDiffTraj_5",
         help="Name of the model (e.g., 'AirDiffTraj_5')."
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        #required=True,
+        default="./data/resampled/combined_traffic_resampled_600.pkl",
+        help="Path to the training data file"
     )
     
     args = parser.parse_args()

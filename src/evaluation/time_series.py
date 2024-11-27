@@ -69,8 +69,8 @@ def duration_and_speed(training_trajectories, synthetic_trajectories, model_name
     training_durations = get_flight_durations(training_trajectories)
     synthetic_durations = get_flight_durations(synthetic_trajectories)
 
-    training_speeds = get_flight_speeds(training_trajectories, method='groundspeed')
-    synthetic_speeds = get_flight_speeds(synthetic_trajectories, method='groundspeed')
+    training_speeds = get_flight_speeds(training_trajectories, method='calculate')
+    synthetic_speeds = get_flight_speeds(synthetic_trajectories, method='calculate')
 
     # Create a single figure with two rows and two columns
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
