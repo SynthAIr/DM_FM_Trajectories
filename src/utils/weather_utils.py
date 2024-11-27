@@ -182,15 +182,15 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
         # Merge the two datasets
         return xr.merge([ds_with_level, ds_without_level])
     
-    ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
-    print("Data loaded")
-    exit()
 
     grid_conditions = []
 
-    name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
+    #name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
+    name = f"flight_processed_{len(traffic)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
         print("ERA5 file not found - creating new")
+        ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
+        print("Data loaded")
 
         for flight in tqdm(traffic):
             # Extracting the average time for the flight and rounding it to the nearest hour

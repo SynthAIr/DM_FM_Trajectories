@@ -303,7 +303,7 @@ class TrafficDataset(Dataset):
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and "2020" not in f]
             
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
