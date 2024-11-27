@@ -151,8 +151,9 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
 
     """
     def preprocess(ds):
+        print(ds._variables)
         return ds[variables].sel(
-            level=pressure_levels, 
+            #level=pressure_levels, 
             longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
             latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid), 
             )
@@ -183,6 +184,7 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
     
     ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
     print("Data loaded")
+    exit()
 
     grid_conditions = []
 
