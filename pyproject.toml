@@ -47,6 +47,7 @@ zarr = "^2.18.2"
 netCDF4 = "^1.7.1"
 beautifulsoup4 = "^4.12.3"
 metar= "1.11.0"
+gcsfs = "^2024.10.0"
 
 
 [tool.poetry.group.dev.dependencies]

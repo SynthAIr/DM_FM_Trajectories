@@ -342,6 +342,21 @@ def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename:
 # Detach and stack samples into a single tensor
 import argparse
 
+def get_figure_from_sample_steps(steps, T=1000):
+    """
+    Get a figure showing the steps of the generated samples.
+    """
+    # Create a figure with T subplots
+    fig, axes = plt.subplots(1, T//50, figsize=(20, 2), sharex=True, sharey=True)
+    
+    # Plot each step on a separate subplot
+    for i,t in enumerate(steps):
+        for s in t:
+            axes[i].imshow(s.cpu().detach().numpy(), cmap="gray")
+            axes[i].axis("off")
+    
+    return fig
+
 def run(args, logger = None):
     model_name = args.model_name
 
@@ -380,7 +395,10 @@ def run(args, logger = None):
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
     length = config['data']['length']
+
     samples, steps = generate_samples(dataset, model, rnd, n = 2, length = length)
+    get_figure_from_sample_steps(steps, T=1000).savefig(f"./figures/{model_name}_generated_steps.png")
+
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
