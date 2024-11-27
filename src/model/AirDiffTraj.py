@@ -237,6 +237,62 @@ class Downsample(nn.Module):
             x = torch.nn.functional.avg_pool2d(x, kernel_size=2, stride=2)
         return x
 
+    
+class ResnetBlockLSTM(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels=None,
+                 use_lstm_shortcut=False,
+                 dropout=0.1,
+                 temb_channels=512):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = in_channels if out_channels is None else out_channels
+        self.use_lstm_shortcut = use_lstm_shortcut
+
+        self.norm1 = Normalize(in_channels)
+        self.lstm1 = nn.LSTM(input_size=in_channels,
+                             hidden_size=self.out_channels,
+                             batch_first=True)
+
+        self.temb_proj = nn.Linear(temb_channels, self.out_channels)
+        self.norm2 = Normalize(self.out_channels)
+        self.dropout = nn.Dropout(dropout)
+
+        self.lstm2 = nn.LSTM(input_size=self.out_channels,
+                             hidden_size=self.out_channels,
+                             batch_first=True)
+
+        if self.in_channels != self.out_channels:
+            if self.use_lstm_shortcut:
+                self.shortcut = nn.LSTM(input_size=in_channels,
+                                        hidden_size=self.out_channels,
+                                        batch_first=True)
+            else:
+                self.nin_shortcut = nn.Linear(in_channels, self.out_channels)
+
+    def forward(self, x, temb):
+        h = x
+        h = self.norm1(h)
+        h = nonlinearity(h)
+
+        # LSTM layers expect input of shape (batch, seq_len, features)
+        h, _ = self.lstm1(h)
+        h = h + self.temb_proj(nonlinearity(temb))[:, None, :]
+
+        h = self.norm2(h)
+        h = nonlinearity(h)
+        h = self.dropout(h)
+        h, _ = self.lstm2(h)
+
+        if self.in_channels != self.out_channels:
+            if self.use_lstm_shortcut:
+                x, _ = self.shortcut(x)
+            else:
+                x = self.nin_shortcut(x)
+
+        return x + h
+
 
 class ResnetBlock(nn.Module):
     def __init__(self,
@@ -346,11 +402,17 @@ class AttnBlock(nn.Module):
 
         return x + h_
 
+def _get_resnet_block(in_channels, out_channels, temb_channels, dropout, CNN = True):
+    if CNN:
+        return ResnetBlock(in_channels, out_channels, dropout=dropout, temb_channels=temb_channels)
+    else:
+        return ResnetBlockLSTM(in_channels, out_channels, dropout=dropout, temb_channels=temb_channels)
 
 class UNET(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.cnn = config["cnn"]
         ch, out_ch, ch_mult = config["ch"], config["out_ch"], tuple(
             config["ch_mult"])
         num_res_blocks = config["num_res_blocks"]
@@ -396,10 +458,10 @@ class UNET(nn.Module):
             block_out = ch * ch_mult[i_level]
             for i_block in range(self.num_res_blocks):
                 block.append(
-                    ResnetBlock(in_channels=block_in,
+                    _get_resnet_block(in_channels=block_in,
                                 out_channels=block_out,
                                 temb_channels=self.temb_ch,
-                                dropout=dropout))
+                                dropout=dropout, CNN = self.cnn))
                 block_in = block_out
                 if curr_res in attn_resolutions:
                     attn.append(AttnBlock(block_in))
@@ -413,15 +475,15 @@ class UNET(nn.Module):
 
         # middle
         self.mid = nn.Module()
-        self.mid.block_1 = ResnetBlock(in_channels=block_in,
+        self.mid.block_1 = _get_resnet_block(in_channels=block_in,
                                        out_channels=block_in,
                                        temb_channels=self.temb_ch,
-                                       dropout=dropout)
+                                       dropout=dropout, CNN=self.cnn)
         self.mid.attn_1 = AttnBlock(block_in)
-        self.mid.block_2 = ResnetBlock(in_channels=block_in,
+        self.mid.block_2 = _get_resnet_block(in_channels=block_in,
                                        out_channels=block_in,
                                        temb_channels=self.temb_ch,
-                                       dropout=dropout)
+                                       dropout=dropout, CNN=self.cnn)
 
         # upsampling
         self.up = nn.ModuleList()
@@ -434,10 +496,10 @@ class UNET(nn.Module):
                 if i_block == self.num_res_blocks:
                     skip_in = ch * in_ch_mult[i_level]
                 block.append(
-                    ResnetBlock(in_channels=block_in + skip_in,
+                    _get_resnet_block(in_channels=block_in + skip_in,
                                 out_channels=block_out,
                                 temb_channels=self.temb_ch,
-                                dropout=dropout))
+                                dropout=dropout), CNN=self.cnn)
                 block_in = block_out
                 if curr_res in attn_resolutions:
                     attn.append(AttnBlock(block_in))
@@ -520,7 +582,6 @@ def gather(consts: torch.Tensor, t: torch.Tensor):
     #t = t.to(consts.device)
     c = consts.gather(-1, t)
     return c.reshape(-1, 1, 1)
-
 
 class AirDiffTraj(L.LightningModule):
 

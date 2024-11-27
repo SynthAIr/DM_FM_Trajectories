@@ -70,6 +70,7 @@ data:
   
 model:
   type: "simple"
+  cnn: True
   sampling: "DDPM"
   attr_dim: 32
   guidance_scale: 0
