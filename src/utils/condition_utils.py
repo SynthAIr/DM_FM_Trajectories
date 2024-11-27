@@ -53,7 +53,13 @@ class ContinuousCondition(Condition):
             data = data.reshape(-1, 1)
         if self.first and self.last:
             data = data[:, [0, -1]]
-        return torch.tensor(data, dtype=torch.float)
+
+        data = torch.tensor(data, dtype=torch.float)
+
+        if len(data.shape) == 1:
+            return data.reshape(-1, 1)
+
+        return data
 
     def get_type(self) -> str:
         return "continuous"

@@ -399,6 +399,8 @@ class TrafficDataset(Dataset):
             if feature_type == "continuous":
                 #feature_data = np.array([f.data[feature_names].values.ravel() for f in traffic])
                 feature_data = feature.to_tensor(feature_data).squeeze()
+                if len(feature_data.shape) == 1:
+                    feature_data = feature_data.reshape(-1, 1)
                 print(feature_names)
                 print(feature_data.shape)
                 condition_continuous.append(feature_data)
