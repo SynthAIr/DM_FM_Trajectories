@@ -383,7 +383,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=4, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"Eval_reconstruction.png")
     logger.experiment.log_artifact(logger.run_id,f"./figures/{model_name}_reconstructed_data.png")

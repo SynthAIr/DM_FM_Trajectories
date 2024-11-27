@@ -176,8 +176,9 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
             latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
         )
         # Add a dummy 'level' dimension filled with zeros
+                # Add a dummy 'level' dimension by copying data across all levels
         ds_without_level = ds_without_level.expand_dims(dim={'level': pressure_levels}).assign_coords(level=pressure_levels)
-        ds_without_level = ds_without_level.fillna(0)  # Ensure new levels are filled with zeros
+        ds_without_level = ds_without_level.map(lambda x: x.broadcast_like(ds_without_level))
 
         # Merge the two datasets
         return xr.merge([ds_with_level, ds_without_level])

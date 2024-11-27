@@ -499,7 +499,7 @@ class UNET(nn.Module):
                     _get_resnet_block(in_channels=block_in + skip_in,
                                 out_channels=block_out,
                                 temb_channels=self.temb_ch,
-                                dropout=dropout), CNN=self.cnn)
+                                dropout=dropout, CNN=self.cnn))
                 block_in = block_out
                 if curr_res in attn_resolutions:
                     attn.append(AttnBlock(block_in))
