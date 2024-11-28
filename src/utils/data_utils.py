@@ -303,7 +303,7 @@ class TrafficDataset(Dataset):
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc') and "2020" not in f]
+        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
             
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
@@ -438,8 +438,8 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        #traffic = traffic.between("2018-01-01", "2021-12-31")
-        traffic = traffic.between("2018-01-01", "2018-01-31")
+        traffic = traffic.between("2018-01-01", "2021-12-31")
+        #traffic = traffic.between("2018-01-01", "2018-01-31")
 
         dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, variables)
         dataset.file_path = file_path

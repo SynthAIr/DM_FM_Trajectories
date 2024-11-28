@@ -186,8 +186,8 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
 
     grid_conditions = []
 
-    #name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
-    name = f"flight_processed_{len(traffic)}_ADES.pkl"
+    name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
+    #name = f"flight_processed_{len(traffic)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
         print("ERA5 file not found - creating new")
         ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
