@@ -25,7 +25,7 @@ def run(args, logger = None):
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
-            artifact_location=artifact_location,
+            #artifact_location=artifact_location,
         )
 
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
@@ -40,10 +40,10 @@ def run(args, logger = None):
         model.guidance_scale = w_i
         reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name, rnd = rnd)
         logger.log_metrics({f"Eval_MSE_{w_i}": mse})
-        logger.log_figure(fig_0, f"Eval_{w_i}_reconstruction.png")
+        logger.experiment.log_figure(logger.run_id, fig_0, f"Eval_{w_i}_reconstruction.png")
         #print(reconstructions[1].data)
         JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
-        logger.log_figure(fig_1, f"Eval_{w_i}_comparison.png")
+        logger.experiment.log_figure(logger.run_id, fig_1, f"Eval_{w_i}_comparison.png")
         logger.log_metrics({f"Eval_edistance_{w_i}": e_distance, f"Eval_JSD_{w_i}": JSD, f"Eval_KL_{w_i}": KL})
 
 
