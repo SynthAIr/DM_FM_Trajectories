@@ -360,10 +360,10 @@ def get_figure_from_sample_steps(steps, T=1000):
 def run(args, logger = None):
     model_name = args.model_name
 
-    config_file = "./configs/config.yaml"
     data_path = args.data_path
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
+    config_file = f"./artifacts/{model_name}/config.yaml"
 
     config = load_config(config_file)
     if logger is None:
