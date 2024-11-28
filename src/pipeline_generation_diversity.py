@@ -12,16 +12,16 @@ def run(args, logger = None):
 
     w = np.arange(0, 10, 2)
 
-    config_file = "./configs/config.yaml"
-    data_path = "./data/resampled/combined_traffic_resampled_600.pkl"
+    data_path = args.data_path
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
+    config_file = f"./artifacts/{model_name}/config.yaml"
 
     config = load_config(config_file)
     if logger is None:
         logger_config = config["logger"]
         logger = MLFlowLogger(
-            experiment_name=logger_config["experiment_name"],
+            experiment_name="AirDiffTrajExperimentAdjustW",
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
