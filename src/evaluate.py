@@ -241,6 +241,8 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         
         # Generate samples and steps using the model
         samples, steps = model.sample(n, con, cat, grid, length)
+        # (steps=50, n, 7, len)
+        # list (steps=50) of tensors (n, 7, len)
         
         # Append results to the lists
         all_samples.append(samples)
@@ -251,6 +253,9 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         #print("grid shape:", grid.shape)
         #print("samples shape:", samples.shape)
         #print("steps length:", len(steps))
+
+    #all_samples = list of rnd with list of tensors (n, 7, len)
+    # len(rnd), len(steps), n, 7, len
     
     return all_samples, all_steps
 
@@ -342,18 +347,25 @@ def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename:
 # Detach and stack samples into a single tensor
 import argparse
 
-def get_figure_from_sample_steps(steps, T=1000):
+def get_figure_from_sample_steps(steps, dataset, length = 200):
+    # len(rnd), len(steps), n, 7, len
     """
     Get a figure showing the steps of the generated samples.
     """
     # Create a figure with T subplots
-    fig, axes = plt.subplots(1, T//50, figsize=(20, 2), sharex=True, sharey=True)
+    len_steps = len(steps[0])
+    fig, axes = plt.subplots(1, len_steps, figsize=(20, 2), sharex=True, sharey=True)
     
     # Plot each step on a separate subplot
-    for i,t in enumerate(steps):
-        for s in t:
-            axes[i].imshow(s.cpu().detach().numpy(), cmap="gray")
-            axes[i].axis("off")
+    for i, t in enumerate(steps):
+        # rnd
+        for y, s in enumerate(t):
+            # steps
+            detached_samples = detach_to_tensor(s).reshape(-1, len(dataset.features), length)
+            reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
+            decoded = dataset.scaler.inverse_transform(reco_x)
+            axes[y].plot(decoded[:, 0], decoded[:, 1], "o", markersize=1)
+            axes[y].axis("off")
     
     return fig
 
@@ -397,7 +409,7 @@ def run(args, logger = None):
     length = config['data']['length']
 
     samples, steps = generate_samples(dataset, model, rnd, n = 2, length = length)
-    get_figure_from_sample_steps(steps, T=1000).savefig(f"./figures/{model_name}_generated_steps.png")
+    get_figure_from_sample_steps(steps, dataset, length).savefig(f"./figures/{model_name}_generated_steps.png")
 
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
