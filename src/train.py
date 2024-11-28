@@ -72,7 +72,7 @@ def run(args: argparse.Namespace):
         run_name=run_name,
         tracking_uri=logger_config["mlflow_uri"],
         tags=logger_config["tags"],
-        artifact_location=artifact_location,
+        #artifact_location=artifact_location,
     )
     print("Logger setup!")
 

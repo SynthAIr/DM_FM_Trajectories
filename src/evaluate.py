@@ -155,8 +155,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1)
     
     # Show the plot
-    plt.show()
-    plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
+    #plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
     return reconstructions, mse, rnd, fig
 
@@ -363,13 +362,14 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
             # steps
             detached_samples = detach_to_tensor(s).reshape(-1, len(dataset.features), length)
             reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
-            decoded = dataset.scaler.inverse_transform(reco_x)
-            axes[y].plot(decoded[:, 0], decoded[:, 1], "o", markersize=1)
+            decoded = dataset.scaler.inverse_transform(reco_x).reshape(-1, length, len(dataset.features))[:,:,:2]
+            axes[y].plot(decoded[:, :, 0], decoded[:, :, 1], "o", markersize=1)
             axes[y].axis("off")
     
     return fig
 
 def run(args, logger = None):
+    np.random.seed(42)
     model_name = args.model_name
 
     data_path = args.data_path
@@ -385,9 +385,9 @@ def run(args, logger = None):
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
-            artifact_location=artifact_location,
+            #artifact_location=artifact_location,
         )
-
+    logger.experiment.log_dict(logger.run_id,config, config_file)
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
@@ -395,28 +395,31 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=4, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=50, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
-    logger.experiment.log_figure(logger.run_id,fig_0, f"Eval_reconstruction.png")
-    logger.experiment.log_artifact(logger.run_id,f"./figures/{model_name}_reconstructed_data.png")
+    logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
+    #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
-    logger.experiment.log_figure(logger.run_id, fig_1, f"Eval_comparison.png")
+    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
     plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
     length = config['data']['length']
 
-    samples, steps = generate_samples(dataset, model, rnd, n = 2, length = length)
-    get_figure_from_sample_steps(steps, dataset, length).savefig(f"./figures/{model_name}_generated_steps.png")
+    samples, steps = generate_samples(dataset, model, rnd, n = 5, length = length)
+    fig_99 = get_figure_from_sample_steps(steps, dataset, length)
+    fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
+    logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
+
 
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
     
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
-    X_gen = reco_x.reshape(-1, length, len(dataset.features))[:,:,:2]
+    X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
     data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
     data_diversity(X, X_gen, 't-SNE', model_name = model_name)
 
@@ -426,13 +429,13 @@ def run(args, logger = None):
     forward=False,
     )
     fig_2 = plot_from_array(reconstructed_traf, model_name)
-    logger.experiment.log_figure(logger.run_id, fig_2, f"Eval_generated_samples.png")
+    logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
 
     training_trajectories = reconstructions[0]
     synthetic_trajectories = reconstructions[1]
 
     fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
-    logger.experiment.log_figure(logger.run_id,fig_3, f"Eval_distribution_plots.png")
+    logger.experiment.log_figure(logger.run_id,fig_3, f"figures/Eval_distribution_plots.png")
 
     features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
     units = {
@@ -449,7 +452,7 @@ def run(args, logger = None):
         units=units,
         model_name=model_name
     )
-    logger.experiment.log_figure(logger.run_id,fig_4, f"Eval_timeseries_plots.png")
+    logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
 
 
 

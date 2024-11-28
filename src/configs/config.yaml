@@ -61,7 +61,7 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 128
+  batch_size: 32
   test_batch_size: 32
   length: 200
   down_sample_factor: 30
@@ -76,9 +76,9 @@ model:
   guidance_scale: 0
   in_channels: 7
   out_ch: 7
-  ch: 128
+  ch: 256
   ch_mult: [ 1, 2, 2, 4 ]
-  num_res_blocks: 4
+  num_res_blocks: 6
   attn_resolutions: [16, 32]
   dropout: 0.2
   lr: 0.0001
@@ -86,10 +86,10 @@ model:
   diffusion:
     beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.06                # Slightly increased for faster diffusion
+    beta_end: 0.08                # Slightly increased for faster diffusion
     num_diffusion_timesteps: 1000
     ema: True
-    ema_rate: 0.9999
+    ema_rate: 0.99999
   weather_config:
     weather_grid: True
     variables: 4
