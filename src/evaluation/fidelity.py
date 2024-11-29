@@ -168,7 +168,7 @@ if __name__ == '__main__':
     # Data loading and processing part remains similar to the original
     ori_data = np.random.rand(100, 200, 2)  # 100 samples, each with a sequence of length 10 and 5 features
     generated_data = np.random.rand(100, 200, 2)  # Synthetic data with the same shape as ori_data
-    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(original, synthetic)
+    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(ori_data, generated_data)
     print("Accuracy on test data:", accuracy)
     print("Discriminative Score:", score)
     print("Confusion Matrix:\n", conf_matrix)

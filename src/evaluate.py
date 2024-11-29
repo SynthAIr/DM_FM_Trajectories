@@ -27,7 +27,9 @@ from utils.helper import load_and_prepare_data, get_model
 from evaluation.diversity import data_diversity
 from evaluation.similarity import jensenshannon_distance
 from evaluation.time_series import duration_and_speed, timeseries_plot
+from evaluation.fidelity import discriminative_score
 from lightning.pytorch.loggers import MLFlowLogger
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 
@@ -468,6 +470,22 @@ def run(args, logger = None):
         model_name=model_name
     )
     logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
+    
+    # NOTE THIS IS PERHAPS NOT THE BEST WAY TO DO THIS BECAUSE USES RECONSRUCTED NOT GENERATED TRAFFIC
+    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories, synthetic_trajectories)
+    logger.log_metrics({"Discriminator_Accuracy": accuracy, "Discriminator_Score": score, "Discriminator_TPR": tpr, "Discriminator_TNR": tnr})
+    print("Accuracy on test data:", accuracy)
+    print("Discriminative Score:", score)
+    print("Confusion Matrix:\n", conf_matrix)
+    print("True Positive Rate (TPR):", tpr)
+    print("True Negative Rate (TNR):", tnr)
+    
+    # Visualize the confusion matrix
+    disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=['Synthetic', 'Original'])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.savefig("figures/fidelity")
+    logger.experiment.log_figure(logger.run_id, disp.figure_, f"figures/fidelity.png")
 
 
 
