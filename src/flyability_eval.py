@@ -416,12 +416,12 @@ def plot_distances_cumulative_distributions(
     )
 
 
-def run(args: argparse.Namespace) -> None:
+def run(training_data_path: str, synthetic_data_path: str) -> None:
 
-    simulation_time = get_longest_non_outlier_flight_duration(args.data_path)
-    ADEP_code, ADES_code, geographic_extent = extract_geographic_info(args.data_path)
+    simulation_time = get_longest_non_outlier_flight_duration(training_data_path)
+    ADEP_code, ADES_code, geographic_extent = extract_geographic_info(training_data_path)
     most_common_ac_type = "A319"
-    generated_trajectories = Traffic.from_file(args.gen_dir)
+    generated_trajectories = Traffic.from_file(synthetic_data_path)
 
 
     #  traj.data["AC Type"] = AC_type
@@ -444,9 +444,9 @@ def run(args: argparse.Namespace) -> None:
 
     #SimuTrajs_list = simulate_traffic(GenTrajs_list, simulation_config)
     #SimuTrajs_list = filter_simulated_traffic(SimuTrajs_list, args.data_path)
-    plot_simulation_results(generated_trajectories,simulated_trajectories , args.data_path)
+    plot_simulation_results(generated_trajectories,simulated_trajectories , training_data_path)
 
-    ADEP_lat, ADEP_lon = extract_airport_coordinates(args.data_path)
+    ADEP_lat, ADEP_lon = extract_airport_coordinates(training_data_path)
 
     all_distances_results = {
         "DTW Euclidean": [],
@@ -482,7 +482,7 @@ def evaluate_flyability():
     parser.add_argument("--gen_dir", type=str, help="Path to the generated data.")
 
     args = parser.parse_args()
-    run(args)
+    run(args.data_path, args.gen_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate the synthetic trajectories.")
@@ -490,4 +490,4 @@ if __name__ == "__main__":
     parser.add_argument("--gen_dir", type=str, help="Path to the generated data.")
 
     args = parser.parse_args()
-    run(args)
+    run(args.data_path, args.gen_dir)
