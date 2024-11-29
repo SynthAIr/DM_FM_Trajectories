@@ -21,7 +21,7 @@ from matplotlib.colors import Normalize
 from mpl_toolkits.basemap import Basemap
 from traffic.core import Traffic
 
-from .flyability_utils import (clean, discret_frechet, e_dtw, e_edr, e_erp,
+from evaluation.flyability_utils import (clean, discret_frechet, e_dtw, e_edr, e_erp,
                           e_hausdorff, e_lcss, e_sspd, frechet, s_dtw, s_edr,
                           s_erp, s_hausdorff, s_lcss, s_sspd, simulate)
 from utils import extract_airport_coordinates, extract_geographic_info
@@ -157,7 +157,8 @@ def simulate_traffic(
     SimTrajs_list = []
     for i, traffic in enumerate(traffic_list):
         print(f"Simulating traffic {i}")
-        SimTrajs_list.append(simulate(traffic, config))
+        simulated_trajectories = simulate(generated_trajectories, simulation_config)
+        #SimTrajs_list.append(simulate(traffic, config))
         clean()
 
     return SimTrajs_list
@@ -419,22 +420,31 @@ def run(args: argparse.Namespace) -> None:
 
     simulation_time = get_longest_non_outlier_flight_duration(args.data_path)
     ADEP_code, ADES_code, geographic_extent = extract_geographic_info(args.data_path)
-    most_common_ac_type = get_most_common_ac_type(args.data_path)
-    GenTrajs_list = load_and_edit_generated_trajectories(
-        args.gen_dir, "TCVAE", most_common_ac_type
-    )
+    most_common_ac_type = "A319"
+    generated_trajectories = Traffic.from_file(args.gen_dir)
+
+
+    #  traj.data["AC Type"] = AC_type
+    generated_trajectories.data["AC Type"] = most_common_ac_type
 
     simulation_config = {
-        "delta": 1000,
+        "delta": 2000,
         "batch_size": 256,
         "early_batch_stop": False,
         "logs_directory": os.path.expanduser("~/bluesky/output/"),
         "simulation_time": simulation_time,
     }
 
-    SimuTrajs_list = simulate_traffic(GenTrajs_list, simulation_config)
-    SimuTrajs_list = filter_simulated_traffic(SimuTrajs_list, args.data_path)
-    plot_simulation_results(GenTrajs_list, SimuTrajs_list, args.data_path)
+    simulated_trajectories = simulate(generated_trajectories, simulation_config)
+    clean()
+
+    # SimuTrajs_list = filter_simulated_traffic(SimuTrajs_list, args.data_path)
+    simulated_trajectories = filter_simulated_traffic(simulated_trajectories, training_data_path)
+
+
+    #SimuTrajs_list = simulate_traffic(GenTrajs_list, simulation_config)
+    #SimuTrajs_list = filter_simulated_traffic(SimuTrajs_list, args.data_path)
+    plot_simulation_results(generated_trajectories,simulated_trajectories , args.data_path)
 
     ADEP_lat, ADEP_lon = extract_airport_coordinates(args.data_path)
 
@@ -456,7 +466,7 @@ def run(args: argparse.Namespace) -> None:
     }
 
     print("Calculating distances between generated and simulated trajectories...")
-    for gen_traj, simulated_traj in zip(GenTrajs_list, SimuTrajs_list):
+    for gen_traj, simulated_traj in zip(generated_trajectories,simulated_trajectories):
         distances = calculate_trajectory_distances(
             gen_traj, simulated_traj, ADEP_lat, ADEP_lon
         )

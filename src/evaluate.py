@@ -404,7 +404,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=50, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=2, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -413,8 +413,8 @@ def run(args, logger = None):
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
-    fig_landing = plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = True)
-    fig_takeoff = plot_traffic_comparison(reconstructions, 10, f"./figures/{model_name}_", landing = False)
+    fig_landing = plot_traffic_comparison(reconstructions, 2, f"./figures/{model_name}_", landing = True)
+    fig_takeoff = plot_traffic_comparison(reconstructions, 2, f"./figures/{model_name}_", landing = False)
     logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
     logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
     length = config['data']['length']
@@ -432,9 +432,9 @@ def run(args, logger = None):
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
     X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
     fig_pca = data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
-    fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
+    #fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
-    logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
+    #logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
 
 
     reconstructed_traf = trajectory_generation_model.build_traffic(
@@ -456,7 +456,7 @@ def run(args, logger = None):
     units = {
         'latitude': '°',
         'longitude': '°',
-        'altitude': 'ft',
+        'altitude': 'm',
         'timedelta': 's'
     }
 

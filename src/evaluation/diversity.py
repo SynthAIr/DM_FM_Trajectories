@@ -36,7 +36,7 @@ def data_diversity(ori_data, generated_data, analysis, average_dimension='sequen
         - average_dimension (string): flatten along 'sequence' or 'samples' dimension
         - max_sample_size (int): maximum sample size for computational speed
     """
-    plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(8, 8))
     plt.rcParams.update({'font.size': 14})
     
     # Determine the analysis sample size (minimum of 1000 or the length of the original data)

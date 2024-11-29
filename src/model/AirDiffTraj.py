@@ -680,7 +680,7 @@ class AirDiffTraj(L.LightningModule):
             x_t, noise = self.q_xt_x0(x, t)
             for i in tqdm(range(self.n_steps-1, -1, -1)):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
-                if i % 50 == 0:
+                if i % 200 == 0:
                     steps.append(x_t.clone().detach())
 
         return x_t, steps
@@ -697,7 +697,7 @@ class AirDiffTraj(L.LightningModule):
             x_t = torch.randn(n, *(7, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
-                if i % 50 == 0:
+                if i % 200 == 0:
                     steps.append(x_t.clone().detach())
         return x_t, steps
 
