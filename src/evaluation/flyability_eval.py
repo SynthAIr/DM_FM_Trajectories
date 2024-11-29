@@ -8,6 +8,9 @@ import os
 import pickle
 import re
 from typing import Any, Dict, List, Tuple
+import scipy.stats as stats
+
+from matplotlib.figure import Figure
 
 import cartopy.crs as ccrs
 import cartopy.feature
@@ -166,7 +169,7 @@ def simulate_traffic(
 
 def plot_simulation_results(
     GenTrajs_list: List[Traffic], SimuTrajs_list: List[Traffic], training_data_path: str
-) -> None:
+) -> Figure:
 
     ADEP_code, ADES_code, geographic_extent = extract_geographic_info(
         training_data_path
@@ -271,6 +274,7 @@ def plot_simulation_results(
     plt.savefig(
         "./results/evaluation/figures/generated_vs_simulated_trajectories.png", bbox_inches="tight"
     )
+    return fig
 
 
 def calculate_trajectory_distances(
@@ -361,7 +365,7 @@ def calculate_trajectory_distances(
 
 def plot_distances_cumulative_distributions(
     all_distances_results: Dict[str, List[float]]
-) -> None:
+) -> Figure:
     n_metrics = len(all_distances_results)
     ncols = 2
     nrows = (n_metrics + ncols - 1) // ncols
@@ -417,9 +421,138 @@ def plot_distances_cumulative_distributions(
     plt.savefig(
         "./results/evaluation/figures/distances_cumulative_distributions.png", bbox_inches="tight"
     )
+    return fig
 
 
-def run(training_data_path: str, synthetic_data_path: str) -> None:
+def create_percentile_plot(data, output_filename):
+    """
+    Creates a percentile plot from the given dataframe and saves it to the specified file.
+    
+    Parameters:
+        data (pd.DataFrame): The input dataframe containing data to plot.
+        output_filename (str): Path to save the resulting plot.
+    """
+    # Set up seaborn style
+    sns.set(style="whitegrid")
+    sns.set_style("whitegrid", {'axes.grid': True, 'grid.color': '.8', 'grid.linestyle': ':'})
+    
+    # Define a custom color palette (colorblind-friendly)
+    custom_colors = [
+        "#0077BB",  # Blue
+        "#33BBEE",  # Cyan
+        "#009988",  # Teal
+        "#EE7733",  # Orange
+        "#CC3311",  # Red
+        "#EE3377",  # Magenta
+        "#BBBBBB",  # Grey
+    ]
+    
+    # Define line styles
+    line_styles = ['-', '--', '-.', ':']
+
+    # Set up the figure and axes
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Prepare the plot
+    num_columns = len(data.columns)
+    colors = custom_colors * (num_columns // len(custom_colors) + 1)
+    styles = line_styles * (num_columns // len(line_styles) + 1)
+
+    for idx, column in enumerate(data.columns):
+        column_data = data[column]
+        percentiles = [stats.percentileofscore(column_data, value) for value in column_data]
+        ax.plot(sorted(column_data), sorted(percentiles),
+                label=column,
+                color=colors[idx],
+                linestyle=styles[idx],
+                linewidth=3)
+
+    # Customize the plot
+    ax.set_xlabel('Distance (log scale)', fontsize=14)
+    ax.set_ylabel('Percentile', fontsize=14)
+    ax.set_xscale('log')
+    ax.grid(True, linestyle='--', alpha=0.7, color='#CCCCCC')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+
+    # Add a box around the plot
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_linewidth(1.5)
+
+    # Customize legend
+    legend = ax.legend(fontsize=12,
+                       loc='center left',
+                       bbox_to_anchor=(0.86, 0.5),
+                       frameon=True,
+                       fancybox=True,
+                       shadow=True,
+                       borderpad=1)
+    legend.set_title("Metrics", prop={'size': 14})
+
+    # Adjust the layout and save
+    plt.tight_layout()
+    plt.savefig(output_filename, bbox_inches='tight')
+    return fig
+
+
+def create_correlation_heatmap(data, output_filename, title=None):
+    """
+    Creates a correlation heatmap from the given dataframe and saves it to the specified file.
+    
+    Parameters:
+        data (pd.DataFrame): The input dataframe containing the data for correlation computation.
+        output_filename (str): Path to save the resulting heatmap.
+        title (str, optional): Title of the heatmap. Defaults to None.
+    """
+    sns.set(style="whitegrid")
+    
+    # Compute the correlation matrix
+    correlation_matrix = data.corr()
+    
+    # Create a mask to hide the upper triangle
+    mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
+    
+    # Set up the figure size
+    fig = plt.figure(figsize=(12, 8))
+    
+    # Create the heatmap with additional styling
+    heatmap = sns.heatmap(correlation_matrix,
+                          annot=True,
+                          fmt='.2f',
+                          cmap='RdBu_r',  # A more color-blind friendly palette
+                          vmin=-1, vmax=1,
+                          center=0,
+                          linewidths=0.5,
+                          linecolor='white',
+                          cbar_kws={'shrink': 0.8, 'aspect': 30, 'label': 'Correlation Coefficient'},
+                          square=True,
+                          mask=mask)  # Apply the mask to hide upper triangle
+    
+    # Add title if provided
+    if title:
+        plt.title(title, fontsize=20, weight='bold', pad=20)
+    
+    # Customize tick labels
+    plt.xticks(fontsize=12, rotation=45, ha='right')
+    plt.yticks(fontsize=12, rotation=0)
+    
+    # Adjust colorbar label
+    cbar = heatmap.collections[0].colorbar
+    cbar.ax.set_ylabel('Correlation Coefficient', fontsize=14, labelpad=15)
+    cbar.ax.tick_params(labelsize=12)
+    
+    # Add a subtle border around the heatmap
+    heatmap.figure.axes[0].add_artist(plt.Rectangle((0, 0), 1, 1, fill=False, edgecolor='gray', lw=1))
+    
+    # Adjust layout and save
+    plt.tight_layout()
+    plt.savefig(output_filename, bbox_inches='tight')
+    return fig
+
+
+
+def run(training_data_path: str, synthetic_data_path: str, logger = None) -> None:
 
     simulation_time = get_longest_non_outlier_flight_duration(training_data_path)
     ADEP_code, ADES_code, geographic_extent = extract_geographic_info(training_data_path)
@@ -447,7 +580,7 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
 
     #SimuTrajs_list = simulate_traffic(GenTrajs_list, simulation_config)
     #SimuTrajs_list = filter_simulated_traffic(SimuTrajs_list, args.data_path)
-    plot_simulation_results(generated_trajectories,simulated_trajectories , training_data_path)
+    fig_simulation = plot_simulation_results(generated_trajectories,simulated_trajectories , training_data_path)
 
     ADEP_lat, ADEP_lon = extract_airport_coordinates(training_data_path)
 
@@ -485,21 +618,35 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
     print("Saving to distances to CSV")
     df.to_csv(file_path, index=False)
 
-    plot_distances_cumulative_distributions(all_distances_results)
+    fig_distance = plot_distances_cumulative_distributions(all_distances_results)
 
+    if logger:
+        logger.experiment.log_figure(logger.run_id,fig_simulation, f"figures/flyability_synthetic_simulation.png")
+        logger.experiment.log_figure(logger.run_id,fig_distance, f"figures/flyability_distances.png")
 
-def evaluate_flyability():
-    parser = argparse.ArgumentParser(description="Evaluate the synthetic trajectories.")
-    parser.add_argument("--data_path", type=str, help="Path to the real data.")
-    parser.add_argument("--gen_dir", type=str, help="Path to the generated data.")
+    def get_euclidean(df: pd.DataFrame) -> pd.DataFrame:
+        df_euclidean = df.filter(like="Euclidean").copy()  # Filter columns with Euclidean metrics and create a copy
+        df_euclidean.loc[:, 'Frechet'] = df['Frechet']
+        df_euclidean.loc[:, 'Discrete Frechet'] = df['Discrete Frechet']
+        df_euclidean.columns = df_euclidean.columns.str.replace('Euclidean', '').str.strip()
+        df_euclidean.columns = df_euclidean.columns.str.replace('Discrete', 'Dis.').str.strip()
 
-    args = parser.parse_args()
-    run(args.data_path, args.gen_dir)
+    def get_sphereical(df: pd.DataFrame) -> pd.DataFrame:
+        df_spherical = df.filter(like="Spherical")  # Filter columns with Spherical metrics
+        # Add Frechet distance to Euclidean metrics using .loc to avoid SettingWithCopyWarning
+        df_spherical.columns = df_spherical.columns.str.replace('Spherical', '').str.strip()
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate the synthetic trajectories.")
-    parser.add_argument("--data_path", type=str, help="Path to the real data.")
-    parser.add_argument("--gen_dir", type=str, help="Path to the generated data.")
+    df_euclidean = get_euclidean(df)
+    df_spherical = get_sphereical(df)
 
-    args = parser.parse_args()
-    run(args.data_path, args.gen_dir)
+    fig_euc = create_percentile_plot(df_euclidean, "results/evaluation/figures/euclidean_percentile_plot.png")
+    fig_sph = create_percentile_plot(df_spherical, "results/evaluation/figures/spherical_percentile_plot.png")
+    corr_euc = create_correlation_heatmap(df_euclidean, 'figures/correlation_heatmap_euclidean.png', title='Correlation Heatmap (Euclidean)')
+    corr_sph = create_correlation_heatmap(df_spherical, 'figures/correlation_heatmap_spherical.png', title='Correlation Heatmap (Spherical)')
+
+    if logger:
+        logger.experiment.log_figure(logger.run_id,fig_euc, f"figures/euclidean_percentile.png")
+        logger.experiment.log_figure(logger.run_id,fig_sph, f"figures/spherical_percentile.png")
+        logger.experiment.log_figure(logger.run_id,corr_euc, f"figures/correlation_heatmap_euclidean.png")
+        logger.experiment.log_figure(logger.run_id,corr_sph, f"figures/correlation_heatmap_spherical.png")
+    

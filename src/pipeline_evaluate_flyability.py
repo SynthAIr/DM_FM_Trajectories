@@ -22,11 +22,14 @@ from matplotlib.colors import Normalize
 from mpl_toolkits.basemap import Basemap
 from traffic.core import Traffic
 
+from utils.helper import load_config
+
 from evaluation.flyability_utils import (clean, discret_frechet, e_dtw, e_edr, e_erp,
                           e_hausdorff, e_lcss, e_sspd, frechet, s_dtw, s_edr,
                           s_erp, s_hausdorff, s_lcss, s_sspd, simulate)
 from utils.helper import extract_geographic_info
 from evaluation.flyability_eval import run as eval_run
+from lightning.pytorch.loggers import MLFlowLogger
 
 from traffic.data import airports
 def extract_airport_coordinates(
@@ -170,11 +173,35 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Evaluate the synthetic trajectories.")
     parser.add_argument("--dataset_file", type=str, help="Path to the training data file.")
+    #parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
     parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="AirDiffTraj_5",
+        help="Name of the model (e.g., 'AirDiffTraj_5')."
+    )
+
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        #required=True,
+        default="./configs/config.yaml",
+        help="Path to the config file"
+    )
 
     args = parser.parse_args()
+    configs = load_config(args.config_file)
+    logger_config = configs["logger"]
+    l_logger = MLFlowLogger(
+        experiment_name="Flyability Evaluation",
+        run_name=args.model_name,
+        tracking_uri=logger_config["mlflow_uri"],
+        tags=logger_config["tags"],
+        #artifact_location=args.artifact_location,
+    )
     #run(args.dataset_file, args.synthetic_data_file)
-    eval_run(args.dataset_file, args.synthetic_data_file)
+    eval_run(args.dataset_file, args.synthetic_data_file, l_logger)
 
 if __name__ == "__main__":
     main()

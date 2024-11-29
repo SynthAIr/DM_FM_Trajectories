@@ -4,7 +4,7 @@ from typing import Any, Dict, Tuple
 import torch
 from train import run as train_run
 from evaluate import run as evaluate_run
-from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.loggerj import MLFlowLogger
 from utils.helper import load_config
 
 def run(args):
