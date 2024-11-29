@@ -26,6 +26,7 @@ from evaluation.flyability_utils import (clean, discret_frechet, e_dtw, e_edr, e
                           e_hausdorff, e_lcss, e_sspd, frechet, s_dtw, s_edr,
                           s_erp, s_hausdorff, s_lcss, s_sspd, simulate)
 from utils.helper import extract_geographic_info
+from evaluation.flyability_eval import run as eval_run
 
 from traffic.data import airports
 def extract_airport_coordinates(
@@ -172,7 +173,8 @@ def main():
     parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
 
     args = parser.parse_args()
-    run(args.dataset_file, args.synthetic_data_file)
+    #run(args.dataset_file, args.synthetic_data_file)
+    eval_run(args.dataset_file, args.synthetic_data_file)
 
 if __name__ == "__main__":
     main()

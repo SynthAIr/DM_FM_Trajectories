@@ -191,7 +191,7 @@ def plot_simulation_results(
         for i, t in enumerate(trajectories):
             color = colormap(color_norm(i))
             t.plot(ax, alpha=0.1, color=color, linewidth=1)
-            t["TRAJ_0"].plot(ax, color=color, linewidth=2)
+            #t["TRAJ_0"].plot(ax, color=color, linewidth=2)
         ax.set_title(title)
         ax.coastlines()
         ax.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
@@ -308,7 +308,10 @@ def calculate_trajectory_distances(
     # To convert 1 kilometer to a degree measure for latitude: 1 km ≈ 1/111 ≈ 0.009 degrees.
     eps = 0.009  # For LCSS and EDR
 
-    for flight, simulated_flight in zip(gen_traj, simulated_traj):
+    for i in range(len(gen_traj)):
+    #for flight, simulated_flight in zip(gen_traj, simulated_traj):
+        flight = gen_traj[i]
+        simulated_flight = simulated_traj[i]
         trajectory_gen = flight.data[["latitude", "longitude"]].values
         trajectory_sim = simulated_flight.data[["latitude", "longitude"]].values
 
@@ -466,12 +469,21 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
     }
 
     print("Calculating distances between generated and simulated trajectories...")
-    for gen_traj, simulated_traj in zip(generated_trajectories,simulated_trajectories):
-        distances = calculate_trajectory_distances(
-            gen_traj, simulated_traj, ADEP_lat, ADEP_lon
-        )
-        for key, values in distances.items():
-            all_distances_results[key].extend(values)
+    #for gen_traj, simulated_traj in zip(generated_trajectories,simulated_trajectories):
+    distances = calculate_trajectory_distances(
+        generated_trajectories, simulated_trajectories, ADEP_lat, ADEP_lon
+    )
+    for key, values in distances.items():
+        all_distances_results[key].extend(values)
+
+
+    # Convert the dictionary to a DataFrame
+
+    df = pd.DataFrame(all_distances_results)
+    # Save the DataFrame to a CSV file
+    file_path = synthetic_data_path.replace(".pkl", "_distances.csv")
+
+    df.to_csv(file_path, index=False)
 
     plot_distances_cumulative_distributions(all_distances_results)
 
