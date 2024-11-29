@@ -630,11 +630,13 @@ def run(training_data_path: str, synthetic_data_path: str, logger = None) -> Non
         df_euclidean.loc[:, 'Discrete Frechet'] = df['Discrete Frechet']
         df_euclidean.columns = df_euclidean.columns.str.replace('Euclidean', '').str.strip()
         df_euclidean.columns = df_euclidean.columns.str.replace('Discrete', 'Dis.').str.strip()
+        return df_euclidean
 
     def get_sphereical(df: pd.DataFrame) -> pd.DataFrame:
         df_spherical = df.filter(like="Spherical")  # Filter columns with Spherical metrics
         # Add Frechet distance to Euclidean metrics using .loc to avoid SettingWithCopyWarning
         df_spherical.columns = df_spherical.columns.str.replace('Spherical', '').str.strip()
+        return df_spherical
 
     df_euclidean = get_euclidean(df)
     df_spherical = get_sphereical(df)
