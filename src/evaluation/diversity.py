@@ -92,6 +92,7 @@ def data_diversity(ori_data, generated_data, analysis, average_dimension='sequen
     plt.ylabel('y-pca' if analysis == 'PCA' else 'y-tsne')
     plt.legend()
     plt.savefig(f'./figures/{model_name}_diversity_{analysis}', dpi=400, bbox_inches='tight')
+    return fig
 
 
 

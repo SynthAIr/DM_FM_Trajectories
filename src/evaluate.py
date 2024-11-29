@@ -431,8 +431,11 @@ def run(args, logger = None):
     
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
     X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
-    data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
-    data_diversity(X, X_gen, 't-SNE', model_name = model_name)
+    fig_pca = data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
+    fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
+    logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
+    logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
+
 
     reconstructed_traf = trajectory_generation_model.build_traffic(
     decoded,
