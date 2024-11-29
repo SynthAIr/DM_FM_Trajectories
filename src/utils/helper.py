@@ -6,6 +6,7 @@ from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTraj, AirDiffTrajDDIM ,AirDiffTrajDDPM
+from typing import Tuple
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -61,4 +62,23 @@ def get_model(configs):
         case _:
             return AirDiffTrajDDPM
 
+def extract_geographic_info(
+    trajectories: Traffic,
+    lon_padding: float = 1,
+    lat_padding: float = 1,
+) -> Tuple[float, float, float, float, float, float]:
 
+    # Determine the geographic bounds for plotting
+    lon_min = trajectories.data["longitude"].min()
+    lon_max = trajectories.data["longitude"].max()
+    lat_min = trajectories.data["latitude"].min()
+    lat_max = trajectories.data["latitude"].max()
+
+    geographic_extent = [
+        lon_min - lon_padding,
+        lon_max + lon_padding,
+        lat_min - lat_padding,
+        lat_max + lat_padding,
+    ]
+
+    return geographic_extent

@@ -441,6 +441,7 @@ def run(args, logger = None):
     )
     fig_2 = plot_from_array(reconstructed_traf, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
+    reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
 
     training_trajectories = reconstructions[0]
     synthetic_trajectories = reconstructions[1]
