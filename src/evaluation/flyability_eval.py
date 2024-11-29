@@ -482,7 +482,7 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
     df = pd.DataFrame(all_distances_results)
     # Save the DataFrame to a CSV file
     file_path = synthetic_data_path.replace(".pkl", "_distances.csv")
-
+    print("Saving to distances to CSV")
     df.to_csv(file_path, index=False)
 
     plot_distances_cumulative_distributions(all_distances_results)
