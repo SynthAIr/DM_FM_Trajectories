@@ -406,7 +406,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=2, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=10, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -421,7 +421,7 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
     length = config['data']['length']
 
-    samples, steps = generate_samples(dataset, model, rnd, n = 3, length = length)
+    samples, steps = generate_samples(dataset, model, rnd, n = 1, length = length)
     fig_99 = get_figure_from_sample_steps(steps, dataset, length)
     fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
     logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")

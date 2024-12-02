@@ -160,6 +160,7 @@ def discriminative_score(original_data, synthetic_data, test_size=0.2):
     - tnr (float): True Negative Rate (Specificity)
     """
     ori_train, ori_test, syn_train, syn_test = split_data(original_data, synthetic_data, test_size)
+    print(ori_train.shape, ori_test.shape, syn_train.shape, syn_test.shape)
     input_dim = ori_train.shape[2]
     discriminator = train_discriminator(ori_train, syn_train, input_dim)
     accuracy, score, conf_matrix, tpr, tnr = evaluate_discriminator(discriminator, ori_test, syn_test)
