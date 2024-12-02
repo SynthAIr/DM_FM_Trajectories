@@ -226,7 +226,8 @@ def build_scenario(flight):
     init_point = flight.data.iloc[0]
     with open(fname, "w") as f:
         f.write(
-            f"00:00:00.00>CRE {fid} {flight.data.iloc[0]['AC Type']} {init_point['latitude']} {init_point['longitude']} {get_initial_heading(flight)} {init_point['altitude']} {get_initial_speed(flight)}\n"
+            f"00:00:00.00>CRE {fid} {flight.data.iloc[0]['AC Type']} {init_point['latitude']} {init_point['longitude']} {get_initial_heading(flight)} {init_point['altitude']} {init_point['groundspeed']}\n"
+            #f"00:00:00.00>CRE {fid} {flight.data.iloc[0]['AC Type']} {init_point['latitude']} {init_point['longitude']} {get_initial_heading(flight)} {init_point['altitude']} {get_initial_speed(flight)}\n"
         )
         # remove AC Type
         # f.write(f"00:00:00.00>CRE {fid} {init_point['latitude']} {init_point['longitude']} {get_initial_heading(flight)} {init_point['altitude']} {get_initial_speed(flight)}\n")

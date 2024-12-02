@@ -472,7 +472,8 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
     
     # NOTE THIS IS PERHAPS NOT THE BEST WAY TO DO THIS BECAUSE USES RECONSRUCTED NOT GENERATED TRAFFIC
-    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories.data.to_numpy(), synthetic_trajectories.data.to_numpy())
+
+    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, 200, 3), synthetic_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
     logger.log_metrics({"Discriminator_Accuracy": accuracy, "Discriminator_Score": score, "Discriminator_TPR": tpr, "Discriminator_TNR": tnr})
     print("Accuracy on test data:", accuracy)
     print("Discriminative Score:", score)
@@ -487,6 +488,7 @@ def run(args, logger = None):
     plt.savefig("figures/fidelity")
     logger.experiment.log_figure(logger.run_id, disp.figure_, f"figures/fidelity.png")
 
+    logger.finalize()
 
 
 if __name__ == "__main__":

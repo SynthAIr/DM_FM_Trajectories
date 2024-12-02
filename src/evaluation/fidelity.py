@@ -159,6 +159,7 @@ def discriminative_score(original_data, synthetic_data, test_size=0.2):
     - tpr (float): True Positive Rate (Sensitivity)
     - tnr (float): True Negative Rate (Specificity)
     """
+    print(original_data.shape, synthetic_data.shape)
     ori_train, ori_test, syn_train, syn_test = split_data(original_data, synthetic_data, test_size)
     print(ori_train.shape, ori_test.shape, syn_train.shape, syn_test.shape)
     input_dim = ori_train.shape[2]

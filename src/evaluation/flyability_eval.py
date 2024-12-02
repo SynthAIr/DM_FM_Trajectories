@@ -561,7 +561,7 @@ def run(training_data_path: str, synthetic_data_path: str, logger = None) -> Non
 
 
     #  traj.data["AC Type"] = AC_type
-    generated_trajectories.data["AC Type"] = most_common_ac_type
+    #generated_trajectories.data["AC Type"] = most_common_ac_type
 
     simulation_config = {
         "delta": 2000,
