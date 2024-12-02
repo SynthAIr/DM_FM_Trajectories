@@ -52,6 +52,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 for n in range(target_length):
                     traffic_obj.data.loc[n,'altitude'] = clean_trajectory_data(traffic_obj.data.loc[n], 'altitude',n, 2.5)
                     traffic_obj.data.loc[n,'groundspeed'] = clean_trajectory_data(traffic_obj.data.loc[n], 'groundspeed',n, 2.5)
+                    traffic_obj.data.loc[n,'vertical_rate'] = clean_trajectory_data(traffic_obj.data.loc[n], 'vertical_rate',n, 2.5)
 
                 print("Cleaning Altitudes")
                 cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in traffic_obj]
