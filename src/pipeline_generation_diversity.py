@@ -36,15 +36,17 @@ def run(args, logger = None):
     batch_size = dataset_config["batch_size"]
     
     rnd = None
+    ## Should check for generated samples not reconstructions
     for w_i in w:
         model.guidance_scale = w_i
         reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name, rnd = rnd)
         logger.log_metrics({f"Eval_MSE_{w_i}": mse})
         logger.experiment.log_figure(logger.run_id, fig_0, f"Eval_{w_i}_reconstruction.png")
-        #print(reconstructions[1].data)
         JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
         logger.experiment.log_figure(logger.run_id, fig_1, f"Eval_{w_i}_comparison.png")
         logger.log_metrics({f"Eval_edistance_{w_i}": e_distance, f"Eval_JSD_{w_i}": JSD, f"Eval_KL_{w_i}": KL})
+
+    logger.finalize()
 
 
 if __name__ == "__main__":
