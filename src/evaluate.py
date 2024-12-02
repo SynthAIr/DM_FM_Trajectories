@@ -406,7 +406,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=50, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=2, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -472,7 +472,7 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
     
     # NOTE THIS IS PERHAPS NOT THE BEST WAY TO DO THIS BECAUSE USES RECONSRUCTED NOT GENERATED TRAFFIC
-    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories, synthetic_trajectories)
+    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories.data.to_numpy(), synthetic_trajectories.data.to_numpy())
     logger.log_metrics({"Discriminator_Accuracy": accuracy, "Discriminator_Score": score, "Discriminator_TPR": tpr, "Discriminator_TNR": tnr})
     print("Accuracy on test data:", accuracy)
     print("Discriminative Score:", score)

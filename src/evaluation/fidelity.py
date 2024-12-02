@@ -57,6 +57,7 @@ def split_data(original_data, synthetic_data, test_size=0.25):
     - syn_train (array): synthetic data for training
     - syn_test (array): synthetic data for testing
     """
+    #print(original_data.shape, synthetic_data.shape)
     ori_train, ori_test = train_test_split(original_data, test_size=test_size)
     syn_train, syn_test = train_test_split(synthetic_data, test_size=test_size)
     return ori_train, ori_test, syn_train, syn_test

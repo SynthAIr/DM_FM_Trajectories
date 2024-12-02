@@ -89,7 +89,7 @@ model:
     beta_end: 0.08                # Slightly increased for faster diffusion
     num_diffusion_timesteps: 1000
     ema: True
-    ema_rate: 0.99999
+    ema_rate: 0.999999
   weather_config:
     weather_grid: True
     variables: 4
