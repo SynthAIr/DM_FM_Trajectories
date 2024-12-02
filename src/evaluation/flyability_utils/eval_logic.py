@@ -224,6 +224,10 @@ def build_scenario(flight):
     if not os.path.exists(os.path.join(BASE_DIR, "scenarios")):
         os.makedirs(os.path.join(BASE_DIR, "scenarios"))
     init_point = flight.data.iloc[0]
+    # m to feet
+    init_point['altitude'] = init_point['altitude'] * 3.28084
+    # m/s to knots
+    init_point['groundspeed'] = init_point['groundspeed'] * 1.94384
     with open(fname, "w") as f:
         f.write(
             f"00:00:00.00>CRE {fid} {flight.data.iloc[0]['AC Type']} {init_point['latitude']} {init_point['longitude']} {get_initial_heading(flight)} {init_point['altitude']} {init_point['groundspeed']}\n"
@@ -393,6 +397,9 @@ def simulate(traffic: Traffic, config: dict, debug=False):
 
     # df = pd.concat(reconstructions, axis=0).drop(columns=['index'])
     df = pd.concat(reconstructions, axis=0)  # .drop(columns=['index'])
+    df['altitude'] = df['altitude']* 0.3048
+    # Knots to m/s
+    df['groundspeed'] = df['groundspeed']* 0.514444
     df.index.rename("index", inplace=True)
     recons = Traffic(df)
     return recons

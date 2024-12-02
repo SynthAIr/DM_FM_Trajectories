@@ -38,7 +38,14 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             print("duplicates dropped")
             traffic_obj = traffic_obj.resample(target_length).eval()
             print("resampled")
+
+            #feet to m
             traffic_obj.data['altitude'] = traffic_obj.data['altitude'] * 0.3048
+            # Knots to m/s
+            traffic_obj.data['groundspeed'] = traffic_obj.data['groundspeed'] * 0.514444
+            # f/min to m/s 
+            traffic_obj.data['vertical_rate'] = traffic_obj.data['vertical_rate'] * 0.00508
+
             
             if filter_alt:
                 print("Filtering Altitude")
@@ -79,7 +86,7 @@ if __name__ == "__main__":
     #directory = "./data"
     
     # Desired target length for all trajectories
-    target_length = 400
+    target_length = 200
     filter_alt = True
     # Change as per your requirements
     

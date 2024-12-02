@@ -560,8 +560,7 @@ def run(training_data_path: str, synthetic_data_path: str, logger = None) -> Non
     generated_trajectories = Traffic.from_file(synthetic_data_path)
 
 
-    #  traj.data["AC Type"] = AC_type
-    #generated_trajectories.data["AC Type"] = most_common_ac_type
+    generated_trajectories.data["AC Type"] = most_common_ac_type
 
     simulation_config = {
         "delta": 2000,
@@ -651,4 +650,5 @@ def run(training_data_path: str, synthetic_data_path: str, logger = None) -> Non
         logger.experiment.log_figure(logger.run_id,fig_sph, f"figures/spherical_percentile.png")
         logger.experiment.log_figure(logger.run_id,corr_euc, f"figures/correlation_heatmap_euclidean.png")
         logger.experiment.log_figure(logger.run_id,corr_sph, f"figures/correlation_heatmap_spherical.png")
+        logger.finalize()
     
