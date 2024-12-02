@@ -342,6 +342,14 @@ def simulate(traffic: Traffic, config: dict, debug=False):
     # traffic = Traffic(df)
     # traffic = Traffic.from_file(trajectories_file)
 
+    for flight in traffic:
+        flight.data = flight.data[
+            ~((flight.data["altitude"] == 0) & (flight.data["altitude"].shift(-1) == 0))
+        ]
+
+        flight = remove_neighbours(flight)
+
+    """
     flights = []
     for flight in traffic:
         flight.data = flight.data[
@@ -349,10 +357,12 @@ def simulate(traffic: Traffic, config: dict, debug=False):
         ]
 
         flight = remove_neighbours(flight)
-        flight = add_ground_speed(flight)
+        ## Groundspeed already exists
+        #flight = add_ground_speed(flight)
 
         flights.append(flight)
     traffic = Traffic.from_flights(flights)
+    """
 
     print("### Building scenarios ###")
     # Build logger

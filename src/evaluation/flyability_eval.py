@@ -316,8 +316,8 @@ def calculate_trajectory_distances(
     #for flight, simulated_flight in zip(gen_traj, simulated_traj):
         flight = gen_traj[i]
         simulated_flight = simulated_traj[i]
-        trajectory_gen = flight.data[["latitude", "longitude"]].values
-        trajectory_sim = simulated_flight.data[["latitude", "longitude"]].values
+        trajectory_gen = flight.data[["latitude", "longitude", "altitude"]].values
+        trajectory_sim = simulated_flight.data[["latitude", "longitude", "altitude"]].values
 
         # Compute SSPD distances
         results["SSPD Euclidean"].append(e_sspd(trajectory_gen, trajectory_sim))
