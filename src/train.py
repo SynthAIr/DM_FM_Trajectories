@@ -20,6 +20,7 @@ def train(
     val_loader: torch.utils.data.DataLoader,
     test_loader: torch.utils.data.DataLoader,
     logger: MLFlowLogger,
+    artifact_location: str,
 ) -> None:
     seed_everything(train_config["seed"], workers=True)
 
@@ -39,7 +40,7 @@ def train(
             ),
             ModelCheckpoint(
                 monitor="valid_loss",
-                dirpath=logger._artifact_location,
+                dirpath=artifact_location,
                 filename="best_model",
                 save_top_k=1,
                 mode="min",
@@ -119,7 +120,7 @@ def run(args: argparse.Namespace):
 
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = configs["train"]
-    train(train_config, model, train_loader, val_loader, test_loader, l_logger)
+    train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
     # Save configuration used for the training in the logger's artifact location.
     save_config(configs, os.path.join(artifact_location, "config.yaml"))
 
