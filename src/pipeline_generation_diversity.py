@@ -10,7 +10,7 @@ from evaluation.similarity import jensenshannon_distance
 def run(args, logger = None):
     model_name = args.model_name
 
-    w = np.arange(0, 10, 2)
+    w = np.arange(0, 2, 0.25)
 
     data_path = args.data_path
     artifact_location= "./artifacts"
