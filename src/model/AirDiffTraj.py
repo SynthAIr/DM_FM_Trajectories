@@ -43,6 +43,28 @@ def get_timestep_embedding(timesteps, embedding_dim):
         emb = torch.nn.functional.pad(emb, (0, 1, 0, 0))
     return emb
 
+def swish(x):
+    return x * torch.sigmoid(x)
+
+def mish(x):
+    """Mish activation function."""
+    return x * torch.tanh(torch.nn.functional.softplus(x))
+
+def snake(self, x, a=0.5):
+    return x + (1 / a) * torch.sin(a * x)**2
+
+def nonlinearity(x, function = "snake"):
+    # swish
+    if function == "swish":
+        return swish(x)
+
+    if function == "mish":
+        return mish(x)
+
+    if function == "snake":
+        return snake(x)
+
+    return x * torch.sigmoid(x)
 
 class Attention(nn.Module):
     def __init__(self, embedding_dim):
@@ -75,9 +97,9 @@ class WeatherGrid(nn.Module):
 
     def forward(self, x):
         # Apply convolutions and pooling
-        x = self.pool(torch.relu(self.conv1(x)))  # (batch_size, 32, lat_len - 1, long_len - 1)
-        x = self.pool(torch.relu(self.conv2(x)))  # (batch_size, 64, lat_len - 2, long_len - 2)
-        x = self.pool(torch.relu(self.conv3(x)))  # (batch_size, 128, lat_len - 3, long_len - 3)
+        x = self.pool(nonlinearity(self.conv1(x)))  # (batch_size, 32, lat_len - 1, long_len - 1)
+        x = self.pool(nonlinearity(self.conv2(x)))  # (batch_size, 64, lat_len - 2, long_len - 2)
+        x = self.pool(nonlinearity(self.conv3(x)))  # (batch_size, 128, lat_len - 3, long_len - 3)
 
         # Flatten the output for the dense layer
         x = x.view(x.size(0), -1)  # Flatten to (batch_size, 128 * output_height * output_width)
@@ -123,7 +145,7 @@ class WideAndDeep(nn.Module):
         categorical_embed = torch.cat(
             (adep_embedding, ades_embedding, cluster_embedding), dim=1)
             #(adep_embedding, ades_embedding, cluster_embedding, phase_embedding), dim=1)
-        deep_out = F.relu(self.deep_fc1(categorical_embed))
+        deep_out = nonlinearity(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
         
@@ -150,9 +172,9 @@ class WeatherBlock(nn.Module):
 
     def forward(self, x):
         x = torch.cat([block(x[:,i]) for i, block in enumerate(self.blocks)], dim=1)
-        x = nn.functional.relu(x)
+        x = nonlinearity(x)
         x = self.fc1(x)
-        x = nn.functional.relu(x)
+        x = nonlinearity(x)
         x = self.fc2(x)
         return x
        
@@ -184,9 +206,6 @@ class EmbeddingBlock(nn.Module):
 
         return x
 
-def nonlinearity(x):
-    # swish
-    return x * torch.sigmoid(x)
 
 
 def Normalize(in_channels):

@@ -28,6 +28,7 @@ def extract_geographic_info(
     training_data = Traffic.from_file(training_data_path)
 
     # raise an error if there exists more than one destination airport or if there are more than one origin airport
+    # But why?
     if len(training_data.data["ADES"].unique()) > 1:
         raise ValueError("There are multiple destination airports in the training data")
     if len(training_data.data["ADES"].unique()) == 0:
