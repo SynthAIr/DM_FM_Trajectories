@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import lightning as L
 from tqdm import tqdm
 from utils.EMA import EMAHelper
+import torch.jit as jit
 
 
 """
@@ -50,10 +51,40 @@ def mish(x):
     """Mish activation function."""
     return x * torch.tanh(torch.nn.functional.softplus(x))
 
-def snake(self, x, a=0.5):
+def snake(x, a=1):
     return x + (1 / a) * torch.sin(a * x)**2
 
-def nonlinearity(x, function = "snake"):
+class SnakeActivation(jit.ScriptModule):
+    """
+    this version allows multiple values of `a` for different channels/num_features
+    """
+
+    def __init__(
+        self, num_features: int, dim: int, a_base=0.2, learnable=True, a_max=0.5
+    ):
+        super().__init__()
+        assert dim in [1, 2], "`dim` supports 1D and 2D inputs."
+
+        if learnable:
+            if dim == 1:  # (b d l); like time series
+                a = np.random.uniform(
+                    a_base, a_max, size=(1, num_features, 1)
+                )  # (1 d 1)
+                self.a = nn.Parameter(torch.tensor(a, dtype=torch.float32))
+            elif dim == 2:  # (b d h w); like 2d images
+                a = np.random.uniform(
+                    a_base, a_max, size=(1, num_features, 1, 1)
+                )  # (1 d 1 1)
+                self.a = nn.Parameter(torch.tensor(a, dtype=torch.float32))
+        else:
+            self.register_buffer("a", torch.tensor(a_base, dtype=torch.float32))
+
+    @jit.script_method
+    def forward(self, x):
+        return x + (1 / self.a) * torch.sin(self.a * x) ** 2
+
+
+def nonlinearity(x, function = "swish"):
     # swish
     if function == "swish":
         return swish(x)
@@ -184,8 +215,9 @@ class EmbeddingBlock(nn.Module):
         super().__init__()
         self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
         self.weather_config = weather_config
+        self.weather = weather_config and weather_config['weather_grid']
         
-        if weather_config:
+        if self.weather:
             variables = weather_config['variables']
             lat = weather_config['lat']
             lon = weather_config['lon']
@@ -199,7 +231,7 @@ class EmbeddingBlock(nn.Module):
     def forward(self, continuous_attrs, categorical_attrs, grid):
         x = self.wide_and_deep(continuous_attrs, categorical_attrs)
 
-        if self.weather_config:
+        if self.weather:
             #x = torch.cat([x, self.weather_block(grid)], dim=1)
             x = x + self.weather_block(grid)
             #x = self.fc1(nn.functional.relu(x))

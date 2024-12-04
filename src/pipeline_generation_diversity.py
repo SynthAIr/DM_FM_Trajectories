@@ -10,7 +10,7 @@ from evaluation.similarity import jensenshannon_distance
 def run(args, logger = None):
     model_name = args.model_name
 
-    w = np.arange(0, 2, 0.25)
+    w = np.arange(0, 1.25, 0.25)
 
     data_path = args.data_path
     artifact_location= "./artifacts"
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "--data_path",
         type=str,
         #required=True,
-        default="./data/resampled/combined_traffic_resampled_600.pkl",
+        default="./data/resampled/combined_traffic_resampled_200.pkl",
         help="Path to the training data file"
     )
 

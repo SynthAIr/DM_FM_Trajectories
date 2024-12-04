@@ -61,7 +61,7 @@ data:
   data_shape: 'image'
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 32
+  batch_size: 64
   test_batch_size: 32
   length: 200
   down_sample_factor: 30
@@ -91,7 +91,7 @@ model:
     ema: True
     ema_rate: 0.999999
   weather_config:
-    weather_grid: True
+    weather_grid: False
     variables: 4
     levels: 4
     lon: 5
