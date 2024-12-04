@@ -7,6 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTraj, AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
+from model.baselines import PerturbationModel
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -59,6 +60,8 @@ def get_model(configs):
             return AirDiffTrajDDPM
         case "DDIM":
             return AirDiffTrajDDIM
+        case "PER":
+            return PerturbationModel
         case _:
             return AirDiffTrajDDPM
 

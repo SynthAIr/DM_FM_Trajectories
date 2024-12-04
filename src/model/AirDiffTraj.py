@@ -83,6 +83,8 @@ class SnakeActivation(jit.ScriptModule):
     def forward(self, x):
         return x + (1 / self.a) * torch.sin(self.a * x) ** 2
 
+def relu(x):
+    return F.relu(x)
 
 def nonlinearity(x, function = "swish"):
     # swish
@@ -128,9 +130,9 @@ class WeatherGrid(nn.Module):
 
     def forward(self, x):
         # Apply convolutions and pooling
-        x = self.pool(nonlinearity(self.conv1(x)))  # (batch_size, 32, lat_len - 1, long_len - 1)
-        x = self.pool(nonlinearity(self.conv2(x)))  # (batch_size, 64, lat_len - 2, long_len - 2)
-        x = self.pool(nonlinearity(self.conv3(x)))  # (batch_size, 128, lat_len - 3, long_len - 3)
+        x = self.pool(relu(self.conv1(x)))  # (batch_size, 32, lat_len - 1, long_len - 1)
+        x = self.pool(relu(self.conv2(x)))  # (batch_size, 64, lat_len - 2, long_len - 2)
+        x = self.pool(relu(self.conv3(x)))  # (batch_size, 128, lat_len - 3, long_len - 3)
 
         # Flatten the output for the dense layer
         x = x.view(x.size(0), -1)  # Flatten to (batch_size, 128 * output_height * output_width)

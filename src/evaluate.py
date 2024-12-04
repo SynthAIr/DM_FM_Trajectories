@@ -125,6 +125,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     # Colors for different sets
     colors = ["red", "blue"]
+    labels = ["real", "synthetic"]
     reconstructions = []
     
     for c, data in enumerate([X_, x_rec]):
@@ -154,7 +155,9 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
-        reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1)
+        reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1, label=labels[c])
+
+    plt.legend()
     
     # Show the plot
     #plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
@@ -405,8 +408,11 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
+    n = 100
+    n_samples = 10
+    logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=10, model_name = model_name)
+    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -420,8 +426,8 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
     logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
     length = config['data']['length']
-
-    samples, steps = generate_samples(dataset, model, rnd, n = 1, length = length)
+    
+    samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
     fig_99 = get_figure_from_sample_steps(steps, dataset, length)
     fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
     logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
