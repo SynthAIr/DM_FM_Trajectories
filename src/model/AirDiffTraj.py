@@ -45,11 +45,11 @@ def get_timestep_embedding(timesteps, embedding_dim):
     return emb
 
 def swish(x):
-    return x * torch.sigmoid(x)
+    return F.silu(x)
 
 def mish(x):
     """Mish activation function."""
-    return x * torch.tanh(torch.nn.functional.softplus(x))
+    return F.mish(x)
 
 def snake(x, a=1):
     return x + (1 / a) * torch.sin(a * x)**2
