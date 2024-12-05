@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from scipy.spatial.distance import cdist
 from tqdm.autonotebook import tqdm
+import pandas as pd
 import numpy as np
 import random
 import numpy as np
@@ -14,6 +15,7 @@ from scipy.spatial.distance import jensenshannon
 from scipy.special import rel_entr
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import pdist, squareform
+from traffic.core import Traffic
 
 
 def compute_energy_distance(X, Y):
@@ -42,15 +44,15 @@ def compute_energy_distance(X, Y):
     energy_dist = np.sqrt(2 * term1 - term2 - term3)
     return energy_dist
 
-def jensenshannon_distance(reconstructions, model_name="model"):
+def jensenshannon_distance(df_subset1 : pd.DataFrame, df_subset2: pd.DataFrame, model_name="model"):
     # Assuming df_2 is a traffic.core.Traffic object containing trajectories
     # Split the traffic object into two halves based on a criterion
-    df_subset1 = reconstructions[0]
-    df_subset2 = reconstructions[1]
+    #df_subset1 = reconstructions[0]
+    #df_subset2 = reconstructions[1]
     
     # Convert the first subset to a DataFrame and extract lat/lon
-    subset1_data = df_subset1.data[['latitude', 'longitude']].dropna().values
-    subset2_data = df_subset2.data[['latitude', 'longitude']].dropna().values
+    subset1_data = df_subset1[['latitude', 'longitude']].dropna().values
+    subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
     
     # Compute energy distance between the raw trajectories
     energy_dist = compute_energy_distance(subset1_data, subset2_data)

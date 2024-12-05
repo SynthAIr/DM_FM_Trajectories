@@ -420,7 +420,7 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
-    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions, model_name = model_name)
+    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
@@ -440,25 +440,34 @@ def run(args, logger = None):
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
     
+
+    
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
     X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
-    fig_pca = data_diversity(X, X_gen, 'PCA', 'sequence', model_name=model_name)
+    fig_pca = data_diversity(X, X_gen, 'PCA', 'samples', model_name=model_name)
     #fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
     #logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
 
+    ### SECOND
 
     reconstructed_traf = trajectory_generation_model.build_traffic(
     decoded,
     coordinates=dict(latitude=48.5, longitude=8.4),
     forward=False,
     )
+
+    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
+    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
+    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
+
     fig_2 = plot_from_array(reconstructed_traf, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
 
     training_trajectories = reconstructions[0]
-    synthetic_trajectories = reconstructions[1]
+    #synthetic_trajectories = reconstructions[1]
+    synthetic_trajectories = reconstructed_traf
 
     fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
     logger.experiment.log_figure(logger.run_id,fig_3, f"figures/Eval_distribution_plots.png")
