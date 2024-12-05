@@ -20,51 +20,58 @@ class PerturbationModel(pl.LightningModule):
         """
         return self.random_perturbation(trajectory)
 
-    def random_perturbation(self, trajectory: torch.Tensor) -> torch.Tensor:
+    def random_perturbation(self, trajectory: torch.Tensor, n_samples: int = 1) -> torch.Tensor:
         """
-        Add uniform random noise to the trajectory.
-        
-        Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates
-        
-        Returns:
-            Perturbed trajectory
-        """
-        noise = (torch.rand_like(trajectory) * 2 * self.noise_ratio) - self.noise_ratio
-        return trajectory + noise
+        Add uniform random noise to the trajectory to generate n_samples.
 
-    def gaussian_perturbation(self, trajectory: torch.Tensor) -> torch.Tensor:
-        """
-        Add Gaussian noise to the trajectory.
-        
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates
-        
-        Returns:
-            Perturbed trajectory
-        """
-        noise = torch.randn_like(trajectory) * torch.sqrt(torch.tensor(self.variance))
-        return trajectory + noise
+            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
+            n_samples: Number of perturbed samples to generate.
 
-    def sample(self, trajectory: torch.Tensor, method="random") -> torch.Tensor:
+        Returns:
+            Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
+        """
+        # Generate noise for n_samples
+        noise = (torch.rand((n_samples, *trajectory.shape)) * 2 * self.noise_ratio) - self.noise_ratio
+        # Expand trajectory and add noise
+        trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
+        return trajectory_expanded + noise
+
+    def gaussian_perturbation(self, trajectory: torch.Tensor, n_samples: int = 1) -> torch.Tensor:
+        """
+        Add Gaussian noise to the trajectory to generate n_samples.
+
+        Args:
+            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
+            n_samples: Number of perturbed samples to generate.
+
+        Returns:
+            Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
+        """
+        # Generate Gaussian noise for n_samples
+        noise = torch.randn((n_samples, *trajectory.shape)) * torch.sqrt(torch.tensor(self.variance))
+        # Expand trajectory and add noise
+        trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
+        return trajectory_expanded + noise
+
+    def sample(self, trajectory: torch.Tensor, method="random", n_samples: int = 1) -> torch.Tensor:
         """
         Sample perturbed trajectories using the specified method.
-        
+
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates
-            method: Perturbation method - "random" or "gaussian"
-        
+            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
+            method: Perturbation method - "random" or "gaussian".
+            n_samples: Number of perturbed samples to generate.
+
         Returns:
-            Sampled perturbed trajectory
+            Tensor of shape (n_samples, ..., 2) containing sampled perturbed trajectories.
         """
         if method == "random":
-            return self.random_perturbation(trajectory)
+            return self.random_perturbation(trajectory, n_samples)
         elif method == "gaussian":
-            return self.gaussian_perturbation(trajectory)
+            return self.gaussian_perturbation(trajectory, n_samples)
         else:
-            raise ValueError(f"Unknown sampling method: {method}")
-
-    def reconstruct(self, trajectory: torch.Tensor) -> torch.Tensor:
+            raise ValueError(f"Unknown sampling method: {method}")    def reconstruct(self, trajectory: torch.Tensor) -> torch.Tensor:
         """
         Simulate a "reconstruction" process by removing the mean noise (for demo purposes).
         

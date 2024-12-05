@@ -59,7 +59,7 @@ def get_flight_speeds(traffic, method='calculate', remove_outliers=True, lower_q
 
 
 
-def duration_and_speed(training_trajectories, synthetic_trajectories, model_name = "model"):
+def duration_and_speed(training_trajectories: Traffic, synthetic_trajectories: Traffic, model_name = "model"):
     # Suppress specific UserWarnings related to set_xticklabels
     warnings.filterwarnings("ignore", message=".*set_ticklabels.*")
 

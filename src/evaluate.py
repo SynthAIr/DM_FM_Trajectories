@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import load_config
 from model.AirDiffTraj import AirDiffTraj, AirDiffTrajDDPM, AirDiffTrajDDIM
+from model.baselines import PerturbationModel
 from utils.data_utils import TrafficDataset
 from traffic.core import Traffic
 from traffic.algorithms.generation import Generation
@@ -276,7 +277,7 @@ def detach_to_tensor(tensor_list):
     """
     return np.stack([tensor.cpu().detach() for tensor in tensor_list])
 
-def plot_from_array(t, model_name = "model"):
+def plot_from_array(t: Traffic, model_name = "model"):
 
     """
     Plots data from a traffic.core.Traffic object on a EuroPP projection.
@@ -508,6 +509,130 @@ def run(args, logger = None):
 
     logger.finalize()
 
+def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
+    data_cpu = data.cpu().numpy()
+    reco_x = data_cpu.transpose(0, 2, 1).reshape(data_cpu.shape[0], -1)
+    n = data_cpu.shape[0]
+    # Inverse scaling and traffic reconstruction
+    decoded = dataset.scaler.inverse_transform(reco_x)
+    reconstructed_traf = trajectory_generation_model.build_traffic(
+        decoded.reshape(n, -1, len(dataset.features)),
+        coordinates=dict(latitude=48.5, longitude=8.4),
+        forward=False
+    )
+    return reconstructed_traf
+    
+        
+
+
+
+def run_perturbation(args, logger = None):
+    np.random.seed(42)
+    model_name = "PerturbationModel"
+
+    data_path = args.data_path
+    #artifact_location= "./artifacts"
+    #checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
+    config_file = f"./configs/config.yaml"
+    model = PerturbationModel()
+
+    config = load_config(config_file)
+    runid = None
+    if logger is not None:
+        runid = logger.run_id
+
+    if logger is None:
+        logger_config = config["logger"]
+        logger = MLFlowLogger(
+            experiment_name=logger_config["experiment_name"],
+            run_name=args.model_name,
+            tracking_uri=logger_config["mlflow_uri"],
+            tags=logger_config["tags"],
+            #artifact_location=artifact_location,
+        )
+
+        if runid is not None:
+            logger.run_id = runid
+
+
+    logger.experiment.log_dict(logger.run_id,config, config_file)
+    config, dataset, traffic, conditions = get_config_data(config_file, data_path, "")
+    config['model']["traj_length"] = dataset.parameters['seq_len']
+    config['model']["continuous_len"] = dataset.con_conditions.shape[1]
+    n = 100
+    n_samples = 10
+    logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
+    length = config['data']['length']
+
+    trajectory_generation_model = Generation(
+        generation=model,
+        features=dataset.parameters['features'],
+        scaler=dataset.scaler,
+    )
+    
+    rnd = np.random.randint(0, len(dataset), (n,))
+    samples = []
+
+    for i in tqdm(rnd):
+        # Load the i-th sample from the dataset
+        x, con, cat, grid = dataset[i]
+        # Generate samples and steps using the model
+        sample = model.sample(x, n_samples = n_samples)
+        samples.append(sample)
+
+
+    #samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
+    detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
+    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model)
+    X_traffic = get_traffic_from_tensor(dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2], dataset, trajectory_generation_model)
+
+    JSD, KL, e_distance, fig_1 = jensenshannon_distance(X_traffic.data,decoded.data , model_name = model_name)
+    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
+    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
+
+    fig_2 = plot_from_array(decoded, model_name)
+    logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
+
+    training_trajectories = X_traffic
+    synthetic_trajectories = decoded
+
+    fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
+    logger.experiment.log_figure(logger.run_id,fig_3, f"figures/Eval_distribution_plots.png")
+
+    features_to_plot = ['latitude', 'longitude', 'altitude', 'timedelta']
+    units = {
+        'latitude': '°',
+        'longitude': '°',
+        'altitude': 'm',
+        'timedelta': 's'
+    }
+
+    fig_4 = timeseries_plot(
+        training_trajectories,
+        synthetic_trajectories,
+        features=features_to_plot,
+        units=units,
+        model_name=model_name
+    )
+    logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
+    
+    accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, length, 3), synthetic_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, length, 3))
+    logger.log_metrics({"Discriminator_Accuracy": accuracy, "Discriminator_Score": score, "Discriminator_TPR": tpr, "Discriminator_TNR": tnr})
+    print("Accuracy on test data:", accuracy)
+    print("Discriminative Score:", score)
+    print("Confusion Matrix:\n", conf_matrix)
+    print("True Positive Rate (TPR):", tpr)
+    print("True Negative Rate (TNR):", tnr)
+    
+    # Visualize the confusion matrix
+    disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=['Synthetic', 'Original'])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.savefig("figures/fidelity")
+    logger.experiment.log_figure(logger.run_id, disp.figure_, f"figures/fidelity.png")
+
+    logger.finalize()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the traffic model.")
@@ -527,3 +652,4 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     run(args)
+    #run_perturbation(args)
