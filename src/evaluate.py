@@ -511,9 +511,9 @@ def run(args, logger = None):
     logger.finalize()
 
 def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
-    data_cpu = data.cpu().numpy()
-    reco_x = data_cpu.transpose(0, 2, 1).reshape(data_cpu.shape[0], -1)
-    n = data_cpu.shape[0]
+    print(data.shape)
+    reco_x = data.transpose(0, 2, 1).reshape(data.shape[0], -1)
+    n = data.shape[0]
     # Inverse scaling and traffic reconstruction
     decoded = dataset.scaler.inverse_transform(reco_x)
     reconstructed_traf = trajectory_generation_model.build_traffic(
@@ -561,7 +561,7 @@ def run_perturbation(args, logger = None):
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     n = 100
-    n_samples = 10
+    n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     length = config['data']['length']
 
@@ -585,7 +585,7 @@ def run_perturbation(args, logger = None):
     #samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model)
-    X_traffic = get_traffic_from_tensor(dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2], dataset, trajectory_generation_model)
+    X_traffic = get_traffic_from_tensor(dataset[rnd][0].cpu().numpy().reshape(-1, len(dataset.features), length), dataset, trajectory_generation_model)
 
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(X_traffic.data,decoded.data , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
@@ -652,5 +652,5 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
-    run(args)
-    #run_perturbation(args)
+    #run(args)
+    run_perturbation(args)

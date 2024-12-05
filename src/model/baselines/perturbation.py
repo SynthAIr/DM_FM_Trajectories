@@ -54,7 +54,7 @@ class PerturbationModel(pl.LightningModule):
         trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
         return trajectory_expanded + noise
 
-    def sample(self, trajectory: torch.Tensor, method="random", n_samples: int = 1) -> torch.Tensor:
+    def sample(self, trajectory: torch.Tensor, method="gaussian", n_samples: int = 1) -> torch.Tensor:
         """
         Sample perturbed trajectories using the specified method.
 
@@ -71,18 +71,7 @@ class PerturbationModel(pl.LightningModule):
         elif method == "gaussian":
             return self.gaussian_perturbation(trajectory, n_samples)
         else:
-            raise ValueError(f"Unknown sampling method: {method}")    def reconstruct(self, trajectory: torch.Tensor) -> torch.Tensor:
-        """
-        Simulate a "reconstruction" process by removing the mean noise (for demo purposes).
-        
-        Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates
-        
-        Returns:
-            Reconstructed trajectory
-        """
-        mean_noise = torch.mean(trajectory, dim=0, keepdim=True)
-        return trajectory - mean_noise
+            raise ValueError(f"Unknown sampling method: {method}")    
 
 if __name__ == "__main__":
     # Initialize model
