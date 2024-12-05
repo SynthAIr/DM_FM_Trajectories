@@ -163,40 +163,6 @@ def get_initial_speed(flight):
     return speed
 
 
-# TODO: Retrieve groundspeed from model or update this to a better method
-def add_ground_speed(flight):
-    """Adds groundspeed to a flight object
-
-    Parameters
-    ----------
-    flight (Flight):
-        Flight object with waypoints
-
-    Returns
-    -------
-        Flight: Flight object with groundspeed added
-    """
-    # Get initial speed and heading
-    groundspeed = []
-    groundspeed.append(get_initial_speed(flight))
-    for i in range(1, len(flight.data)):
-        # Get previous and current waypoints
-        waypoint1 = flight.data.iloc[i - 1]
-        waypoint2 = flight.data.iloc[i]
-
-        # Calculate speed
-        speed = get_speed(waypoint1, waypoint2)
-
-        # Add ground speed to list
-        groundspeed.append(speed)
-
-    # Add speeds to dataframe
-    flight = flight
-    flight.data.loc[:, "groundspeed"] = groundspeed
-
-    return flight
-
-
 # Removing similar points
 def remove_neighbours(flight):
     """Removes the next waypoint if coordinates are equal to the current waypoint"""
@@ -354,20 +320,6 @@ def simulate(traffic: Traffic, config: dict, debug=False):
 
         flight = remove_neighbours(flight)
 
-    """
-    flights = []
-    for flight in traffic:
-        flight.data = flight.data[
-            ~((flight.data["altitude"] == 0) & (flight.data["altitude"].shift(-1) == 0))
-        ]
-
-        flight = remove_neighbours(flight)
-        ## Groundspeed already exists
-        #flight = add_ground_speed(flight)
-
-        flights.append(flight)
-    traffic = Traffic.from_flights(flights)
-    """
 
     print("### Building scenarios ###")
     # Build logger

@@ -26,6 +26,7 @@ def extract_geographic_info(
 ) -> Tuple[str, str, float, float, float, float, float, float]:
 
     training_data = Traffic.from_file(training_data_path)
+    training_data = Traffic(training_data.data[training_data.data['ADEP'] == 'EHAM'])
 
     # raise an error if there exists more than one destination airport or if there are more than one origin airport
     # But why?
