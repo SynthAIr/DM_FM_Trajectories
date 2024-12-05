@@ -5,7 +5,7 @@ train:
   seed: 42
   gradient_clip_val: 0.5
   log_every_n_steps: 2
-  early_stop_patience: 10
+  early_stop_patience: 60
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
@@ -49,6 +49,10 @@ data:
       type: 'continuous'
       last: True
       first: False
+    timedelta:
+      type: 'continuous'
+      last: True
+      first: False
       #groundspeed:
       #type: 'continuous'
       #track:
@@ -80,13 +84,13 @@ model:
   ch_mult: [ 1, 2, 2, 4 ]
   num_res_blocks: 6
   attn_resolutions: [16, 32]
-  dropout: 0.2
+  dropout: 0.1
   lr: 0.0001
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.08                # Slightly increased for faster diffusion
+    beta_end: 0.08               # Slightly increased for faster diffusion
     num_diffusion_timesteps: 1000
     ema: True
     ema_rate: 0.999999

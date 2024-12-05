@@ -118,7 +118,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     plt.xlabel('X values')
     plt.ylabel('Y values')
-    plt.title('Plot of Reconstructed Data')
+    plt.title('Plot of Real (Red) and Reconstructed Data (Blue)')
     
     # Calculate and print MSE
     mse = torch.nn.functional.mse_loss(X_, x_rec)
@@ -156,7 +156,8 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
-        reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1, label=labels[c])
+        reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1)
+
 
     plt.legend()
     
@@ -413,7 +414,7 @@ def run(args, logger = None):
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     n = 100
-    n_samples = 10
+    n_samples = 4
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
