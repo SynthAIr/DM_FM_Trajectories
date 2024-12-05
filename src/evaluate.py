@@ -358,7 +358,7 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
     """
     # Create a figure with T subplots
     len_steps = len(steps[0])
-    fig, axes = plt.subplots(1, len_steps, figsize=(20, 2), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, len_steps, figsize=(20, 4), sharex=True, sharey=True)
     
     # Plot each step on a separate subplot
     for i, t in enumerate(steps):
@@ -370,6 +370,9 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
             decoded = dataset.scaler.inverse_transform(reco_x).reshape(-1, length, len(dataset.features))[:,:,:2]
             axes[y].plot(decoded[:, :, 0], decoded[:, :, 1], "o", markersize=1)
             axes[y].axis("off")
+            axes[y].set_title(f"Step {1000 - (y+1) * 200}")
+    
+    plt.tight_layout()
     
     return fig
 
