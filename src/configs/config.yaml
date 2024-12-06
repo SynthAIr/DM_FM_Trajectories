@@ -86,7 +86,7 @@ model:
   num_res_blocks: 6
   attn_resolutions: [16, 32]
   dropout: 0.1
-  lr: 0.00005
+  lr: 0.00002
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'cosine'
