@@ -1,4 +1,3 @@
-from AirDiffTraj import AirDiffTraj
 import torch
 import numpy
 import torch.nn as nn
@@ -9,13 +8,15 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from .networks import TCN
-from SynTraj.utils import DatasetParams, TrafficDataset
-from SynTraj.vae import VAE, ExemplarLSR, NormalLSR, VampPriorLSR
+from model.tcvae import TCN
+from utils import DatasetParams, TrafficDataset
+from model.tcvae import VAE, VampPriorLSR
+from model.tcvae import TCDecoder, TCEncoder
 
 from typing import Tuple
+from diffusion import GaussianDiffusion, Unet
 
-class TCVAE(VAE):
+class AirLatDiffTraj(VAE):
 
     _required_hparams = VAE._required_hparams + [
         "sampling_factor",
@@ -39,7 +40,7 @@ class TCVAE(VAE):
         self.conditional = config.get("conditional", False) 
 
         #config["cond_embed_dim"] = get_cond_len(dataset_params['conditional_features'], seq_len = self.dataset_params["seq_len"]) if self.conditional else 0
-        config["cond_embed_dim"] =config['length']
+        #config["cond_embed_dim"] =config['length']
 
         self.encoder = TCEncoder(
             input_dim=self.dataset_params["input_dim"],
@@ -69,10 +70,21 @@ class TCVAE(VAE):
             original_dim=self.dataset_params["input_dim"],
             original_seq_len=self.dataset_params["seq_len"],
             input_dim=h_dim,
-            cond_length=config.get("cond_embed_dim", 0),
+            cond_length=0,
             out_dim=self.hparams.encoding_dim,
             encoder=self.encoder,
             n_components=self.hparams.n_components,
+        )
+        self.unet = Unet(
+            dim = h_dim,
+            dim_mults = (1, 2, 4, 8),
+            num_classes = 6,
+            cond_drop_prob = 0.5
+        )
+        self.diffusion = GaussianDiffusion(
+            self.unet,
+            image_size = h_dim,
+            timesteps = 1000
         )
 
         self.out_activ = nn.Identity()
@@ -94,3 +106,5 @@ class TCVAE(VAE):
         loss = F.mse_loss(x_hat, x)
         self.log("hp/test_loss", loss)
         return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info
+
+

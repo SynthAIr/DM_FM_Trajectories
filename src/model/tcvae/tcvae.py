@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from utils import DatasetParams, TrafficDataset
-from model.tcvae import VAE, VampPriorLSR
+from model.tcvae.vae import VAE, VampPriorLSR
 from typing import Tuple
 
 

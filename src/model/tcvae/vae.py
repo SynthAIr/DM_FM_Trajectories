@@ -11,7 +11,6 @@ from torch.distributions import (
     Distribution,
     Independent,
     MixtureSameFamily,
-    MultivariateNormal,
     Normal,
 )
 from torch.distributions.categorical import Categorical
