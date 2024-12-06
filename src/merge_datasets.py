@@ -58,6 +58,8 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'altitude') for flight in traffic_obj]
                 traffic_obj = Traffic.from_flights(cleaned_flights)
                 cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'groundspeed') for flight in traffic_obj]
+                traffic_obj = Traffic.from_flights(cleaned_flights)
+                cleaned_flights = [clean_and_smooth_flight_with_tight_threshold(flight, target_length, 'vertical_rate') for flight in traffic_obj]
                 
                 traffic_obj = Traffic.from_flights(cleaned_flights)
                 print("Columns:", traffic_obj.data.columns)

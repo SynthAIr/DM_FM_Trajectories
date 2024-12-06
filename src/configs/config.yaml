@@ -5,7 +5,7 @@ train:
   seed: 42
   gradient_clip_val: 0.5
   log_every_n_steps: 2
-  early_stop_patience: 60
+  early_stop_patience: 40
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
@@ -18,7 +18,8 @@ data:
   #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
   #features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track']
   #features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track_cos', 'track_sin']
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin']
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin']
   #features: [ 'latitude_sin', 'latitude_cos', 'longitude_sin', 'longitude_cos', 'altitude', 'timedelta', 'groundspeed', 'track']
   #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
   conditional_features:
@@ -75,17 +76,17 @@ data:
 model:
   type: "simple"
   cnn: True
-  sampling: "DDPM"
+  sampling: "DDIM"
   attr_dim: 32
   guidance_scale: 0
-  in_channels: 7
-  out_ch: 7
+  in_channels: 8
+  out_ch: 8
   ch: 256
   ch_mult: [ 1, 2, 2, 4 ]
   num_res_blocks: 6
   attn_resolutions: [16, 32]
   dropout: 0.1
-  lr: 0.0001
+  lr: 0.00005
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'cosine'

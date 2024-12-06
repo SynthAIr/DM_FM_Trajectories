@@ -1,0 +1,301 @@
+"""
+Implementation of the Temporal Convolutional Variational Autoencoder (TCVAE) model, based on  https://github.com/kruuZHAW/deep-traffic-generation-paper
+
+"""
+from typing import List, Optional
+
+import torch.nn as nn
+import torch.nn.functional as F
+# from torch.nn.utils import weight_norm #  deprecated in favor of torch.nn.utils.parametrizations.weight_norm
+from torch.nn.utils.parametrizations import weight_norm
+from argparse import Namespace
+from typing import Dict, List, Optional, Union
+
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
+from utils import DatasetParams, TrafficDataset
+from model.tcvae import VAE, VampPriorLSR
+from typing import Tuple
+
+
+class TemporalBlock(nn.Module):
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int,
+        dropout: float = 0.2,
+        out_activ: Optional[nn.Module] = None,
+    ) -> None:
+        super().__init__()
+
+        self.left_padding = (kernel_size - 1) * dilation
+
+        self.conv = weight_norm(
+            nn.Conv1d(
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                dilation=dilation,
+            )
+        )
+
+        self.out_activ = out_activ
+        self.dropout = nn.Dropout(dropout)
+        self.init_weights()
+
+    def init_weights(self) -> None:
+        self.conv.weight.data.normal_(0, 0.01)
+
+    def forward(self, x):
+        x = F.pad(x, (self.left_padding, 0), "constant", 0)
+        x = self.conv(x)
+        x = self.out_activ(x) if self.out_activ is not None else x
+        x = self.dropout(x)
+        return x
+
+
+class ResidualBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int,
+        dropout: float = 0.2,
+        h_activ: Optional[nn.Module] = None,
+        is_last: bool = False,
+    ) -> None:
+        super().__init__()
+
+        self.is_last = is_last
+
+        self.tmp_block1 = TemporalBlock(
+            in_channels,
+            out_channels,
+            kernel_size,
+            dilation,
+            dropout,
+            h_activ,
+        )
+
+        self.tmp_block2 = TemporalBlock(
+            out_channels,
+            out_channels,
+            kernel_size,
+            dilation,
+            dropout,
+            h_activ if not is_last else None,  # deactivate last activation
+        )
+
+        # Optional convolution for matching in_channels and out_channels sizes
+        self.downsample = (
+            nn.Conv1d(in_channels, out_channels, 1)
+            if in_channels != out_channels
+            else None
+        )
+        self.init_weights()
+
+    def init_weights(self) -> None:
+        if self.downsample is not None:
+            self.downsample.weight.data.normal_(0, 0.01)
+
+    def forward(self, x):
+        y = self.tmp_block1(x)
+        y = self.tmp_block2(y)
+        r = x if self.downsample is None else self.downsample(x)
+        return y + r
+
+
+class TCN(nn.Module):
+
+    def __init__(
+        self,
+        input_dim: int,
+        out_dim: int,
+        h_dims: List[int],
+        kernel_size: int,
+        dilation_base: int,
+        h_activ: Optional[nn.Module] = None,
+        dropout: float = 0.2,
+    ):
+        super().__init__()
+        layer_dims = [input_dim] + h_dims + [out_dim]
+        self.n_layers = len(layer_dims) - 1
+        layers = []
+
+        for index in range(self.n_layers):
+            dilation = dilation_base**index
+            in_channels = layer_dims[index]
+            out_channels = layer_dims[index + 1]
+            is_last = index == (self.n_layers - 1)
+            layer = ResidualBlock(
+                in_channels,
+                out_channels,
+                kernel_size,
+                dilation,
+                dropout,
+                h_activ,
+                is_last,
+            )
+            layers.append(layer)
+
+        self.network = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.network(x)
+
+
+class TCDecoder(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        out_dim: int,
+        h_dims: List[int],
+        seq_len: int,
+        kernel_size: int,
+        dilation_base: int,
+        sampling_factor: int,
+        h_activ: Optional[nn.Module] = None,
+        dropout: float = 0.2,
+    ):
+        super().__init__()
+
+        self.seq_len = seq_len
+        self.sampling_factor = sampling_factor
+
+        self.decode_entry = nn.Linear(input_dim, h_dims[0] * int(seq_len / sampling_factor))
+
+        self.decoder = nn.Sequential(
+            nn.Upsample(scale_factor=sampling_factor),
+            TCN(
+                h_dims[0],
+                out_dim,
+                h_dims[1:],
+                kernel_size,
+                dilation_base,
+                h_activ,
+                dropout,
+            ),
+        )
+
+    def forward(self, x):
+        x = self.decode_entry(x)
+        b, _ = x.size()
+        x = x.view(b, -1, int(self.seq_len / self.sampling_factor))
+        x_hat = self.decoder(x)
+        return x_hat
+
+
+    
+class TCEncoder(nn.Module):
+    def __init__(self,
+        input_dim: int,
+        out_dim: int,
+        h_dims: List[int],
+        kernel_size: int,
+        dilation_base: int,
+        sampling_factor: int,
+        h_activ: Optional[nn.Module] = None,
+        dropout: float = 0.2):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            TCN(
+                input_dim=input_dim,
+                out_dim=out_dim,
+                h_dims=h_dims,
+                kernel_size=kernel_size,
+                dilation_base=dilation_base,
+                dropout=dropout,
+                h_activ=h_activ,
+            ),
+            nn.AvgPool1d(sampling_factor),
+            nn.Flatten(),)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        return x
+
+class TCVAE(VAE):
+
+    _required_hparams = VAE._required_hparams + [
+        "sampling_factor",
+        "kernel_size",
+        "dilation_base",
+        "n_components",
+    ]
+
+    def __init__(
+        self,
+        dataset_params: DatasetParams,
+        config: Union[Dict, Namespace],
+    ) -> None:
+        super().__init__(dataset_params, config)
+
+        @property
+        def example_input_array(self):
+            # return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]), torch.rand(1, 1, self.dataset_params["seq_len"]) # Example (x,c) 
+            return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]) # Example X
+
+        self.conditional = config.get("conditional", False) 
+
+        #config["cond_embed_dim"] = get_cond_len(dataset_params['conditional_features'], seq_len = self.dataset_params["seq_len"]) if self.conditional else 0
+        config["cond_embed_dim"] =config['length']
+
+        self.encoder = TCEncoder(
+            input_dim=self.dataset_params["input_dim"],
+            out_dim=self.hparams.encoding_dim,
+            h_dims=self.hparams.h_dims[::-1],
+            kernel_size=self.hparams.kernel_size,
+            dilation_base=self.hparams.dilation_base,
+            sampling_factor=self.hparams.sampling_factor,
+            dropout=self.hparams.dropout,
+            h_activ=nn.ReLU()
+            )
+
+        self.decoder = TCDecoder(
+            input_dim=self.hparams.encoding_dim,
+            out_dim=self.dataset_params["input_dim"],
+            h_dims=self.hparams.h_dims[::-1],
+            seq_len=self.dataset_params["seq_len"],
+            kernel_size=self.hparams.kernel_size,
+            dilation_base=self.hparams.dilation_base,
+            sampling_factor=self.hparams.sampling_factor,
+            dropout=self.hparams.dropout,
+            h_activ=nn.ReLU(),
+        )
+        h_dim = self.hparams.h_dims[-1] * (int(self.dataset_params["seq_len"] / self.hparams.sampling_factor))
+
+        self.lsr = VampPriorLSR(
+            original_dim=self.dataset_params["input_dim"],
+            original_seq_len=self.dataset_params["seq_len"],
+            input_dim=h_dim,
+            cond_length=config.get("cond_embed_dim", 0),
+            out_dim=self.hparams.encoding_dim,
+            encoder=self.encoder,
+            n_components=self.hparams.n_components,
+        )
+
+        self.out_activ = nn.Identity()
+    
+    def forward(self, x, c=None) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
+        h = self.encoder(x)
+        q = self.lsr(h, c)
+        z = q.rsample()
+        x_hat = self.out_activ(self.decoder(z))
+        return self.lsr.dist_params(q), z, x_hat
+
+    def get_distribution(self, c=None) -> torch.Tensor:
+        pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
+        return pseudo_means, pseudo_scales
+
+    def test_step(self, batch, batch_idx):
+        x,c, info = batch
+        _, _, x_hat = self.forward(x,c)
+        loss = F.mse_loss(x_hat, x)
+        self.log("hp/test_loss", loss)
+        return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info

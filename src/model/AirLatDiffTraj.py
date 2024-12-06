@@ -2,21 +2,95 @@ from AirDiffTraj import AirDiffTraj
 import torch
 import numpy
 import torch.nn as nn
+from argparse import Namespace
+from typing import Dict, List, Optional, Union
 
-class Encoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim):
-        super(Encoder, self).__init__()
-        self.linear1 = nn.Linear(input_dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = nn.Linear(hidden_dim, latent_dim)
-        self.relu = nn.ReLU()
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
 
-class Decoder(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, output_dim):
-        super(Decoder, self).__init__()
-        self.linear1 = nn.Linear(latent_dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = nn.Linear(hidden_dim, output_dim)
-        self.relu = nn.ReLU()
+from .networks import TCN
+from SynTraj.utils import DatasetParams, TrafficDataset
+from SynTraj.vae import VAE, ExemplarLSR, NormalLSR, VampPriorLSR
 
+from typing import Tuple
 
+class TCVAE(VAE):
+
+    _required_hparams = VAE._required_hparams + [
+        "sampling_factor",
+        "kernel_size",
+        "dilation_base",
+        "n_components",
+    ]
+
+    def __init__(
+        self,
+        dataset_params: DatasetParams,
+        config: Union[Dict, Namespace],
+    ) -> None:
+        super().__init__(dataset_params, config)
+
+        @property
+        def example_input_array(self):
+            # return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]), torch.rand(1, 1, self.dataset_params["seq_len"]) # Example (x,c) 
+            return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]) # Example X
+
+        self.conditional = config.get("conditional", False) 
+
+        #config["cond_embed_dim"] = get_cond_len(dataset_params['conditional_features'], seq_len = self.dataset_params["seq_len"]) if self.conditional else 0
+        config["cond_embed_dim"] =config['length']
+
+        self.encoder = TCEncoder(
+            input_dim=self.dataset_params["input_dim"],
+            out_dim=self.hparams.encoding_dim,
+            h_dims=self.hparams.h_dims[::-1],
+            kernel_size=self.hparams.kernel_size,
+            dilation_base=self.hparams.dilation_base,
+            sampling_factor=self.hparams.sampling_factor,
+            dropout=self.hparams.dropout,
+            h_activ=nn.ReLU()
+            )
+
+        self.decoder = TCDecoder(
+            input_dim=self.hparams.encoding_dim,
+            out_dim=self.dataset_params["input_dim"],
+            h_dims=self.hparams.h_dims[::-1],
+            seq_len=self.dataset_params["seq_len"],
+            kernel_size=self.hparams.kernel_size,
+            dilation_base=self.hparams.dilation_base,
+            sampling_factor=self.hparams.sampling_factor,
+            dropout=self.hparams.dropout,
+            h_activ=nn.ReLU(),
+        )
+        h_dim = self.hparams.h_dims[-1] * (int(self.dataset_params["seq_len"] / self.hparams.sampling_factor))
+
+        self.lsr = VampPriorLSR(
+            original_dim=self.dataset_params["input_dim"],
+            original_seq_len=self.dataset_params["seq_len"],
+            input_dim=h_dim,
+            cond_length=config.get("cond_embed_dim", 0),
+            out_dim=self.hparams.encoding_dim,
+            encoder=self.encoder,
+            n_components=self.hparams.n_components,
+        )
+
+        self.out_activ = nn.Identity()
+    
+    def forward(self, x, c=None) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
+        h = self.encoder(x)
+        q = self.lsr(h, c)
+        z = q.rsample()
+        x_hat = self.out_activ(self.decoder(z))
+        return self.lsr.dist_params(q), z, x_hat
+
+    def get_distribution(self, c=None) -> torch.Tensor:
+        pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
+        return pseudo_means, pseudo_scales
+
+    def test_step(self, batch, batch_idx):
+        x,c, info = batch
+        _, _, x_hat = self.forward(x,c)
+        loss = F.mse_loss(x_hat, x)
+        self.log("hp/test_loss", loss)
+        return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info
