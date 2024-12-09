@@ -59,6 +59,17 @@ def train(
     # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
+    if True:
+        model.phase = "diffusion"
+        model.encoder.eval()
+        model.decoder.eval()
+        model.lsr.eval()
+        trainer.fit(model, train_loader, val_loader)
+        # Optionally evaluate the model on test data using the best model checkpoint.
+        trainer.test(model, test_loader, ckpt_path="best")
+        model.phase = "eval"
+
+
 
 def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
