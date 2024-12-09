@@ -216,7 +216,7 @@ class Unet(nn.Module):
         super().__init__()
         if use_linear_attn: attn_type = "linear"
         self.ch = ch
-        self.temb_ch = self.ch*4
+        self.temb_ch = self.ch
         self.num_resolutions = len(ch_mult)
         self.num_res_blocks = num_res_blocks
         self.resolution = resolution
@@ -332,6 +332,7 @@ class Unet(nn.Module):
         temb = nonlinearity(temb)
         temb = self.temb.dense[1](temb)
         if extra_embed is not None:
+            #print(temb.shape, extra_embed.shape)
             temb = temb + extra_embed
 
 
@@ -380,11 +381,13 @@ class Diffusion(nn.Module):
         self.guidance_scale = config["guidance_scale"]
         self.ch_mult = config["ch_mult"]
         self.num_res_blocks = config["num_res_blocks"]
+        self.num_resolutions = len(self.ch_mult)
         self.attn_resolutions = config["attn_resolutions"]
         self.dropout = config["dropout"]
         self.resamp_with_conv = config["resamp_with_conv"]
-        self.in_channels = config["in_channels"]
-        self.resolution = config["resolution"]
+        #jself.in_channels = config["in_channels"]
+        self.in_channels = 32
+        self.resolution = 64
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         #self.use_linear_attn = config["use_linear_attn"]
         #self.attn_type = config["attn_type"]
@@ -499,8 +502,7 @@ class Diffusion(nn.Module):
                     steps.append(x_t.clone().detach())
         return x_t, steps
 
-    def step(self, batch, batch_idx):
-        x, con, cat, grid = batch
+    def step(self, x, con, cat, grid):
         x_t, noise, t = self.forward_process(x)
         pred_noise = self.reverse_process(x_t, t, con, cat, grid)
         loss = F.mse_loss(noise.float(), pred_noise)

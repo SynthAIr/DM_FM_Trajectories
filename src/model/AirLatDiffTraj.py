@@ -142,12 +142,20 @@ class AirLatDiffTraj(VAE):
     def vae_step(self, batch, batch_idx):
         return super().training_step(batch, batch_idx)
 
+    def diffusion_step(self, batch, batch_idx):
+        x, con, cat, grid = batch
+        h = self.encoder(x)
+        q = self.lsr(h)
+        z = q.rsample()
+        return self.diffusion.step(z, con, cat, grid)
+
+
     def step(self, batch, batch_idx):
         match self.phase:
             case Phase.VAE:
                 return self.vae_step(batch, batch_idx)
             case Phase.DIFFUSION:
-                return self.diffusion.step(batch, batch_idx)
+                return self.diffusion_step(batch, batch_idx)
     
         raise ValueError(f"Invalid phase {self.phase}")
 
