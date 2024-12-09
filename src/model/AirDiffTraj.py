@@ -738,8 +738,6 @@ class AirDiffTraj(L.LightningModule):
 
         return x_t, steps
 
-
-
     def sample(self, n,con, cat, grid, length = 200, features=8):
         self.eval()
         con = con.to(self.device)
