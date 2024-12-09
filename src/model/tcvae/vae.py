@@ -14,6 +14,7 @@ from torch.distributions import (
     Normal,
 )
 from torch.distributions.categorical import Categorical
+from utils.data_utils import DatasetParams
 
 
 class LSR(nn.Module):
@@ -234,7 +235,7 @@ class Abstract(L.LightningModule):
 
         self.dataset_params = dataset_params
 
-    def get_builder(self, nb_samples: int, length: int) -> CollectionBuilder:
+    """def get_builder(self, nb_samples: int, length: int) -> CollectionBuilder:
         builder = CollectionBuilder(
             [
                 IdentifierBuilder(nb_samples, length),
@@ -254,7 +255,7 @@ class Abstract(L.LightningModule):
         elif "x" in self.dataset_params["features"]:
             builder.append(LatLonBuilder(build_from="xy", projection=EuroPP()))
 
-        return builder
+        return builder"""
 
     def _check_hparams(self, hparams: Union[Dict, Namespace]):
         for hparam in self._required_hparams:

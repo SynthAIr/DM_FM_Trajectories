@@ -14,7 +14,7 @@ from model.tcvae import VAE, VampPriorLSR
 from model.tcvae import TCDecoder, TCEncoder
 
 from typing import Tuple
-from diffusion import GaussianDiffusion, Unet
+from model.diffusion import GaussianDiffusion, Unet
 
 class AirLatDiffTraj(VAE):
 
