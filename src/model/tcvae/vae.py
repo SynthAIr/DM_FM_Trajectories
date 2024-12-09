@@ -148,10 +148,8 @@ class VampPriorLSR(LSR):
 
         self.register_parameter("prior_weights", self.prior_weights)
 
-    def forward(self, hidden: torch.Tensor, c: torch.Tensor = None) -> Distribution:
+    def forward(self, hidden: torch.Tensor, con: torch.Tensor = None, cat: torch.Tensor = None, grid: torch.Tensor = None) -> Distribution:
 
-        if c != None:
-            hidden = torch.cat((hidden, c), dim=1)
 
         loc = self.z_loc(hidden)
         log_var = self.z_log_var(hidden)
@@ -163,9 +161,6 @@ class VampPriorLSR(LSR):
         # X, pseudo_c = X[:, :-1, :], X[:, -1]
         pseudo_h = self.encoder(X)
         pseudo_c = self.conditions.to(pseudo_h.device)
-
-        if c != None:
-            pseudo_h = torch.cat((pseudo_h, pseudo_c), dim=1)
 
         self.prior_means = self.z_loc(pseudo_h)
         self.prior_log_vars = self.prior_log_var_NN(pseudo_h)

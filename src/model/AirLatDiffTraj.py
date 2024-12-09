@@ -115,7 +115,8 @@ class AirLatDiffTraj(VAE):
         return x_hat
     """
 
-    def forward(self, x, c=None) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
+    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:    
+
         match self.phase:
             case Phase.VAE:
                 return self.vae_forward(x)
@@ -124,6 +125,11 @@ class AirLatDiffTraj(VAE):
             case Phase.EVAL:
                 return self.vae_forward(x)
         return self.vae_forward(x)
+
+    def reconstruct(self, x, con, cat, grid):
+        params, z, x_hat = self.forward(x, con, cat, grid)
+        return x_hat, []
+
 
     def get_distribution(self, c=None) -> torch.Tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
