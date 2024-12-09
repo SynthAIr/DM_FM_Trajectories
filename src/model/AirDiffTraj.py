@@ -740,14 +740,14 @@ class AirDiffTraj(L.LightningModule):
 
 
 
-    def sample(self, n,con, cat, grid, length = 200):
+    def sample(self, n,con, cat, grid, length = 200, features=8):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
         steps = []
         with torch.no_grad():
             #Fix this
-            x_t = torch.randn(n, *(7, length), device=self.device)
+            x_t = torch.randn(n, *(features, length), device=self.device)
             for i in range(self.n_steps-1, -1, -1):
                 x_t = self.sample_step(x_t,con, cat,grid, i)
                 if i % 200 == 0:
