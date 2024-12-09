@@ -14,7 +14,7 @@ from model.tcvae import VAE, VampPriorLSR
 from model.tcvae import TCDecoder, TCEncoder
 
 from typing import Tuple
-from model.diffusion import GaussianDiffusion, Unet
+from model.diffusion import Unet
 from enum import Enum
 
 class Phase(Enum):
