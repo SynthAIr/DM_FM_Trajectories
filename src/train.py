@@ -11,6 +11,7 @@ from utils import TrafficDataset
 from utils.helper import load_config, save_config, load_and_prepare_data, get_model
 from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
+from model.AirLatDiffTraj import Phase
 
 
 def train(
@@ -82,14 +83,14 @@ def train(
             ),
         ],
     )
-        model.phase = "diffusion"
+        model.phase = Phase.DIFFUSION
         model.encoder.eval()
         model.decoder.eval()
         model.lsr.eval()
         trainer.fit(model, train_loader, val_loader)
         # Optionally evaluate the model on test data using the best model checkpoint.
         trainer.test(model, test_loader, ckpt_path="best")
-        model.phase = "eval"
+        model.phase = Phase.EVAL
 
 
 

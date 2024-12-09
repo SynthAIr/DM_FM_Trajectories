@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from einops import rearrange
-from model.AirDiffTraj import EmbeddingBlock, make_beta_schedule, EMAHelper, gather
+from model.AirDiffTraj import EmbeddingBlock, make_beta_schedule, EMAHelper, gather, get_timestep_embedding
 from tqdm import tqdm
 from torch.nn import functional as F
 
@@ -24,27 +24,6 @@ class LinearAttention(nn.Module):
         out = torch.einsum('bhde,bhdn->bhen', context, q)
         out = rearrange(out, 'b heads c (h w) -> b (heads c) h w', heads=self.heads, h=h, w=w)
         return self.to_out(out)
-
-
-def get_timestep_embedding(timesteps, embedding_dim):
-    """
-    This matches the implementation in Denoising Diffusion Probabilistic Models:
-    From Fairseq.
-    Build sinusoidal embeddings.
-    This matches the implementation in tensor2tensor, but differs slightly
-    from the description in Section 3.5 of "Attention Is All You Need".
-    """
-    assert len(timesteps.shape) == 1
-
-    half_dim = embedding_dim // 2
-    emb = math.log(10000) / (half_dim - 1)
-    emb = torch.exp(torch.arange(half_dim, dtype=torch.float32) * -emb)
-    emb = emb.to(device=timesteps.device)
-    emb = timesteps.float()[:, None] * emb[None, :]
-    emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
-    if embedding_dim % 2 == 1:  # zero pad
-        emb = torch.nn.functional.pad(emb, (0,1,0,0))
-    return emb
 
 
 def nonlinearity(x):
@@ -233,7 +212,7 @@ def make_attn(in_channels, attn_type="vanilla"):
 class Unet(nn.Module):
     def __init__(self, *, ch, out_ch, ch_mult=(1,2,4,8), num_res_blocks,
                  attn_resolutions, dropout=0.0, resamp_with_conv=True, in_channels,
-                 resolution, use_timestep=True, use_linear_attn=False, attn_type="vanilla"):
+                 resolution,use_timestep = True, use_linear_attn=False, attn_type="vanilla"):
         super().__init__()
         if use_linear_attn: attn_type = "linear"
         self.ch = ch
@@ -394,6 +373,7 @@ class Unet(nn.Module):
 
 class Diffusion(nn.Module):
     def __init__(self, config):
+        super().__init__()
         self.config = config
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
@@ -405,13 +385,13 @@ class Diffusion(nn.Module):
         self.resamp_with_conv = config["resamp_with_conv"]
         self.in_channels = config["in_channels"]
         self.resolution = config["resolution"]
-        self.use_timestep = config["use_timestep"]
-        self.use_linear_attn = config["use_linear_attn"]
-        self.attn_type = config["attn_type"]
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.use_linear_attn = config["use_linear_attn"]
+        #self.attn_type = config["attn_type"]
 
         self.unet = Unet(ch = self.ch, out_ch = self.attr_dim, ch_mult = self.ch_mult, num_res_blocks = self.num_res_blocks,
                          attn_resolutions = self.attn_resolutions, dropout = self.dropout, resamp_with_conv = self.resamp_with_conv, in_channels = self.in_channels,
-                         resolution = self.resolution, use_timestep = self.use_timestep, use_linear_attn = self.use_linear_attn, attn_type = self.attn_type)
+                         resolution = self.resolution, use_timestep = True, use_linear_attn = False, attn_type = "vanilla")
 
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]

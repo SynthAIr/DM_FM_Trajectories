@@ -96,9 +96,18 @@ class AirLatDiffTraj(VAE):
     
     def diffusion_forward(self, x, con, cat, grid) -> torch.Tensor:
         h = self.encoder(x)
-        z = self.lsr.sample(h)
-        x_hat = self.diffusion(z, con, cat, grid)
-        return x_hat
+        q = self.lsr(h)
+        z = q.rsample()
+        z_hat = self.diffusion(z, con, cat, grid)
+        return z_hat
+
+    def eval_forward(self, x, con, cat, grid) -> torch.Tensor:
+        h = self.encoder(x)
+        q = self.lsr(h)
+        z = q.rsample()
+        z_hat = self.diffusion(z, con, cat, grid)
+        x_hat = self.out_activ(self.decoder(z_hat))
+        return x_hat, []
 
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:    
         match self.phase:
@@ -112,8 +121,12 @@ class AirLatDiffTraj(VAE):
 
     def reconstruct(self, x, con, cat, grid):
         with torch.no_grad():
-            params, z, x_hat = self.forward(x, con, cat, grid)
-        return x_hat, []
+            h = self.encoder(x)
+            q = self.lsr(h)
+            z = q.rsample()
+            z_hat, _ = self.reconstruct(z, con, cat, grid)
+            x_hat = self.out_activ(self.decoder(z_hat))
+        return x_hat, _
 
     def get_distribution(self, c=None) -> torch.Tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
@@ -153,9 +166,14 @@ class AirLatDiffTraj(VAE):
             case Phase.VAE:
                 loss = super().validation_step(batch, batch_idx)
                 self.log("valid_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
-            case Phase.DIFFUSION:
+            case Phase.DIFFUSION: 
                 loss = self.step(batch, batch_idx)
                 self.log("valid_loss_diffusion", loss, on_step=True, on_epoch=True, sync_dist=True)
+            case Phase.EVAL:
+                loss = self.step(batch, batch_idx)
+                self.log("valid_loss_eval", loss, on_step=True, on_epoch=True, sync_dist=True)
+            case _:
+                loss = self.step(batch, batch_idx)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -166,6 +184,9 @@ class AirLatDiffTraj(VAE):
             case Phase.DIFFUSION:
                 loss = self.step(batch, batch_idx)
                 self.log("test_loss_diffusion", loss, on_step=True, on_epoch=True, sync_dist=True)
+            case Phase.EVAL:
+                loss = self.step(batch, batch_idx)
+                self.log("test_loss_eval", loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):
