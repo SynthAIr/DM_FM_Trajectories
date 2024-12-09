@@ -116,7 +116,7 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x, temb):
         h = x
-        h = self.norm1(h)
+        #h = self.norm1(h)
         h = nonlinearity(h)
         h = self.conv1(h)
 
@@ -335,12 +335,15 @@ class Unet(nn.Module):
             #print(temb.shape, extra_embed.shape)
             temb = temb + extra_embed
 
+        print(temb.shape)
+        print(x.shape)
 
         # downsampling
         hs = [self.conv_in(x)]
         for i_level in range(self.num_resolutions):
             for i_block in range(self.num_res_blocks):
                 h = self.down[i_level].block[i_block](hs[-1], temb)
+                print(h.shape, hs[-1].shape, temb.shape)
                 if len(self.down[i_level].attn) > 0:
                     h = self.down[i_level].attn[i_block](h)
                 hs.append(h)
@@ -356,6 +359,7 @@ class Unet(nn.Module):
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
             for i_block in range(self.num_res_blocks+1):
+                print(h.shape, hs[-1].shape)
                 h = self.up[i_level].block[i_block](
                     torch.cat([h, hs.pop()], dim=1), temb)
                 if len(self.up[i_level].attn) > 0:
@@ -387,7 +391,7 @@ class Diffusion(nn.Module):
         self.resamp_with_conv = config["resamp_with_conv"]
         #jself.in_channels = config["in_channels"]
         self.in_channels = 32
-        self.resolution = 64
+        self.resolution = 100
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         #self.use_linear_attn = config["use_linear_attn"]
         #self.attn_type = config["attn_type"]
@@ -457,7 +461,8 @@ class Diffusion(nn.Module):
         place_vector_grid = torch.zeros(grid.shape, device=self.device)
         place_vector_grid = place_vector_grid.type_as(grid)
         place_emb = self.place_emb(place_vector_con, place_vector_cat, place_vector_grid)
-
+        
+        print("reverse",x_t.shape)
         cond_noise = self.unet(x_t, t, guide_emb)
         uncond_noise = self.unet(x_t, t, place_emb)
         pred_noise = cond_noise + self.guidance_scale * (cond_noise -
@@ -504,6 +509,7 @@ class Diffusion(nn.Module):
 
     def step(self, x, con, cat, grid):
         x_t, noise, t = self.forward_process(x)
+        print(x_t.shape)
         pred_noise = self.reverse_process(x_t, t, con, cat, grid)
         loss = F.mse_loss(noise.float(), pred_noise)
         return loss

@@ -85,8 +85,8 @@ model:
   in_channels: 8
   out_ch: 8
   ch: 64
-  ch_mult: [ 1, 2, 2, 4 ]
-  num_res_blocks: 6
+  ch_mult: [ 1, 2, 4 ]
+  num_res_blocks: 3
   attn_resolutions: [16]
   dropout: 0.1
   #lr: 0.00002
