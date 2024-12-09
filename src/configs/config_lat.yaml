@@ -1,11 +1,11 @@
 train:
-  epochs: 20
+  epochs: 500
   accelerator: 'gpu'
   devices: '1'
   seed: 37
   gradient_clip_val: 0.5
   log_every_n_steps: 2
-  early_stop_patience: 300
+  early_stop_patience: 50
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
@@ -62,10 +62,10 @@ data:
 model:
   type: TCVAE
   sampling: "LatDiff"
-  h_dims: [64, 64, 64]
-  encoding_dim: 64
+  h_dims: [128, 128, 128]
+  encoding_dim: 128
   #encoding_dim: 128
-  lr: 0.001
+  lr: 0.00001
   lr_step_size: 200
   lr_gamma: 0.5
   dropout: 0.0
@@ -90,7 +90,7 @@ model:
   num_res_blocks: 6
   attn_resolutions: [16, 32]
   dropout: 0.1
-  lr: 0.00002
+  #lr: 0.00002
   resamp_with_conv: True
   diffusion:
     beta_schedule: 'cosine'

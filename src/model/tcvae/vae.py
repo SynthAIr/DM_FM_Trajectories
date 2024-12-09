@@ -297,27 +297,27 @@ class AE(Abstract):
 
         self.logger.log_hyperparams(params)
 
-    def forward(self, x,c=None):
-        z = self.encoder(x,c)
+    def forward(self, x,con, cat, grid):
+        z = self.encoder(x,None)
         x_hat = self.out_activ(self.decoder(z))
         return z, x_hat
 
     def training_step(self, batch, batch_idx):
-        x, c, _ = batch
-        _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x,c, _ = batch
-        _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/valid_loss", loss)
 
     def test_step(self, batch, batch_idx):
-        x,c, info = batch
-        _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/test_loss", loss)
         return x, x_hat, info
@@ -352,8 +352,8 @@ class VAE(AE):
         return self.lsr.dist_params(q), z, x_hat
 
     def training_step(self, batch, batch_idx):
-        x, c, _ = batch
-        dist_params, z, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        dist_params, z, x_hat = self.forward(x,con, cat, grid)
 
         llv_loss = -self.gaussian_likelihood(x, x_hat)
         llv_coef = self.hparams.llv_coef
@@ -388,14 +388,14 @@ class VAE(AE):
         return elbo
 
     def validation_step(self, batch, batch_idx):
-        x,c, _ = batch
-        _, _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _, _, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/valid_loss", loss)
 
     def test_step(self, batch, batch_idx):
-        x,c, info = batch
-        _, _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _,_, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/test_loss", loss)
         return x, x_hat, info

@@ -127,7 +127,10 @@ class AirLatDiffTraj(VAE):
         return self.vae_forward(x)
 
     def reconstruct(self, x, con, cat, grid):
-        params, z, x_hat = self.forward(x, con, cat, grid)
+        with torch.no_grad():
+            params, z, x_hat = self.forward(x, con, cat, grid)
+            #print(z)
+            #print(z.shape)
         return x_hat, []
 
 
@@ -164,22 +167,11 @@ class AirLatDiffTraj(VAE):
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch
         #x_t, noise, t = self.forward_process(x)
-        _, _, x_hat = self.forward(x,c=None)
+        _, _, x_hat = self.forward(x,con, cat, grid)
         #pred_noise = self.reverse_process(x_t, t, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         #loss = F.mse_loss(noise.float(), pred_noise)
         return loss
-
-    def training_step(self, batch, batch_idx):
-        loss = self.step(batch, batch_idx)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
-        return loss
-
-    #def on_train_batch_end(self, outputs, batch, batch_idx):
-        #"""This is called after the optimizer step, at the end of the batch."""
-        #print("Called this on train batch end hooks")
-        #if self.config['diffusion']['ema']:
-            #self.ema_helper.update(self)
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
