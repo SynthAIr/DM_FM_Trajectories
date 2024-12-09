@@ -142,27 +142,29 @@ class AirLatDiffTraj(VAE):
         loss = self.step(batch, batch_idx)
         match self.phase:
             case Phase.VAE:
-                self.log("train_loss_vae", loss, on_step=True, on_epoch=True, sync_dist=True)
+                self.log("elbo", loss, on_step=True, on_epoch=True, sync_dist=True)
             case Phase.DIFFUSION:
                 self.log("train_loss_diffusion", loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 
 
     def validation_step(self, batch, batch_idx):
-        loss = self.step(batch, batch_idx)
         match self.phase:
             case Phase.VAE:
-                self.log("valid_loss_vae", loss, on_step=True, on_epoch=True, sync_dist=True)
+                loss = super().validation_step(batch, batch_idx)
+                self.log("valid_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
             case Phase.DIFFUSION:
+                loss = self.step(batch, batch_idx)
                 self.log("valid_loss_diffusion", loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 
     def test_step(self, batch, batch_idx):
-        loss = self.step(batch, batch_idx)
         match self.phase:
             case Phase.VAE:
-                self.log("test_loss_vae", loss, on_step=True, on_epoch=True, sync_dist=True)
+                loss = super().test_step(batch, batch_idx)
+                self.log("test_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
             case Phase.DIFFUSION:
+                loss = self.step(batch, batch_idx)
                 self.log("test_loss_diffusion", loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 

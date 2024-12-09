@@ -60,6 +60,28 @@ def train(
     trainer.test(model, test_loader, ckpt_path="best")
 
     if True:
+        trainer = Trainer(
+        accelerator=train_config["accelerator"],
+        devices=train_config["devices"],
+        max_epochs=train_config["epochs"],
+        gradient_clip_val=train_config["gradient_clip_val"],
+        log_every_n_steps=train_config["log_every_n_steps"],
+        strategy="ddp_find_unused_parameters_true",
+        logger=logger,
+        callbacks=[
+            EarlyStopping(
+                monitor="valid_loss_diffusion",
+                patience=train_config["early_stop_patience"],
+            ),
+            ModelCheckpoint(
+                monitor="valid_loss_diffusion",
+                dirpath=artifact_location,
+                filename="best_model",
+                save_top_k=1,
+                mode="min",
+            ),
+        ],
+    )
         model.phase = "diffusion"
         model.encoder.eval()
         model.decoder.eval()
