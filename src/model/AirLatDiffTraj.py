@@ -33,24 +33,26 @@ class AirLatDiffTraj(VAE):
 
     def __init__(
         self,
-        dataset_params: DatasetParams,
         config: Union[Dict, Namespace],
     ) -> None:
-        super().__init__(dataset_params, config)
+        super().__init__(config)
 
         @property
         def example_input_array(self):
             # return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]), torch.rand(1, 1, self.dataset_params["seq_len"]) # Example (x,c) 
-            return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]) # Example X
+            return torch.rand(1, self.config["in_channels"], self.config["traj_length"]) # Example X
 
-        self.conditional = config.get("conditional", False) 
+        #self.conditional = config.get("conditional", False) 
         self.phase = Phase.VAE
+        self.config = config
+        self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
 
         #config["cond_embed_dim"] = get_cond_len(dataset_params['conditional_features'], seq_len = self.dataset_params["seq_len"]) if self.conditional else 0
         #config["cond_embed_dim"] =config['length']
 
         self.encoder = TCEncoder(
-            input_dim=self.dataset_params["input_dim"],
+                #input_dim=self.dataset_params["input_dim"],
+            input_dim=self.config["in_channels"],
             out_dim=self.hparams.encoding_dim,
             h_dims=self.hparams.h_dims[::-1],
             kernel_size=self.hparams.kernel_size,
@@ -62,26 +64,27 @@ class AirLatDiffTraj(VAE):
 
         self.decoder = TCDecoder(
             input_dim=self.hparams.encoding_dim,
-            out_dim=self.dataset_params["input_dim"],
+            out_dim=self.config["in_channels"],
             h_dims=self.hparams.h_dims[::-1],
-            seq_len=self.dataset_params["seq_len"],
+            seq_len=self.config["traj_length"],
             kernel_size=self.hparams.kernel_size,
             dilation_base=self.hparams.dilation_base,
             sampling_factor=self.hparams.sampling_factor,
             dropout=self.hparams.dropout,
             h_activ=nn.ReLU(),
         )
-        h_dim = self.hparams.h_dims[-1] * (int(self.dataset_params["seq_len"] / self.hparams.sampling_factor))
+        h_dim = self.hparams.h_dims[-1] * (int(self.config["traj_length"] / self.hparams.sampling_factor))
 
         self.lsr = VampPriorLSR(
-            original_dim=self.dataset_params["input_dim"],
-            original_seq_len=self.dataset_params["seq_len"],
+            original_dim=self.config["in_channels"],
+            original_seq_len=self.config["traj_length"],
             input_dim=h_dim,
             cond_length=0,
             out_dim=self.hparams.encoding_dim,
             encoder=self.encoder,
             n_components=self.hparams.n_components,
         )
+        """
         self.unet = Unet(
             dim = h_dim,
             dim_mults = (1, 2, 4, 8),
@@ -93,6 +96,7 @@ class AirLatDiffTraj(VAE):
             image_size = h_dim,
             timesteps = 1000
         )
+        """
 
         self.out_activ = nn.Identity()
 
@@ -102,32 +106,35 @@ class AirLatDiffTraj(VAE):
         z = q.rsample()
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
-
+    
+    """
     def diffusion_forward(self, x, c=None) -> torch.Tensor:
         h = self.encoder(x)
         z = self.lsr.sample(h)
         x_hat = self.diffusion(z)
         return x_hat
+    """
 
     def forward(self, x, c=None) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         match self.phase:
             case Phase.VAE:
                 return self.vae_forward(x)
-            case Phase.DIFFUSION:
-                return self.diffusion_forward(x)
+            #case Phase.DIFFUSION:
+                #return #self.diffusion_forward(x)
             case Phase.EVAL:
                 return self.vae_forward(x)
+        return self.vae_forward(x)
 
     def get_distribution(self, c=None) -> torch.Tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
 
-    def test_step(self, batch, batch_idx):
+    """def test_step(self, batch, batch_idx):
         x,c, info = batch
         _, _, x_hat = self.forward(x,c)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/test_loss", loss)
-        return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info
+        return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info"""
 
     def sample(self, n,con, cat, grid, length = 200, features=8):
         self.eval()
@@ -150,9 +157,11 @@ class AirLatDiffTraj(VAE):
 
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        x_t, noise, t = self.forward_process(x)
-        pred_noise = self.reverse_process(x_t, t, con, cat, grid)
-        loss = F.mse_loss(noise.float(), pred_noise)
+        #x_t, noise, t = self.forward_process(x)
+        _, _, x_hat = self.forward(x,c=None)
+        #pred_noise = self.reverse_process(x_t, t, con, cat, grid)
+        loss = F.mse_loss(x_hat, x)
+        #loss = F.mse_loss(noise.float(), pred_noise)
         return loss
 
     def training_step(self, batch, batch_idx):
@@ -160,11 +169,11 @@ class AirLatDiffTraj(VAE):
         self.log("train_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        """This is called after the optimizer step, at the end of the batch."""
+    #def on_train_batch_end(self, outputs, batch, batch_idx):
+        #"""This is called after the optimizer step, at the end of the batch."""
         #print("Called this on train batch end hooks")
-        if self.config['diffusion']['ema']:
-            self.ema_helper.update(self)
+        #if self.config['diffusion']['ema']:
+            #self.ema_helper.update(self)
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
@@ -181,9 +190,9 @@ class AirLatDiffTraj(VAE):
 
 
 
-class AirDiffTrajDDPM(AirLatDiffTraj):
-    def __init__(self, dataset_params, config):
-        super().__init__(dataset_params, config)
+class AirLatDiffTrajDDPM(AirLatDiffTraj):
+    def __init__(self, config):
+        super().__init__(config)
 
     def sample_step(self, x, con, cat, grid, t):
         # From DDPM
@@ -195,9 +204,9 @@ class AirDiffTrajDDPM(AirLatDiffTraj):
         x_tminusone = 1/torch.sqrt(self.alpha[t]) * (x - (1-self.alpha[t])/(torch.sqrt(1-self.alpha_bar[t])) * eps_t) + torch.sqrt(self.beta[t]) * z
         return x_tminusone
 
-class AirDiffTrajDDIM(AirLatDiffTraj):
-    def __init__(self, dataset_params, config):
-        super().__init__(dataset_params, config)
+class AirLatDiffTrajDDIM(AirLatDiffTraj):
+    def __init__(self, config):
+        super().__init__(config)
 
     def sample_step(self, x, con, cat, grid, t):
         l = 1

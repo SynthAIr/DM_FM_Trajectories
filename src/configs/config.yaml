@@ -70,8 +70,6 @@ data:
   test_batch_size: 32
   length: 200
   down_sample_factor: 30
-  info_features: [ ] # These are useless
-  info_index: -1 # Useless
   
 model:
   type: "simple"

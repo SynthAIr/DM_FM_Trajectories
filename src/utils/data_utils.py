@@ -191,7 +191,6 @@ class Infos(TypedDict):
 class DatasetParams(TypedDict):
     features: List[str]
     file_path: Optional[Path]
-    info_params: Infos
     input_dim: int
     scaler: Optional[TransformerProtocol]
     seq_len: int
@@ -219,11 +218,6 @@ class TrafficDataset(Dataset):
             consider `StandardScaler()
             <https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html>`_.
             Defaults to None.
-        info_params (Infos, optional): typed dictionnary with two keys:
-            `features` (List[str]): list of features.
-            `index` (int): index in the underlying trajectory DataFrame
-            where to get the features.
-            Defaults ``features=[]`` and ``index=None``.
     """
 
     _repr_indent = 4
@@ -236,7 +230,6 @@ class TrafficDataset(Dataset):
         features: List[str],
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
-        info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
         variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> None:
@@ -250,13 +243,11 @@ class TrafficDataset(Dataset):
         self.conditional_features = conditional_features 
         self.shape = shape
         self.scaler = scaler
-        self.info_params = info_params
 
         self.data: torch.Tensor
         self.continuous_conditions: torch.Tensor
         self.categorical_conditions: torch.Tensor
         self.lengths: List[int]
-        self.infos: List[Any]
         self.variables = variables
         # self.target_transform = target_transform
         # data = extract_features(traffic, features, info_params["features"])
@@ -378,15 +369,6 @@ class TrafficDataset(Dataset):
                 self.data = torch.transpose(self.data, 1, 2)
                 #self.conditions = torch.transpose(self.conditions, 1, 2)
 
-        if self.info_params["index"] is not None:
-            self.infos = torch.Tensor(
-                np.array(
-                    [
-                        f.data[self.info_params["features"]].iloc[self.info_params["index"]].values.ravel()
-                        for f in traffic
-                    ]
-                )
-            )
 
     def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]: 
         condition_continuous = []
@@ -430,7 +412,6 @@ class TrafficDataset(Dataset):
         features: List[str],
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
-        info_params: Infos = Infos(features=[], index=None),
         conditional_features = [],
         variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
     ) -> "TrafficDataset":
@@ -441,7 +422,7 @@ class TrafficDataset(Dataset):
         traffic = traffic.between("2018-01-01", "2021-12-31")
         #traffic = traffic.between("2018-01-01", "2018-01-31")
 
-        dataset = cls(traffic, features, shape, scaler, info_params, conditional_features, variables)
+        dataset = cls(traffic, features, shape, scaler, conditional_features, variables)
         dataset.file_path = file_path
         return dataset
 
@@ -497,7 +478,6 @@ class TrafficDataset(Dataset):
 
         * features (List[str])
         * file_path (Path, optional)
-        * info_params (TypedDict) (see Infos for details)
         * input_dim (int)
         * scaler (Any object that matches TransformerProtocol, see TODO)
         * seq_len (int)
@@ -506,7 +486,6 @@ class TrafficDataset(Dataset):
         return DatasetParams(
             features=self.features,
             file_path=self.file_path,
-            info_params=self.info_params,
             input_dim=self.input_dim,
             scaler=self.scaler,
             seq_len=self.seq_len,

@@ -8,7 +8,7 @@ from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
 from model.baselines import PerturbationModel
-from model.AirLatDiffTraj import AirLatDiffTraj
+from model.AirLatDiffTraj import AirLatDiffTraj, AirLatDiffTrajDDPM
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -44,10 +44,6 @@ def load_and_prepare_data(configs):
         features=dataset_config["features"],
         shape=dataset_config["data_shape"],
         scaler=MinMaxScaler(feature_range=(-1, 1)),
-        info_params={
-            "features": dataset_config["info_features"],
-            "index": dataset_config["info_index"],
-        },
         conditional_features = load_conditions(dataset_config) ,
         variables = dataset_config["weather_grid"]["variables"]
     )
@@ -64,7 +60,7 @@ def get_model(configs):
         case "PER":
             return PerturbationModel
         case "LatDiff":
-            return AirLatDiffTraj
+            return AirLatDiffTrajDDPM
         case _:
             return AirDiffTrajDDPM
 

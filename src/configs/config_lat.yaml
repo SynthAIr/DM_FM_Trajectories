@@ -1,7 +1,7 @@
 train:
   epochs: 20
   accelerator: 'gpu'
-  devices: 1
+  devices: '1'
   seed: 37
   gradient_clip_val: 0.5
   log_every_n_steps: 2
@@ -61,6 +61,7 @@ data:
   
 model:
   type: TCVAE
+  sampling: "LatDiff"
   h_dims: [64, 64, 64]
   encoding_dim: 64
   #encoding_dim: 128
@@ -80,3 +81,32 @@ model:
   #kernel_size: 32
   dilation_base: 2
   exemplar_path: ./data/traffic.pkl
+  attr_dim: 32
+  guidance_scale: 0
+  in_channels: 8
+  out_ch: 8
+  ch: 256
+  ch_mult: [ 1, 2, 2, 4 ]
+  num_res_blocks: 6
+  attn_resolutions: [16, 32]
+  dropout: 0.1
+  lr: 0.00002
+  resamp_with_conv: True
+  diffusion:
+    beta_schedule: 'cosine'
+    beta_start: 0.0001            # Slightly increased for faster diffusion
+    beta_end: 0.08               # Slightly increased for faster diffusion
+    num_diffusion_timesteps: 1000
+    ema: True
+    ema_rate: 0.999999
+  weather_config:
+    weather_grid: True
+    variables: 4
+    levels: 4
+    lon: 5
+    lat: 5
+    type: "ADES"
+      #type: "Function"
+      #type: "Grid"
+      #lon: 81
+      #lat: 106

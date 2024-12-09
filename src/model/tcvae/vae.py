@@ -227,13 +227,12 @@ class Abstract(L.LightningModule):
         "dropout",
     ]
 
-    def __init__(self, dataset_params: DatasetParams, config: Union[Dict, Namespace]) -> None:
+    def __init__(self, config: Union[Dict, Namespace]) -> None:
         super().__init__()
 
         self._check_hparams(config)
         self.save_hyperparameters(config)
 
-        self.dataset_params = dataset_params
 
     """def get_builder(self, nb_samples: int, length: int) -> CollectionBuilder:
         builder = CollectionBuilder(
@@ -243,7 +242,7 @@ class Abstract(L.LightningModule):
             ]
         )
         if "track_unwrapped" in self.dataset_params["features"]:
-            if self.dataset_params["info_params"]["index"] == 0:
+            if self.ataset_params["info_params"]["index"] == 0:
                 builder.append(LatLonBuilder(build_from="azgs"))
             elif self.dataset_params["info_params"]["index"] == -1:
                 builder.append(LatLonBuilder(build_from="azgs_r"))
@@ -278,8 +277,8 @@ class AE(Abstract):
         "h_dims",
     ]
 
-    def __init__(self, dataset_params: DatasetParams, config: Union[Dict, Namespace]) -> None:
-        super().__init__(dataset_params, config)
+    def __init__(self, config: Union[Dict, Namespace]) -> None:
+        super().__init__(config)
 
         self.encoder: nn.Module
         self.decoder: nn.Module
@@ -340,10 +339,9 @@ class VAE(AE):
 
     def __init__(
         self,
-        dataset_params: DatasetParams,
         config: Union[Dict, Namespace],
     ) -> None:
-        super().__init__(dataset_params, config)
+        super().__init__(config)
 
         self.pseudo_gamma = 0.1
 
