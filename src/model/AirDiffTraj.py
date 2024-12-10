@@ -462,17 +462,19 @@ def _get_resnet_block(in_channels, out_channels, temb_channels, dropout, CNN = T
         return ResnetBlockLSTM(in_channels, out_channels, dropout=dropout, temb_channels=temb_channels)
 
 class UNET(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, resolution = None, in_channels=None):
         super().__init__()
         self.config = config
         self.cnn = config["cnn"]
-        ch, out_ch, ch_mult = config["ch"], config["out_ch"], tuple(
-            config["ch_mult"])
+        ch, ch_mult = config["ch"], tuple(config["ch_mult"])
+        #ch, out_ch, ch_mult = config["ch"], config["out_ch"], tuple(
+            #config["ch_mult"])
         num_res_blocks = config["num_res_blocks"]
         attn_resolutions = config["attn_resolutions"]
         dropout = config["dropout"]
-        in_channels = config["in_channels"]
-        resolution = config["traj_length"]
+        in_channels = config["in_channels"]if in_channels is None else in_channels
+        out_ch = in_channels
+        resolution = config["traj_length"] if resolution is None else resolution
         resamp_with_conv = ["resamp_with_conv"]
         num_timesteps = config["diffusion"]["num_diffusion_timesteps"]
 
@@ -573,6 +575,7 @@ class UNET(nn.Module):
                                         padding=1)
 
     def forward(self, x, t, extra_embed=None):
+        #print(x.shape, self.resolution)
         assert x.shape[2] == self.resolution
 
         # timestep embedding
@@ -583,6 +586,8 @@ class UNET(nn.Module):
         if extra_embed is not None:
             temb = temb + extra_embed
 
+        ##print("cond", temb.shape)
+        #print("z", x.shape)
         # downsampling
         hs = [self.conv_in(x)]
         # print(hs[-1].shape)
@@ -592,6 +597,7 @@ class UNET(nn.Module):
                 # print(i_level, i_block, h.shape)
                 if len(self.down[i_level].attn) > 0:
                     h = self.down[i_level].attn[i_block](h)
+                #print(h.shape, hs[-1].shape, temb.shape)
                 hs.append(h)
             if i_level != self.num_resolutions - 1:
                 hs.append(self.down[i_level].downsample(hs[-1]))
@@ -603,6 +609,7 @@ class UNET(nn.Module):
         h = self.mid.block_1(h, temb)
         h = self.mid.attn_1(h)
         h = self.mid.block_2(h, temb)
+        #print("Before End", h.shape)
         # print(h.shape)
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
@@ -613,16 +620,21 @@ class UNET(nn.Module):
                                                 (0, ht.size(-1) - h.size(-1)))
                 h = self.up[i_level].block[i_block](torch.cat([h, ht], dim=1),
                                                     temb)
+                #print(h.shape, temb.shape)
                 # print(i_level, i_block, h.shape)
                 if len(self.up[i_level].attn) > 0:
                     h = self.up[i_level].attn[i_block](h)
             if i_level != 0:
                 h = self.up[i_level].upsample(h)
 
+        #print("After End", h.shape)
         # end
         h = self.norm_out(h)
+        #print("End", h.shape)
         h = nonlinearity(h)
+        #print("End", h.shape)
         h = self.conv_out(h)
+        #print("End", h.shape)
         return h
 
 

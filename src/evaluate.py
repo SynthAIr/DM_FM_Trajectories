@@ -162,7 +162,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     plt.legend()
     
     # Show the plot
-    #plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
+    plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
     return reconstructions, mse, rnd, fig
 

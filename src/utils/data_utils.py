@@ -419,8 +419,8 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        #traffic = traffic.between("2018-01-01", "2021-12-31")
-        traffic = traffic.between("2018-01-01", "2018-01-31")
+        traffic = traffic.between("2018-01-01", "2021-12-31")
+        #traffic = traffic.between("2018-01-01", "2018-01-31")
 
         dataset = cls(traffic, features, shape, scaler, conditional_features, variables)
         dataset.file_path = file_path

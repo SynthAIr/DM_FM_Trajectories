@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from einops import rearrange
-from model.AirDiffTraj import EmbeddingBlock, make_beta_schedule, EMAHelper, gather, get_timestep_embedding
+from model.AirDiffTraj import EmbeddingBlock, make_beta_schedule, EMAHelper, gather, get_timestep_embedding, UNET
 from tqdm import tqdm
 from torch.nn import functional as F
 
@@ -116,11 +116,14 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x, temb):
         h = x
-        #h = self.norm1(h)
+        h = self.norm1(h)
         h = nonlinearity(h)
         h = self.conv1(h)
 
-        if temb is not None:
+        if temb is not None and False:
+            #print(self.temb_proj(nonlinearity(temb))[:,:,None,None].shape)
+            #print(self.temb_proj(nonlinearity(temb)).shape)
+            #print(h.shape)
             h = h + self.temb_proj(nonlinearity(temb))[:,:,None,None]
 
         h = self.norm2(h)
@@ -216,7 +219,7 @@ class Unet(nn.Module):
         super().__init__()
         if use_linear_attn: attn_type = "linear"
         self.ch = ch
-        self.temb_ch = self.ch
+        self.temb_ch = self.ch * 4
         self.num_resolutions = len(ch_mult)
         self.num_res_blocks = num_res_blocks
         self.resolution = resolution
@@ -335,15 +338,17 @@ class Unet(nn.Module):
             #print(temb.shape, extra_embed.shape)
             temb = temb + extra_embed
 
-        print(temb.shape)
-        print(x.shape)
+        #print("cond", temb.shape)
+        #print("z", x.shape)
+        #x = x.reshape(-1, 1, 16, 16)
+        #print("Before Down z", x.shape)
 
         # downsampling
         hs = [self.conv_in(x)]
         for i_level in range(self.num_resolutions):
             for i_block in range(self.num_res_blocks):
                 h = self.down[i_level].block[i_block](hs[-1], temb)
-                print(h.shape, hs[-1].shape, temb.shape)
+                #print(h.shape, hs[-1].shape, temb.shape)
                 if len(self.down[i_level].attn) > 0:
                     h = self.down[i_level].attn[i_block](h)
                 hs.append(h)
@@ -352,14 +357,17 @@ class Unet(nn.Module):
 
         # middle
         h = hs[-1]
+        #print("After Down z", h.shape)
         h = self.mid.block_1(h, temb)
         h = self.mid.attn_1(h)
         h = self.mid.block_2(h, temb)
+        #print("After attention", h.shape)
 
+
+        #print("Before Up", h.shape)
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
             for i_block in range(self.num_res_blocks+1):
-                print(h.shape, hs[-1].shape)
                 h = self.up[i_level].block[i_block](
                     torch.cat([h, hs.pop()], dim=1), temb)
                 if len(self.up[i_level].attn) > 0:
@@ -368,9 +376,13 @@ class Unet(nn.Module):
                 h = self.up[i_level].upsample(h)
 
         # end
+        #print("Before End", h.shape)
         h = self.norm_out(h)
         h = nonlinearity(h)
         h = self.conv_out(h)
+        #print("After End", h.shape)
+        #h = h.reshape(-1, 1, 16*16)
+        #print("After Reshape end", h.shape)
         return h
 
     def get_last_layer(self):
@@ -390,15 +402,17 @@ class Diffusion(nn.Module):
         self.dropout = config["dropout"]
         self.resamp_with_conv = config["resamp_with_conv"]
         #jself.in_channels = config["in_channels"]
-        self.in_channels = 32
-        self.resolution = 100
+        self.in_channels = 1
+        self.resolution = self.ch
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         #self.use_linear_attn = config["use_linear_attn"]
         #self.attn_type = config["attn_type"]
-
-        self.unet = Unet(ch = self.ch, out_ch = self.attr_dim, ch_mult = self.ch_mult, num_res_blocks = self.num_res_blocks,
+        """
+        self.unet = Unet(ch = config["ch"], out_ch = self.attr_dim, ch_mult = self.ch_mult, num_res_blocks = self.num_res_blocks,
                          attn_resolutions = self.attn_resolutions, dropout = self.dropout, resamp_with_conv = self.resamp_with_conv, in_channels = self.in_channels,
                          resolution = self.resolution, use_timestep = True, use_linear_attn = False, attn_type = "vanilla")
+        """
+        self.unet = UNET(config, resolution = self.resolution, in_channels = self.in_channels)
 
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
@@ -462,7 +476,7 @@ class Diffusion(nn.Module):
         place_vector_grid = place_vector_grid.type_as(grid)
         place_emb = self.place_emb(place_vector_con, place_vector_cat, place_vector_grid)
         
-        print("reverse",x_t.shape)
+        #print("reverse",x_t.shape)
         cond_noise = self.unet(x_t, t, guide_emb)
         uncond_noise = self.unet(x_t, t, place_emb)
         pred_noise = cond_noise + self.guidance_scale * (cond_noise -
@@ -475,6 +489,7 @@ class Diffusion(nn.Module):
         return x_t, noise, x_hat
 
     def reconstruct(self, x, con, cat, grid):
+        #print("diff reconstruct", x.shape)
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
@@ -484,7 +499,7 @@ class Diffusion(nn.Module):
             t = torch.tensor([self.n_steps-1], device=x.device)
             x_t, noise = self.q_xt_x0(x, t)
             for i in tqdm(range(self.n_steps-1, -1, -1)):
-                x_t = self.sample_step(x_t,con, cat,grid, i)
+                x_t = self.sample_step_ddpm(x_t,con, cat,grid, i)
                 if i % 200 == 0:
                     steps.append(x_t.clone().detach())
 
@@ -509,8 +524,10 @@ class Diffusion(nn.Module):
 
     def step(self, x, con, cat, grid):
         x_t, noise, t = self.forward_process(x)
-        print(x_t.shape)
+        #print(x_t.shape)
         pred_noise = self.reverse_process(x_t, t, con, cat, grid)
+        #print("real", noise.shape)
+        #print("predicted",pred_noise.shape)
         loss = F.mse_loss(noise.float(), pred_noise)
         return loss
 

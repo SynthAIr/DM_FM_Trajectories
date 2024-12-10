@@ -98,14 +98,20 @@ class AirLatDiffTraj(VAE):
         h = self.encoder(x)
         q = self.lsr(h)
         z = q.rsample()
+        z = z.unsqueeze(1)
+        #print("z", z.shape)
         z_hat = self.diffusion(z, con, cat, grid)
+        z_hat = z_hat.squeeze(1)
         return z_hat
 
     def eval_forward(self, x, con, cat, grid) -> torch.Tensor:
         h = self.encoder(x)
         q = self.lsr(h)
         z = q.rsample()
+        z = z.unsqueeze(1)
+        #print("z", z.shape)
         z_hat = self.diffusion(z, con, cat, grid)
+        z_hat = z_hat.squeeze(1)
         x_hat = self.out_activ(self.decoder(z_hat))
         return x_hat, []
 
@@ -124,7 +130,9 @@ class AirLatDiffTraj(VAE):
             h = self.encoder(x)
             q = self.lsr(h)
             z = q.rsample()
-            z_hat, _ = self.reconstruct(z, con, cat, grid)
+            z = z.unsqueeze(1)
+            z_hat, _ = self.diffusion.reconstruct(z, con, cat, grid)
+            z_hat = z_hat.squeeze(1)
             x_hat = self.out_activ(self.decoder(z_hat))
         return x_hat, _
 
@@ -147,6 +155,8 @@ class AirLatDiffTraj(VAE):
         h = self.encoder(x)
         q = self.lsr(h)
         z = q.rsample()
+        z = z.unsqueeze(1)
+        #print("z", z.shape)
         return self.diffusion.step(z, con, cat, grid)
 
 
