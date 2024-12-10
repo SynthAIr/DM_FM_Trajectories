@@ -130,10 +130,12 @@ class AirLatDiffTraj(VAE):
             h = self.encoder(x)
             q = self.lsr(h)
             z = q.rsample()
-            z = z.unsqueeze(1)
-            z_hat, _ = self.diffusion.reconstruct(z, con, cat, grid)
-            z_hat = z_hat.squeeze(1)
+            #z = z.unsqueeze(1)
+            #z_hat, _ = self.diffusion.reconstruct(z, con, cat, grid)
+            #z_hat = z_hat.squeeze(1)
+            z_hat = z
             x_hat = self.out_activ(self.decoder(z_hat))
+        _ = []
         return x_hat, _
 
     def get_distribution(self, c=None) -> torch.Tensor:

@@ -60,7 +60,7 @@ def train(
     # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
-    if True:
+    if False:
         trainer = Trainer(
         accelerator=train_config["accelerator"],
         devices=train_config["devices"],
