@@ -120,7 +120,7 @@ class ResnetBlock(nn.Module):
         h = nonlinearity(h)
         h = self.conv1(h)
 
-        if temb is not None and False:
+        if temb is not None:
             #print(self.temb_proj(nonlinearity(temb))[:,:,None,None].shape)
             #print(self.temb_proj(nonlinearity(temb)).shape)
             #print(h.shape)
