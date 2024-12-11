@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
-from model.baselines import PerturbationModel
+from model.baselines import PerturbationModel, TimeGAN
 from model.AirLatDiffTraj import AirLatDiffTraj
 
 def sample_batch(size, noise=1.0):
@@ -61,6 +61,8 @@ def get_model(configs):
             return PerturbationModel
         case "LatDiff":
             return AirLatDiffTraj
+        case "TimeGAN":
+            return TimeGAN
         case _:
             return AirDiffTrajDDPM
 
