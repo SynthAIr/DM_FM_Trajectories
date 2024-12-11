@@ -8,7 +8,8 @@ from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
 from model.baselines import PerturbationModel, TimeGAN
-from model.AirLatDiffTraj import AirLatDiffTraj
+from model.AirLatDiffTraj import AirLatDiffTraj, LatentDiffusionTraj
+from model.tcvae import TCVAE
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -60,9 +61,11 @@ def get_model(configs):
         case "PER":
             return PerturbationModel
         case "LatDiff":
-            return AirLatDiffTraj
+            return LatentDiffusionTraj
         case "TimeGAN":
             return TimeGAN
+        case "TCVAE":
+            return TCVAE
         case _:
             return AirDiffTrajDDPM
 

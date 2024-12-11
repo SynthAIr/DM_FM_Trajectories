@@ -231,23 +231,12 @@ class TCVAE(VAE):
 
     def __init__(
         self,
-        dataset_params: DatasetParams,
         config: Union[Dict, Namespace],
     ) -> None:
-        super().__init__(dataset_params, config)
-
-        @property
-        def example_input_array(self):
-            # return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]), torch.rand(1, 1, self.dataset_params["seq_len"]) # Example (x,c) 
-            return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]) # Example X
-
-        self.conditional = config.get("conditional", False) 
-
-        #config["cond_embed_dim"] = get_cond_len(dataset_params['conditional_features'], seq_len = self.dataset_params["seq_len"]) if self.conditional else 0
-        config["cond_embed_dim"] =config['length']
+        super().__init__(config)
 
         self.encoder = TCEncoder(
-            input_dim=self.dataset_params["input_dim"],
+            input_dim=self.config["in_channels"],
             out_dim=self.hparams.encoding_dim,
             h_dims=self.hparams.h_dims[::-1],
             kernel_size=self.hparams.kernel_size,
@@ -259,22 +248,22 @@ class TCVAE(VAE):
 
         self.decoder = TCDecoder(
             input_dim=self.hparams.encoding_dim,
-            out_dim=self.dataset_params["input_dim"],
+            out_dim=self.config["in_channels"],
             h_dims=self.hparams.h_dims[::-1],
-            seq_len=self.dataset_params["seq_len"],
+            seq_len=self.config["traj_length"],
             kernel_size=self.hparams.kernel_size,
             dilation_base=self.hparams.dilation_base,
             sampling_factor=self.hparams.sampling_factor,
             dropout=self.hparams.dropout,
             h_activ=nn.ReLU(),
         )
-        h_dim = self.hparams.h_dims[-1] * (int(self.dataset_params["seq_len"] / self.hparams.sampling_factor))
+        h_dim = self.hparams.h_dims[-1] * (int(self.config["traj_length"] / self.hparams.sampling_factor))
 
         self.lsr = VampPriorLSR(
-            original_dim=self.dataset_params["input_dim"],
-            original_seq_len=self.dataset_params["seq_len"],
+            original_dim=self.config["in_channels"],
+            original_seq_len=self.config["traj_length"],
             input_dim=h_dim,
-            cond_length=config.get("cond_embed_dim", 0),
+            cond_length=0,
             out_dim=self.hparams.encoding_dim,
             encoder=self.encoder,
             n_components=self.hparams.n_components,
@@ -282,9 +271,9 @@ class TCVAE(VAE):
 
         self.out_activ = nn.Identity()
     
-    def forward(self, x, c=None) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
+    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         h = self.encoder(x)
-        q = self.lsr(h, c)
+        q = self.lsr(h)
         z = q.rsample()
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
@@ -294,8 +283,8 @@ class TCVAE(VAE):
         return pseudo_means, pseudo_scales
 
     def test_step(self, batch, batch_idx):
-        x,c, info = batch
-        _, _, x_hat = self.forward(x,c)
+        x, con, cat, grid = batch
+        _, _, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("hp/test_loss", loss)
-        return torch.transpose(x, 1, 2), torch.transpose(x_hat, 1, 2), info
+        return loss

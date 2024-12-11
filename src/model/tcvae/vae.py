@@ -150,7 +150,6 @@ class VampPriorLSR(LSR):
 
     def forward(self, hidden: torch.Tensor, con: torch.Tensor = None, cat: torch.Tensor = None, grid: torch.Tensor = None) -> Distribution:
 
-
         loc = self.z_loc(hidden)
         log_var = self.z_log_var(hidden)
         scales = (log_var / 2).exp()
@@ -229,28 +228,6 @@ class Abstract(L.LightningModule):
         self.save_hyperparameters(config)
 
 
-    """def get_builder(self, nb_samples: int, length: int) -> CollectionBuilder:
-        builder = CollectionBuilder(
-            [
-                IdentifierBuilder(nb_samples, length),
-                TimestampBuilder(),
-            ]
-        )
-        if "track_unwrapped" in self.dataset_params["features"]:
-            if self.ataset_params["info_params"]["index"] == 0:
-                builder.append(LatLonBuilder(build_from="azgs"))
-            elif self.dataset_params["info_params"]["index"] == -1:
-                builder.append(LatLonBuilder(build_from="azgs_r"))
-        elif "track" in self.dataset_params["features"]:
-            if self.dataset_params["info_params"]["index"] == 0:
-                builder.append(LatLonBuilder(build_from="azgs"))
-            elif self.dataset_params["info_params"]["index"] == -1:
-                builder.append(LatLonBuilder(build_from="azgs_r"))
-        elif "x" in self.dataset_params["features"]:
-            builder.append(LatLonBuilder(build_from="xy", projection=EuroPP()))
-
-        return builder"""
-
     def _check_hparams(self, hparams: Union[Dict, Namespace]):
         for hparam in self._required_hparams:
             if isinstance(hparams, Namespace):
@@ -297,10 +274,14 @@ class AE(Abstract):
 
         self.logger.log_hyperparams(params)
 
-    def forward(self, x,con, cat, grid):
+    def forward(self, x, con, cat, grid):
         z = self.encoder(x,None)
         x_hat = self.out_activ(self.decoder(z))
         return z, x_hat
+
+    def get_latent(self, x, con, cat, grid):
+        z = self.encoder(x)
+        return z
 
     def training_step(self, batch, batch_idx):
         x, con, cat, grid = batch
@@ -345,12 +326,18 @@ class VAE(AE):
 
         self.lsr: LSR
 
-    def forward(self, x,c) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
+    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
         h = self.encoder(x)
-        q = self.lsr(h,c)
+        q = self.lsr(h)
         z = q.rsample()
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
+
+    def get_latent(self, x, con, cat, grid):
+        h = self.encoder(x)
+        q = self.lsr(h)
+        z = q.rsample()
+        return z
 
     def training_step(self, batch, batch_idx):
         x, con, cat, grid = batch
@@ -369,7 +356,7 @@ class VAE(AE):
         if self.hparams.reg_pseudo:
             pseudo_X = self.lsr.pseudo_inputs_NN(self.lsr.idle_input)
             pseudo_X = pseudo_X.view((pseudo_X.shape[0], x.shape[1], x.shape[2]))
-            pseudo_dist_params, pseudo_z, pseudo_x_hat = self.forward(pseudo_X)
+            pseudo_dist_params, pseudo_z, pseudo_x_hat = self.forward(pseudo_X, con, cat, grid)
 
             pseudo_llv_loss = -self.gaussian_likelihood(pseudo_X, pseudo_x_hat)
             pseudo_q_zx = self.lsr.get_posterior(pseudo_dist_params)

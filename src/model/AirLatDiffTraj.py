@@ -7,12 +7,13 @@ from typing import Dict, List, Optional, Union
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import lightning as L
 
 from model.tcvae import TCN
 from utils import DatasetParams, TrafficDataset
 from model.tcvae import VAE, VampPriorLSR
 from model.tcvae import TCDecoder, TCEncoder
-
+from model.generative import Generative
 from typing import Tuple
 from model.diffusion import Diffusion, Unet
 from enum import Enum
@@ -21,6 +22,105 @@ class Phase(Enum):
     VAE = "vae"
     DIFFUSION = "diffusion"
     EVAL = "eval"
+
+class LatentDiffusionTraj(L.LightningModule):
+    def __init__(self, config: Union[Dict, Namespace], vae: VAE, generative: Generative) -> None:
+        super().__init__()
+        self.config = config
+        self.lr = config["lr"]
+        self.generative_model = generative
+        self.vae = vae
+        self.phase = Phase.VAE
+
+    def generative_forward(self, x, con, cat, grid) -> torch.Tensor:
+        z = self.vae.get_latent(x, con, cat, grid)
+        z = z.unsqueeze(1)
+        #print("z", z.shape)
+        z_hat = self.generative_model(z, con, cat, grid)
+        z_hat = z_hat.squeeze(1)
+        return z_hat
+
+    def eval_forward(self, x, con, cat, grid) -> torch.Tensor:
+        h = self.encoder(x)
+        q = self.lsr(h)
+        z = q.rsample()
+        z = z.unsqueeze(1)
+        #print("z", z.shape)
+        z_hat = self.diffusion(z, con, cat, grid)
+        z_hat = z_hat.squeeze(1)
+        x_hat = self.out_activ(self.decoder(z_hat))
+        return x_hat, []
+    
+    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:    
+        match self.phase:
+            case Phase.VAE:
+                return self.vae(x, con, cat, grid)
+            case Phase.DIFFUSION:
+                return self.generative_forward(x, con, cat, grid)
+            case Phase.EVAL:
+                z = self.generative_forward(x, con, cat, grid)
+                x_hat = self.vae.decoder(z)
+                return x_hat, []
+
+        raise ValueError(f"Invalid phase {self.phase}")
+
+    def reconstruct(self, x, con, cat, grid):
+        with torch.no_grad():
+            z = self.vae.get_latent(x, con, cat, grid)
+            z = z.unsqueeze(1)
+            z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
+            z_hat = z_hat.squeeze(1)
+            #z_hat = z
+            x_hat = self.out_activ(self.decoder(z_hat))
+        _ = []
+        return x_hat, _
+
+    def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
+        self.eval()
+        x_t, steps = self.generative_model.sample(n, con, cat, grid, length, features, sampling)
+        with torch.no_grad():
+            x_hat = self.out_activ(self.decoder(x_t))
+        return x_hat, steps
+
+    def training_step(self, batch, batch_idx):
+        match self.phase:
+            case Phase.VAE:
+                return self.vae.training_step(batch, batch_idx)
+            case Phase.DIFFUSION:
+                x, con, cat, grid = batch
+                z = self.vae.get_latent(x, con, cat, grid)
+                z = z.unsqueeze(1)
+                batch[0] = z
+                return self.generative_model.training_step(batch, batch_idx)
+        raise ValueError(f"Invalid phase {self.phase}")
+    
+    def validation_step(self, batch, batch_idx):
+        match self.phase:
+            case Phase.VAE:
+                return self.vae.validation_step(batch, batch_idx)
+            case Phase.DIFFUSION:
+                x, con, cat, grid = batch
+                z = self.vae.get_latent(x, con, cat, grid)
+                z = z.unsqueeze(1)
+                batch[0] = z
+                return self.generative_model.validation_step(batch, batch_idx)
+        raise ValueError(f"Invalid phase {self.phase}")
+
+    def test_step(self, batch, batch_idx):
+        match self.phase:
+            case Phase.VAE:
+                return self.vae.test_step(batch, batch_idx)
+            case Phase.DIFFUSION:
+                x, con, cat, grid = batch
+                z = self.vae.get_latent(x, con, cat, grid)
+                z = z.unsqueeze(1)
+                batch[0] = z
+                return self.generative_model.test_step(batch, batch_idx)
+        raise ValueError(f"Invalid phase {self.phase}")
+    
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+
 
 class AirLatDiffTraj(VAE):
 
@@ -37,12 +137,6 @@ class AirLatDiffTraj(VAE):
     ) -> None:
         super().__init__(config)
 
-        @property
-        def example_input_array(self):
-            # return torch.rand(1, self.dataset_params["input_dim"], self.dataset_params["seq_len"]), torch.rand(1, 1, self.dataset_params["seq_len"]) # Example (x,c) 
-            return torch.rand(1, self.config["in_channels"], self.config["traj_length"]) # Example X
-
-        #self.conditional = config.get("conditional", False) 
         self.phase = Phase.VAE
         self.config = config
         self.lr = config["lr"]  # Explore this - might want it lower when training on the full dataset
@@ -138,7 +232,7 @@ class AirLatDiffTraj(VAE):
         _ = []
         return x_hat, _
 
-    def get_distribution(self, c=None) -> torch.Tensor:
+    def get_distribution(self, c=none) -> torch.tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
 
