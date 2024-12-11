@@ -48,6 +48,7 @@ netCDF4 = "^1.7.1"
 beautifulsoup4 = "^4.12.3"
 metar= "1.11.0"
 gcsfs = "^2024.10.0"
+flow-matching = "^1.0.9"
 
 
 [tool.poetry.group.dev.dependencies]
