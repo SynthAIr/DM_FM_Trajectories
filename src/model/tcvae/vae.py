@@ -223,7 +223,7 @@ class Abstract(L.LightningModule):
 
     def __init__(self, config: Union[Dict, Namespace]) -> None:
         super().__init__()
-
+        self.config = config
         self._check_hparams(config)
         self.save_hyperparameters(config)
 
@@ -270,7 +270,7 @@ class AE(Abstract):
         }
 
     def on_train_start(self) -> None:
-        params = {**self.hparams, "hp/valid_loss": 1, "hp/test_loss": 1}
+        params = {**self.hparams, "valid_loss": 1, "test_loss": 1}
 
         self.logger.log_hyperparams(params)
 
@@ -294,14 +294,14 @@ class AE(Abstract):
         x, con, cat, grid = batch
         _, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        #self.log("hp/valid_loss", loss)
+        self.log("valid_loss", loss)
         return loss
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         _, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        #self.log("hp/test_loss", loss)
+        self.log("test_loss", loss)
         return loss
 
 
@@ -379,14 +379,14 @@ class VAE(AE):
         x, con, cat, grid = batch
         _, _, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        #self.log("hp/valid_loss", loss)
+        self.log("valid_loss", loss)
         return loss
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         _,_, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        #self.log("hp/test_loss", loss)
+        self.log("test_loss", loss)
         return loss
 
     def gaussian_likelihood(self, x: torch.Tensor, x_hat: torch.Tensor):

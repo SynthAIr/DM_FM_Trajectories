@@ -31,6 +31,8 @@ from evaluation.time_series import duration_and_speed, timeseries_plot
 from evaluation.fidelity import discriminative_score
 from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from model.diffusion import Diffusion
+from model.AirLatDiffTraj import Phase
 
 
 
@@ -61,7 +63,18 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
     """
     Load the trained model and create the trajectory generation model.
     """
-    model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
+    if model_config["type"] == "LatDiff":
+        temp_conf = {"type": "TCVAE"}
+        config_file = f"{model_config['vae']}/config.yaml"
+        checkpoint = f"{model_config['vae']}/best_model.ckpt"
+        c = load_config(config_file)
+        #print(c)
+        vae = get_model(temp_conf)(c['model'])
+        diff = Diffusion(model_config)
+        model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
+        model.phase = Phase.EVAL
+    else:
+        model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 
@@ -411,6 +424,7 @@ def run(args, logger = None):
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
+    model.eval()
     dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     n = 100

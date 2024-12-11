@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.nn import functional as F
 import lightning as L
 
-class Generative(L.LightningModule):
+class Generative(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
     

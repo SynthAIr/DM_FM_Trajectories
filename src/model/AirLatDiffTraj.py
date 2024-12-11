@@ -91,7 +91,9 @@ class LatentDiffusionTraj(L.LightningModule):
                 z = self.vae.get_latent(x, con, cat, grid)
                 z = z.unsqueeze(1)
                 batch[0] = z
-                return self.generative_model.training_step(batch, batch_idx)
+                loss = self.generative_model.training_step(batch, batch_idx)
+                self.log("train_loss", loss)
+                return loss
         raise ValueError(f"Invalid phase {self.phase}")
     
     def validation_step(self, batch, batch_idx):
@@ -103,7 +105,9 @@ class LatentDiffusionTraj(L.LightningModule):
                 z = self.vae.get_latent(x, con, cat, grid)
                 z = z.unsqueeze(1)
                 batch[0] = z
-                return self.generative_model.validation_step(batch, batch_idx)
+                loss = self.generative_model.validation_step(batch, batch_idx)
+                self.log("valid_loss", loss)
+                return loss
         raise ValueError(f"Invalid phase {self.phase}")
 
     def test_step(self, batch, batch_idx):
@@ -115,7 +119,9 @@ class LatentDiffusionTraj(L.LightningModule):
                 z = self.vae.get_latent(x, con, cat, grid)
                 z = z.unsqueeze(1)
                 batch[0] = z
-                return self.generative_model.test_step(batch, batch_idx)
+                loss = self.generative_model.test_step(batch, batch_idx)
+                self.log("test_loss", loss)
+                return loss
         raise ValueError(f"Invalid phase {self.phase}")
     
     def configure_optimizers(self):

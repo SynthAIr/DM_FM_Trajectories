@@ -279,7 +279,8 @@ class TCVAE(VAE):
         return self.lsr.dist_params(q), z, x_hat
     
     def reconstruct(self, x, con, cat, grid):
-        return self.forward(x, con, cat, grid)[2], []
+        with torch.no_grad():
+            return self.forward(x, con, cat, grid)[2], []
 
     def get_distribution(self, c=None) -> torch.Tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
@@ -289,5 +290,5 @@ class TCVAE(VAE):
         x, con, cat, grid = batch
         _, _, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("hp/test_loss", loss)
+        self.log("test_loss", loss)
         return loss

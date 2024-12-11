@@ -171,19 +171,19 @@ class Diffusion(Generative):
     def training_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         loss = self.step(x, con, cat, grid)
-        self.log("diffusion/train_loss", loss)
+        #self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         loss = self.step(x, con, cat, grid)
-        self.log("diffusion/val_loss", loss)
+        #self.log("valid_loss", loss)
         return loss
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         loss = self.step(x, con, cat, grid)
-        self.log("diffusion/test_loss", loss)
+        #self.log("test_loss", loss)
         return loss
 
     def configure_optimizers(self):

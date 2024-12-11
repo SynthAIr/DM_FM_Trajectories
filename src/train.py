@@ -12,6 +12,7 @@ from utils.helper import load_config, save_config, load_and_prepare_data, get_mo
 from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
 from model.AirLatDiffTraj import Phase
+from model.diffusion import Diffusion
 
 
 def train(
@@ -54,7 +55,6 @@ def train(
     # torch.set_float32_matmul_precision("high") # Faster, but less precise
     # torch.set_float32_matmul_precision("medium") # Even faster, but also less precise
     torch.set_float32_matmul_precision(precision=train_config["precision"])
-
     # Start the model training and validation process.
     trainer.fit(model, train_loader, val_loader)
     # Optionally evaluate the model on test data using the best model checkpoint.
@@ -83,7 +83,6 @@ def train(
             ),
         ],
     )
-        model.phase = Phase.DIFFUSION
         model.encoder.eval()
         model.decoder.eval()
         model.lsr.eval()
@@ -149,7 +148,21 @@ def run(args: argparse.Namespace):
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]
     print(f"*******model parameters: {model_config}")
-    model = get_model(model_config)(model_config)
+    if model_config["type"] == "LatDiff":
+        temp_conf = {"type": "TCVAE"}
+        config_file = f"{model_config['vae']}/config.yaml"
+        checkpoint = f"{model_config['vae']}/best_model.ckpt"
+        c = load_config(config_file)
+        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c['model'])
+        diff = Diffusion(model_config)
+        model = get_model(model_config)(model_config, vae, diff)
+        model.phase = Phase.DIFFUSION
+        model.vae.eval()
+    else:
+        model = get_model(model_config)(model_config)
+
+        
+
     print("Model built!")
 
     # Initiate training with the setup configurations and prepared dataset and model.
