@@ -5,8 +5,9 @@ import numpy as np
 from einops import rearrange
 from tqdm import tqdm
 from torch.nn import functional as F
+import lightning as L
 
-class Generative(nn.LightningModule):
+class Generative(L.LightningModule):
     def __init__(self) -> None:
         super().__init__()
     

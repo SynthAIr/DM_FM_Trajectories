@@ -61,8 +61,7 @@ data:
   test_batch_size: 32
   
 model:
-  type: TCVAE
-  sampling: "LatDiff"
+  type: "LatDiff"
   h_dims: [256, 256, 256, 256]
   encoding_dim: 256
   lr: 0.00005

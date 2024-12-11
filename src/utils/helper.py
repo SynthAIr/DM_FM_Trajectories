@@ -53,7 +53,7 @@ def load_and_prepare_data(configs):
     return dataset, traffic
 
 def get_model(configs):
-    match configs["sampling"]:
+    match configs["type"]:
         case "DDPM":
             return AirDiffTrajDDPM
         case "DDIM":

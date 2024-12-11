@@ -15,7 +15,7 @@ from model.tcvae import VAE, VampPriorLSR
 from model.tcvae import TCDecoder, TCEncoder
 from model.generative import Generative
 from typing import Tuple
-from model.diffusion import Diffusion, Unet
+from model.diffusion import Diffusion
 from enum import Enum
 
 class Phase(Enum):
@@ -232,7 +232,7 @@ class AirLatDiffTraj(VAE):
         _ = []
         return x_hat, _
 
-    def get_distribution(self, c=none) -> torch.tensor:
+    def get_distribution(self, c=None) -> torch.tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
 

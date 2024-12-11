@@ -1,5 +1,5 @@
 train:
-  epochs: 500
+  epochs: 10
   accelerator: 'auto'
   devices: '1'
   seed: 42
@@ -9,9 +9,9 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirDiffTraj
-  run_name: AirDiffTraj
-  tags: {'model': 'diffusion', 'dataset': 'opensky'}
+  experiment_name: TCVAE
+  run_name: TCVAE
+  tags: {'model': 'tcvae', 'dataset': 'opensky'}
 data:
   dataset: opensky
   data_path: ./data/traffic.pkl
@@ -71,7 +71,7 @@ data:
   length: 200
   
 model:
-  type: TCVAE
+  type: "TCVAE"
   h_dims: [64, 64, 64]
   encoding_dim: 64
   #encoding_dim: 128

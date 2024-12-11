@@ -69,12 +69,10 @@ data:
   batch_size: 64
   test_batch_size: 32
   length: 200
-  down_sample_factor: 30
   
 model:
-  type: "simple"
+  type: "DDIM"
   cnn: True
-  sampling: "DDIM"
   attr_dim: 32
   guidance_scale: 0
   in_channels: 8
