@@ -69,11 +69,14 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         checkpoint = f"{model_config['vae']}/best_model.ckpt"
         c = load_config(config_file)
         #print(c)
-        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
+        #vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
+        c = c['model']
+        c["traj_length"] = model_config['traj_length']
+        vae = get_model(temp_conf)(c)
         diff = Diffusion(model_config)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
-        model.phase = Phase.EVAL
+        #model.phase = Phase.EVAL
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode

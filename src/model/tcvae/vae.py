@@ -287,21 +287,21 @@ class AE(Abstract):
         x, con, cat, grid = batch
         z, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("train_loss", loss)
+        #self.log("train_loss", loss)
         return loss, z
 
     def validation_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         z, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("valid_loss", loss)
+        #self.log("valid_loss", loss)
         return loss, z
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         z, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("test_loss", loss)
+        #self.log("test_loss", loss)
         return loss, z
 
     def decode(self, z):
@@ -367,7 +367,7 @@ class VAE(AE):
             pseudo_elbo = kld_coef * pseudo_kld_loss + llv_coef * pseudo_llv_loss
             pseudo_elbo = (x.shape[0] / pseudo_X.shape[0]) * pseudo_elbo.mean()
             elbo = elbo + self.pseudo_gamma * pseudo_elbo
-
+        """
         self.log_dict(
             {
                 "train_loss": elbo,
@@ -375,21 +375,22 @@ class VAE(AE):
                 "recon_loss": llv_loss.mean(),
             }
         )
-        return elbo, q_zx, p_z, z
+        """
+        return elbo, q_zx, p_z, z, kld_loss.mean(), llv_loss.mean()
 
     def validation_step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        _, _, x_hat = self.forward(x,con, cat, grid)
+        _, z, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("valid_loss", loss)
-        return loss
+        #self.log("valid_loss", loss)
+        return loss, z
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        _,_, x_hat = self.forward(x,con, cat, grid)
+        _,z, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
-        self.log("test_loss", loss)
-        return loss
+        #self.log("test_loss", loss)
+        return loss, z
 
     def gaussian_likelihood(self, x: torch.Tensor, x_hat: torch.Tensor):
         mean = x_hat

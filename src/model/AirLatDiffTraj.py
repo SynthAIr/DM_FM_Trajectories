@@ -81,12 +81,20 @@ class LatentDiffusionTraj(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         diff_lambda = 1.0
-        vae_loss, _, _, z = self.vae.training_step(batch, batch_idx)
+        vae_loss, _, _, z, kld_loss, llv_loss = self.vae.training_step(batch, batch_idx)
         z = z.unsqueeze(1)
         batch[0] = z
         generative_loss = self.generative_model.training_step(batch, batch_idx)
         loss = vae_loss + diff_lambda * generative_loss
-        self.log("train_loss", loss)
+        self.log_dict(
+            {
+                "vae_loss": vae_loss,
+                "kl_loss": kld_loss,
+                "recon_loss": llv_loss,
+                "diff_loss": generative_loss,
+                "train_loss": loss
+            }
+        )
         return loss
 
         match self.phase:
@@ -126,10 +134,10 @@ class LatentDiffusionTraj(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         diff_lambda = 1.0
-        vae_loss, z = self.vae.validation_step(batch, batch_idx)
+        vae_loss, z = self.vae.test_step(batch, batch_idx)
         z = z.unsqueeze(1)
         batch[0] = z
-        generative_loss = self.generative_model.validation_step(batch, batch_idx)
+        generative_loss = self.generative_model.test_step(batch, batch_idx)
         loss = vae_loss + diff_lambda * generative_loss
         self.log("test_loss", loss)
         return loss

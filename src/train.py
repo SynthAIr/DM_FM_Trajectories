@@ -13,6 +13,7 @@ from utils.train_utils import get_dataloaders
 from utils.condition_utils import load_conditions
 from model.AirLatDiffTraj import Phase
 from model.diffusion import Diffusion
+from model.tcvae import TCVAE
 
 
 def train(
@@ -148,19 +149,21 @@ def run(args: argparse.Namespace):
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]
     print(f"*******model parameters: {model_config}")
-    """
+
     if model_config["type"] == "LatDiff":
         temp_conf = {"type": "TCVAE"}
-        config_file = f"{model_config['vae']}/config.yaml"
+        #config_file = f"{model_config['vae']}/config.yaml"
+        config_file = f"configs/tcvae_config.yaml"
         checkpoint = f"{model_config['vae']}/best_model.ckpt"
         c = load_config(config_file)
-        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c['model'])
+        #vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c['model'])
+        c = c['model']
+        c["traj_length"] = dataset.parameters['seq_len']
+        vae = get_model(temp_conf)(c)
         diff = Diffusion(model_config)
         model = get_model(model_config)(model_config, vae, diff)
     else:
-    """
-
-    model = get_model(model_config)(model_config)
+        model = get_model(model_config)(model_config)
 
         
 

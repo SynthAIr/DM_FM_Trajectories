@@ -287,9 +287,3 @@ class TCVAE(VAE):
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
 
-    def test_step(self, batch, batch_idx):
-        x, con, cat, grid = batch
-        _, _, x_hat = self.forward(x, con, cat, grid)
-        loss = F.mse_loss(x_hat, x)
-        self.log("test_loss", loss)
-        return loss
