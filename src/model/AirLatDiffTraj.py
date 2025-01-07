@@ -41,15 +41,12 @@ class LatentDiffusionTraj(L.LightningModule):
         return z_hat
 
     def eval_forward(self, x, con, cat, grid) -> torch.Tensor:
-        h = self.encoder(x)
-        q = self.lsr(h)
-        z = q.rsample()
+        z = self.vae.get_latent(x, con, cat, grid)
         z = z.unsqueeze(1)
         #print("z", z.shape)
-        z_hat = self.diffusion(z, con, cat, grid)
+        z_hat = self.generative_model(z, con, cat, grid)
         z_hat = z_hat.squeeze(1)
-        x_hat = self.out_activ(self.decoder(z_hat))
-        return x_hat, []
+        return self.vae.decode(z_hat)
     
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:    
         match self.phase:
@@ -65,19 +62,19 @@ class LatentDiffusionTraj(L.LightningModule):
         raise ValueError(f"Invalid phase {self.phase}")
 
     def reconstruct(self, x, con, cat, grid):
+        #return self.vae.reconstruct(x, con, cat, grid)
         with torch.no_grad():
             z = self.vae.get_latent(x, con, cat, grid)
             z = z.unsqueeze(1)
             z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
             z_hat = z_hat.squeeze(1)
-            #z_hat = z
-            x_hat = self.out_activ(self.decoder(z_hat))
+            x_hat = self.vae.decode(z_hat)
         _ = []
         return x_hat, _
 
     def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
         self.eval()
-        x_t, steps = self.generative_model.sample(n, con, cat, grid, length, features, sampling)
+        x_t, steps = self.generative_model.sample(n, con, cat, grid, 1, 256, sampling)
         with torch.no_grad():
             x_hat = self.out_activ(self.decoder(x_t))
         return x_hat, steps
@@ -242,7 +239,7 @@ class AirLatDiffTraj(VAE):
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
 
-    def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
+    def sample(self, n,con, cat, grid, length = 256, features=1, sampling="ddpm"):
         self.eval()
         x_t, steps = self.diffusion.sample(n, con, cat, grid, length, features, sampling)
         with torch.no_grad():

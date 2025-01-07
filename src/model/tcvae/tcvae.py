@@ -280,6 +280,7 @@ class TCVAE(VAE):
     
     def reconstruct(self, x, con, cat, grid):
         with torch.no_grad():
+            print("recon vae")
             return self.forward(x, con, cat, grid)[2], []
 
     def get_distribution(self, c=None) -> torch.Tensor:

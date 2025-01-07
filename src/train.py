@@ -157,6 +157,7 @@ def run(args: argparse.Namespace):
         diff = Diffusion(model_config)
         model = get_model(model_config)(model_config, vae, diff)
         model.phase = Phase.DIFFUSION
+        model.vae = model.vae.requires_grad_(False)
         model.vae.eval()
     else:
         model = get_model(model_config)(model_config)

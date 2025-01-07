@@ -304,6 +304,8 @@ class AE(Abstract):
         self.log("test_loss", loss)
         return loss
 
+    def decode(self, z):
+        return self.out_activ(self.decoder(z))
 
 class VAE(AE):
 

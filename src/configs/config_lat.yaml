@@ -1,11 +1,11 @@
 train:
-  epochs: 10
+  epochs: 500
   accelerator: 'gpu'
   devices: '1'
   seed: 37
   gradient_clip_val: 0.5
   log_every_n_steps: 2
-  early_stop_patience: 30
+  early_stop_patience: 60
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
@@ -57,15 +57,15 @@ data:
     function: True
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 512
+  batch_size: 256
   test_batch_size: 32
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/TCVAE_3"
+  vae: "./artifacts/TCVAE_5"
   h_dims: [256, 256, 256, 256]
   encoding_dim: 256
-  lr: 0.00005
+  lr: 0.000001
   lr_step_size: 200
   lr_gamma: 0.5
   attr_dim: 32
@@ -73,16 +73,16 @@ model:
   in_channels: 8
   out_ch: 8
   ch: 64
-  ch_mult: [ 1, 2, 2, 4 ]
-  num_res_blocks: 4
-  attn_resolutions: [16]
+  ch_mult: [ 1, 2, 4, 8 ]
+  num_res_blocks: 6
+  attn_resolutions: [32, 16]
   dropout: 0.0
   resamp_with_conv: True
   cnn: True
   diffusion:
-    beta_schedule: 'cosine'
+    beta_schedule: 'linear'
     beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.08               # Slightly increased for faster diffusion
+    beta_end: 0.05               # Slightly increased for faster diffusion
     num_diffusion_timesteps: 1000
     ema: True
     ema_rate: 0.999999

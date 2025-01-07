@@ -69,9 +69,10 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         checkpoint = f"{model_config['vae']}/best_model.ckpt"
         c = load_config(config_file)
         #print(c)
-        vae = get_model(temp_conf)(c['model'])
+        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
         diff = Diffusion(model_config)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
+        #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
         model.phase = Phase.EVAL
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
@@ -444,7 +445,7 @@ def run(args, logger = None):
     fig_takeoff = plot_traffic_comparison(reconstructions, 2, f"./figures/{model_name}_", landing = False)
     logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
     logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
-    length = config['data']['length']
+    length = config['model']['traj_length']
     
     samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
     fig_99 = get_figure_from_sample_steps(steps, dataset, length)
