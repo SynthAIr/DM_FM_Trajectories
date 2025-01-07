@@ -80,6 +80,15 @@ class LatentDiffusionTraj(L.LightningModule):
         return x_hat, steps
 
     def training_step(self, batch, batch_idx):
+        diff_lambda = 1.0
+        vae_loss, _, _, z = self.vae.training_step(batch, batch_idx)
+        z = z.unsqueeze(1)
+        batch[0] = z
+        generative_loss = self.generative_model.training_step(batch, batch_idx)
+        loss = vae_loss + diff_lambda * generative_loss
+        self.log("train_loss", loss)
+        return loss
+
         match self.phase:
             case Phase.VAE:
                 return self.vae.training_step(batch, batch_idx)
@@ -94,6 +103,14 @@ class LatentDiffusionTraj(L.LightningModule):
         raise ValueError(f"Invalid phase {self.phase}")
     
     def validation_step(self, batch, batch_idx):
+        diff_lambda = 1.0
+        vae_loss, z = self.vae.validation_step(batch, batch_idx)
+        z = z.unsqueeze(1)
+        batch[0] = z
+        generative_loss = self.generative_model.validation_step(batch, batch_idx)
+        loss = vae_loss + diff_lambda * generative_loss
+        self.log("valid_loss", loss)
+        return loss
         match self.phase:
             case Phase.VAE:
                 return self.vae.validation_step(batch, batch_idx)
@@ -108,6 +125,14 @@ class LatentDiffusionTraj(L.LightningModule):
         raise ValueError(f"Invalid phase {self.phase}")
 
     def test_step(self, batch, batch_idx):
+        diff_lambda = 1.0
+        vae_loss, z = self.vae.validation_step(batch, batch_idx)
+        z = z.unsqueeze(1)
+        batch[0] = z
+        generative_loss = self.generative_model.validation_step(batch, batch_idx)
+        loss = vae_loss + diff_lambda * generative_loss
+        self.log("test_loss", loss)
+        return loss
         match self.phase:
             case Phase.VAE:
                 return self.vae.test_step(batch, batch_idx)
@@ -260,6 +285,7 @@ class AirLatDiffTraj(VAE):
 
 
     def step(self, batch, batch_idx):
+
         match self.phase:
             case Phase.VAE:
                 return self.vae_step(batch, batch_idx)

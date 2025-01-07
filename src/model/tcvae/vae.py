@@ -285,24 +285,24 @@ class AE(Abstract):
 
     def training_step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        _, x_hat = self.forward(x, con, cat, grid)
+        z, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("train_loss", loss)
-        return loss
+        return loss, z
 
     def validation_step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        _, x_hat = self.forward(x, con, cat, grid)
+        z, x_hat = self.forward(x, con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("valid_loss", loss)
-        return loss
+        return loss, z
 
     def test_step(self, batch, batch_idx):
         x, con, cat, grid = batch
-        _, x_hat = self.forward(x,con, cat, grid)
+        z, x_hat = self.forward(x,con, cat, grid)
         loss = F.mse_loss(x_hat, x)
         self.log("test_loss", loss)
-        return loss
+        return loss, z
 
     def decode(self, z):
         return self.out_activ(self.decoder(z))
@@ -375,7 +375,7 @@ class VAE(AE):
                 "recon_loss": llv_loss.mean(),
             }
         )
-        return elbo
+        return elbo, q_zx, p_z, z
 
     def validation_step(self, batch, batch_idx):
         x, con, cat, grid = batch

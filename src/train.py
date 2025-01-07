@@ -148,6 +148,7 @@ def run(args: argparse.Namespace):
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]
     print(f"*******model parameters: {model_config}")
+    """
     if model_config["type"] == "LatDiff":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -156,11 +157,10 @@ def run(args: argparse.Namespace):
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c['model'])
         diff = Diffusion(model_config)
         model = get_model(model_config)(model_config, vae, diff)
-        model.phase = Phase.DIFFUSION
-        model.vae = model.vae.requires_grad_(False)
-        model.vae.eval()
     else:
-        model = get_model(model_config)(model_config)
+    """
+
+    model = get_model(model_config)(model_config)
 
         
 
