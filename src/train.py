@@ -158,6 +158,7 @@ def run(args: argparse.Namespace):
         c = c['model']
         c["traj_length"] = dataset.parameters['seq_len']
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
+        vae.eval()
         diff = Diffusion(model_config)
         model = get_model(model_config)(model_config, vae, diff)
     else:
