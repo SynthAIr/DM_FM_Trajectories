@@ -112,8 +112,9 @@ def run(args: argparse.Namespace):
     print("Logger setup!")
 
     # Dataset preparation and loading.
-    dataset_config = configs["data"]
-    dataset, traffic = load_and_prepare_data(configs)
+    #dataset_config = configs["data"]
+    dataset_config = load_config(args.dataset_config)
+    dataset, traffic = load_and_prepare_data(dataset_config)
     #conditional_features = load_conditions(dataset_config)
     """
     dataset = TrafficDataset.from_file(
@@ -208,6 +209,15 @@ if __name__ == "__main__":
         default="./configs/config.yaml",
         help="Path to the config file"
     )
+
+    parser.add_argument(
+        "--dataset_config",
+        type=str,
+        #required=True,
+        default="./configs/dataset_opensky.yaml",
+        help="Path to the dataset config file"
+    )
+    
     parser.add_argument(
         "--data_path",
         type=str,

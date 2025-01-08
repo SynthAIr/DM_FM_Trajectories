@@ -58,6 +58,15 @@ if __name__ == "__main__":
         default=None,
         help="Name of the model (e.g., 'AirDiffTraj_5')."
         )
+
+    parser.add_argument(
+        "--dataset_config",
+        type=str,
+        #required=True,
+        default="./configs/dataset_opensky.yaml",
+        help="Path to the dataset config file"
+    )
+
     args = parser.parse_args()
     run(args)
     

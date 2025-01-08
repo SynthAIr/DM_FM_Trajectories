@@ -35,11 +35,10 @@ def save_config(config, config_file):
     with open(config_file, "w") as f:
         yaml.dump(config, f)
 
-def load_and_prepare_data(configs):
+def load_and_prepare_data(dataset_config):
     """
     Load and prepare the dataset for the model.
     """
-    dataset_config = configs['data']
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
         features=dataset_config["features"],

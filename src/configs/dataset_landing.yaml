@@ -1,0 +1,34 @@
+data:
+  dataset: landing
+  data_path: ./data/traffic.pkl
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+  data_shape: 'image'
+  conditional_features:
+    hour:
+      type: 'cyclic'
+      max_value: 24
+    month:
+      type: 'cyclic'
+      max_value: 12
+    day_of_week:
+      type: 'cyclic'
+      max_value: 6
+    cumdist:
+      type: 'continuous'
+      last: True
+      first: False
+    timedelta:
+      type: 'continuous'
+      last: True
+      first: False
+  weather_grid:
+    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
+    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+    resolution: 1
+    function: True
+  train_ratio: 0.8
+  val_ratio: 0.2
+  batch_size: 256
+  test_batch_size: 32
+ 
