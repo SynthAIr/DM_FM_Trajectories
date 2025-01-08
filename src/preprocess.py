@@ -645,6 +645,50 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
     # Plot the training data with altitude
     #plot_training_data_with_altitude(training_data_path=save_path)
 
+def main_landing(base_path: str, data_source: str) -> None:
+    from traffic.data.datasets import landing_zurich_2019
+
+    flights_points = (
+    landing_zurich_2019
+    #.query("runway == '14' and initial_flow == '162-216'")
+    .assign_id()
+    .unwrap()
+    .resample(200)
+    .eval()
+    ).data
+
+    avg_sequence_length = 200
+
+    print("Adding weather data")
+    #flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
+
+    # Create Traffic object from flight points
+    trajectories = get_trajectories(flights_points)
+    del flights_points
+
+    # Prepare trajectories for training
+    trajectories = prepare_trajectories(
+        trajectories, int(avg_sequence_length), n_jobs=7, douglas_peucker_coeff=None
+    )
+
+    # Save the prepared trajectories to a pickle file in the parent directory of the base_path
+    save_path = (
+        Path(base_path).parent
+        / f"{data_source}_landing_trajectories_{avg_sequence_length}.pkl"
+    )
+
+    trajectories.to_pickle(Path(save_path))
+    print(f"Saved trajectories to {save_path}")
+
+    del trajectories
+
+    # Plot the training data
+    #plot_training_data(training_data_path=save_path)
+
+    # Plot the training data with altitude
+    #plot_training_data_with_altitude(training_data_path=save_path)
+
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -657,6 +701,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_source", dest="data_source", type=str, default="OpenSky"
     )
+    parser.add_argument(
+        "--landing", dest="landing", type=bool, default=False
+    )
 
     args = parser.parse_args()
-    main(args.base_path, args.ADEP, args.ADES, args.data_source)
+    if args.landing:
+        main_landing(args.base_path, args.data_source)
+    else:
+        main(args.base_path, args.ADEP, args.ADES, args.data_source)
