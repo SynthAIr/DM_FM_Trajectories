@@ -30,36 +30,7 @@ class LatentDiffusionTraj(L.LightningModule):
         self.lr = config["lr"]
         self.generative_model = generative
         self.vae = vae
-        self.phase = Phase.VAE
-
-    def generative_forward(self, x, con, cat, grid) -> torch.Tensor:
-        z = self.vae.get_latent(x, con, cat, grid)
-        z = z.unsqueeze(1)
-        #print("z", z.shape)
-        z_hat = self.generative_model(z, con, cat, grid)
-        z_hat = z_hat.squeeze(1)
-        return z_hat
-
-    def eval_forward(self, x, con, cat, grid) -> torch.Tensor:
-        z = self.vae.get_latent(x, con, cat, grid)
-        z = z.unsqueeze(1)
-        #print("z", z.shape)
-        z_hat = self.generative_model(z, con, cat, grid)
-        z_hat = z_hat.squeeze(1)
-        return self.vae.decode(z_hat)
-    
-    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:    
-        match self.phase:
-            case Phase.VAE:
-                return self.vae(x, con, cat, grid)
-            case Phase.DIFFUSION:
-                return self.generative_forward(x, con, cat, grid)
-            case Phase.EVAL:
-                z = self.generative_forward(x, con, cat, grid)
-                x_hat = self.vae.decoder(z)
-                return x_hat, []
-
-        raise ValueError(f"Invalid phase {self.phase}")
+        self.phase = Phase.DIFFUSION
 
     def reconstruct(self, x, con, cat, grid):
         #return self.vae.reconstruct(x, con, cat, grid)
@@ -80,23 +51,6 @@ class LatentDiffusionTraj(L.LightningModule):
         return x_hat, steps
 
     def training_step(self, batch, batch_idx):
-        diff_lambda = 1.0
-        vae_loss, _, _, z, kld_loss, llv_loss = self.vae.training_step(batch, batch_idx)
-        z = z.unsqueeze(1)
-        batch[0] = z
-        generative_loss = self.generative_model.training_step(batch, batch_idx)
-        loss = vae_loss + diff_lambda * generative_loss
-        self.log_dict(
-            {
-                "vae_loss": vae_loss,
-                "kl_loss": kld_loss,
-                "recon_loss": llv_loss,
-                "diff_loss": generative_loss,
-                "train_loss": loss
-            }
-        )
-        return loss
-
         match self.phase:
             case Phase.VAE:
                 return self.vae.training_step(batch, batch_idx)
@@ -109,16 +63,16 @@ class LatentDiffusionTraj(L.LightningModule):
                 self.log("train_loss", loss)
                 return loss
         raise ValueError(f"Invalid phase {self.phase}")
-    
-    def validation_step(self, batch, batch_idx):
-        diff_lambda = 1.0
-        vae_loss, z = self.vae.validation_step(batch, batch_idx)
+
+    def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
+        z = self.vae.get_latent(x, con, cat, grid)
         z = z.unsqueeze(1)
-        batch[0] = z
-        generative_loss = self.generative_model.validation_step(batch, batch_idx)
-        loss = vae_loss + diff_lambda * generative_loss
-        self.log("valid_loss", loss)
-        return loss
+        #print("z", z.shape)
+        z_hat = self.generative_model(z, con, cat, grid)
+        z_hat = z_hat.squeeze(1)
+        return self.vae.decode(z_hat)
+
+    def validation_step(self, batch, batch_idx):
         match self.phase:
             case Phase.VAE:
                 return self.vae.validation_step(batch, batch_idx)
@@ -133,14 +87,6 @@ class LatentDiffusionTraj(L.LightningModule):
         raise ValueError(f"Invalid phase {self.phase}")
 
     def test_step(self, batch, batch_idx):
-        diff_lambda = 1.0
-        vae_loss, z = self.vae.test_step(batch, batch_idx)
-        z = z.unsqueeze(1)
-        batch[0] = z
-        generative_loss = self.generative_model.test_step(batch, batch_idx)
-        loss = vae_loss + diff_lambda * generative_loss
-        self.log("test_loss", loss)
-        return loss
         match self.phase:
             case Phase.VAE:
                 return self.vae.test_step(batch, batch_idx)

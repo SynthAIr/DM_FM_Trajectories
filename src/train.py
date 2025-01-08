@@ -152,14 +152,12 @@ def run(args: argparse.Namespace):
 
     if model_config["type"] == "LatDiff":
         temp_conf = {"type": "TCVAE"}
-        #config_file = f"{model_config['vae']}/config.yaml"
-        config_file = f"configs/tcvae_config.yaml"
+        config_file = f"{model_config['vae']}/config.yaml"
         checkpoint = f"{model_config['vae']}/best_model.ckpt"
         c = load_config(config_file)
-        #vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c['model'])
         c = c['model']
         c["traj_length"] = dataset.parameters['seq_len']
-        vae = get_model(temp_conf)(c)
+        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         diff = Diffusion(model_config)
         model = get_model(model_config)(model_config, vae, diff)
     else:

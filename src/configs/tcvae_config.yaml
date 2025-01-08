@@ -82,7 +82,7 @@ model:
   in_channels: 8
   out_ch: 8
   llv_coef: 1.0
-  kld_coef: 1.0
+  kld_coef: 0.0001
   reg_pseudo: False
   scale: 1.0
   fix_prior: True
