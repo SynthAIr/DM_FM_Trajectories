@@ -654,8 +654,11 @@ def main_landing(base_path: str, data_source: str) -> None:
     .assign_id()
     .unwrap()
     .resample(200)
+    .drop_duplicates()
     .eval()
     ).data
+
+    flights_points = add_time_based_features(flights_points, "timestamp")
 
     avg_sequence_length = 200
 
@@ -667,14 +670,22 @@ def main_landing(base_path: str, data_source: str) -> None:
     del flights_points
 
     # Prepare trajectories for training
-    trajectories = prepare_trajectories(
-        trajectories, int(avg_sequence_length), n_jobs=7, douglas_peucker_coeff=None
+    #trajectories = prepare_trajectories(
+        #trajectories, int(avg_sequence_length), n_jobs=7, douglas_peucker_coeff=None
+    #)
+    trajectories = Traffic.from_flights(
+        flight.assign(
+            timedelta=lambda r: (r.timestamp - flight.start).apply(
+                lambda t: t.total_seconds()
+            )
+        )
+        for flight in trajectories
     )
 
     # Save the prepared trajectories to a pickle file in the parent directory of the base_path
     save_path = (
         Path(base_path).parent
-        / f"{data_source}_landing_trajectories_{avg_sequence_length}.pkl"
+        / f"landing/{data_source}_trajectories_{avg_sequence_length}.pkl"
     )
 
     trajectories.to_pickle(Path(save_path))
@@ -702,7 +713,7 @@ if __name__ == "__main__":
         "--data_source", dest="data_source", type=str, default="OpenSky"
     )
     parser.add_argument(
-        "--landing", dest="landing", type=bool, action='store_true'
+        "--landing", dest="landing", action='store_true'
     )
 
     args = parser.parse_args()

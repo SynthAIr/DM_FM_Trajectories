@@ -37,7 +37,8 @@ class LatentDiffusionTraj(L.LightningModule):
         with torch.no_grad():
             z = self.vae.get_latent(x, con, cat, grid)
             z = z.unsqueeze(1)
-            z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
+            #z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
+            z_hat = z
             z_hat = z_hat.squeeze(1)
             x_hat = self.vae.decode(z_hat)
         _ = []
@@ -79,7 +80,8 @@ class LatentDiffusionTraj(L.LightningModule):
                 #return self.vae.validation_step(batch, batch_idx)
             case Phase.DIFFUSION:
                 x, con, cat, grid = batch
-                z = self.vae.get_latent(x, con, cat, grid)
+                with torch.no_grad():
+                    z = self.vae.get_latent(x, con, cat, grid)
                 z = z.unsqueeze(1)
                 batch[0] = z
                 loss = self.generative_model.validation_step(batch, batch_idx)
@@ -93,7 +95,8 @@ class LatentDiffusionTraj(L.LightningModule):
                 #return self.vae.test_step(batch, batch_idx)
             case Phase.DIFFUSION:
                 x, con, cat, grid = batch
-                z = self.vae.get_latent(x, con, cat, grid)
+                with torch.no_grad():
+                    z = self.vae.get_latent(x, con, cat, grid)
                 z = z.unsqueeze(1)
                 batch[0] = z
                 loss = self.generative_model.test_step(batch, batch_idx)

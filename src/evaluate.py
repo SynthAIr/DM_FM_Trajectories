@@ -71,7 +71,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         c = c['model']
         c["traj_length"] = model_config['traj_length']
         #print(c)
-        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
+        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
         diff = Diffusion(model_config)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
