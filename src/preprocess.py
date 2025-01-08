@@ -702,7 +702,7 @@ if __name__ == "__main__":
         "--data_source", dest="data_source", type=str, default="OpenSky"
     )
     parser.add_argument(
-        "--landing", dest="landing", type=bool, default=False
+        "--landing", dest="landing", type=bool, action='store_true'
     )
 
     args = parser.parse_args()
