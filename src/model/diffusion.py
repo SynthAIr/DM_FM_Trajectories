@@ -11,6 +11,8 @@ from torch.nn import functional as F
 class Diffusion(Generative):
     def __init__(self, config):
         super().__init__()
+        self.dataset_config = config["data"]
+        config = config["model"]
         self.config = config
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
@@ -32,8 +34,8 @@ class Diffusion(Generative):
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
 
-        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
-        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
+        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config, dataset_config = self.dataset_config)
+        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config, dataset_config = self.dataset_config)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]

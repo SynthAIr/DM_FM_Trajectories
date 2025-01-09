@@ -225,12 +225,35 @@ class WeatherBlock(nn.Module):
         x = self.fc2(x)
         return x
 
+def get_categorical_category_counts(config):
+    """
+    Retrieves the total number of categories for each categorical variable in the configuration.
+
+    Parameters:
+        config (dict): Configuration dictionary containing conditional features.
+
+    Returns:
+        list: List of total number of categories for each categorical variable.
+    """
+    # Extract conditional features from the config
+    conditional_features = config.get('conditional_features', {})
+    
+    # Initialize a list to hold category counts
+    category_counts = []
+    
+    # Iterate through the features
+    for feature_name, feature_config in conditional_features.items():
+        if feature_config.get('type') == 'categorical':
+            categories = feature_config.get('categories', [])
+            category_counts.append(len(categories))  # Add the number of categories to the list
+    
+    return category_counts
 
 class EmbeddingBlock(nn.Module):
-    def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_config = None) -> None:
+    def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_config = None, dataset_config = None) -> None:
         super().__init__()
-        wide_and_deep_config = WideAndDeepConfig(continuous_len, categorical_len, embedding_dim, hidden_dim)
-        self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
+        wide_and_deep_config = WideAndDeepConfig(continuous_len, categorical_len, embedding_dim, hidden_dim, get_categorical_category_counts(dataset_config))
+        self.wide_and_deep = WideAndDeep(wide_and_deep_config)
         self.weather_config = weather_config
         self.weather = weather_config and weather_config['weather_grid']
         
@@ -667,7 +690,8 @@ class AirDiffTraj(L.LightningModule):
 
     def __init__(self, config):
         super().__init__()
-        self.config = config
+        self.dataset_config = config["data"]
+        self.config = config['model']
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
         self.guidance_scale = config["guidance_scale"]
@@ -676,8 +700,8 @@ class AirDiffTraj(L.LightningModule):
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
 
-        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
-        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config)
+        self.guide_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config, dataset_config = self.dataset_config)
+        self.place_emb = EmbeddingBlock(self.continuous_len, 0, self.ch, weather_config = self.weather_config, dataset_config = self.dataset_config)
 
         diff_config = config["diffusion"]
         self.n_steps = diff_config["num_diffusion_timesteps"]

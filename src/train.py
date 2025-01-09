@@ -61,42 +61,9 @@ def train(
     # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
-    if False:
-        trainer = Trainer(
-        accelerator=train_config["accelerator"],
-        devices=train_config["devices"],
-        max_epochs=train_config["epochs"],
-        gradient_clip_val=train_config["gradient_clip_val"],
-        log_every_n_steps=train_config["log_every_n_steps"],
-        strategy="ddp_find_unused_parameters_true",
-        logger=logger,
-        callbacks=[
-            EarlyStopping(
-                monitor="valid_loss_diffusion",
-                patience=train_config["early_stop_patience"],
-            ),
-            ModelCheckpoint(
-                monitor="valid_loss_diffusion",
-                dirpath=artifact_location,
-                filename="best_model",
-                save_top_k=1,
-                mode="min",
-            ),
-        ],
-    )
-        model.encoder.eval()
-        model.decoder.eval()
-        model.lsr.eval()
-        trainer.fit(model, train_loader, val_loader)
-        # Optionally evaluate the model on test data using the best model checkpoint.
-        trainer.test(model, test_loader, ckpt_path="best")
-        model.phase = Phase.EVAL
-
-
 
 def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
-    configs["data"]["data_path"] = args.data_path
     configs["logger"]["artifact_location"] = args.artifact_location
 
     # Setup logger with MLFlow with configurations read from the file.
@@ -115,6 +82,7 @@ def run(args: argparse.Namespace):
     #dataset_config = configs["data"]
     dataset_config = load_config(args.dataset_config)
     dataset_config["data_path"] = args.data_path
+    configs["data"] = dataset_config
     dataset, traffic = load_and_prepare_data(dataset_config)
     #conditional_features = load_conditions(dataset_config)
     """
@@ -147,6 +115,7 @@ def run(args: argparse.Namespace):
 
     print("Dataset loaded!")
     model_config = configs["model"]
+    model_config["data"] = dataset_config
     # print(f"*******dataset parameters: {dataset.parameters}")
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]

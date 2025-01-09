@@ -421,6 +421,10 @@ def run(args, logger = None):
         if runid is not None:
             logger.run_id = runid
 
+    dataset_config = config["data"]
+    dataset_config["data_path"] = args.data_path
+    configs["data"] = dataset_config
+    model_config['model']["data"] = dataset_config
 
     logger.experiment.log_dict(logger.run_id,config, config_file)
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
@@ -428,7 +432,6 @@ def run(args, logger = None):
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     model.eval()
-    dataset_config = config["data"]
     batch_size = dataset_config["batch_size"]
     n = 100
     n_samples = 4
