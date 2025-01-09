@@ -22,7 +22,6 @@ def extract(input, t, x):
     return out.reshape(*reshape)
 
 
-
 def load_config(config_file):
     with open(config_file, "r") as stream:
         try:

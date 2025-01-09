@@ -412,5 +412,9 @@ class VAE(AE):
         logstd = torch.log(std)
         return (torch.square(mu) + torch.square(std) - 2 * logstd - 1) / 2.0
 
+    def sample(self, num_samples: int, condition = None) -> torch.Tensor:
+        z = self.lsr.get_prior(num_samples).sample()
+        return self.decode(z)
+
     def get_distribution(self, c=None) -> torch.Tensor:
         raise NotImplementedError("get_distribution() must be implemented in subclass.")

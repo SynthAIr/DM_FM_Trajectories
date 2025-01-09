@@ -1,3 +1,4 @@
+from typing import List
 import torch
 import torch.nn as nn
 import numpy as np
@@ -7,7 +8,7 @@ import lightning as L
 from tqdm import tqdm
 from utils.EMA import EMAHelper
 import torch.jit as jit
-
+from dataclasses import dataclass
 
 """
 Code from https://github.com/Yasoz/DiffTraj
@@ -141,10 +142,22 @@ class WeatherGrid(nn.Module):
         
         return x
         
+@dataclass
+class WideAndDeepConfig:
+    continuous_len: int
+    categorical_len: int
+    embedding_dim: int = 128
+    hidden_dim: int = 256
+    deep_layers: List[int] = [10, 10, 5]
 
 class WideAndDeep(nn.Module):
-    def __init__(self, continuous_len, categorical_len,embedding_dim=128, hidden_dim=256):
+    def __init__(self, wide_and_deep_config: WideAndDeepConfig):
         super(WideAndDeep, self).__init__()
+        
+        continuous_len = wide_and_deep_config.continuous_len
+        categorical_len = wide_and_deep_config.categorical_len
+        embedding_dim = wide_and_deep_config.embedding_dim
+        hidden_dim = wide_and_deep_config.hidden_dim
 
         # Wide part (linear model for continuous attributes)
         self.wide_fc = nn.Linear(continuous_len, embedding_dim)
@@ -153,9 +166,13 @@ class WideAndDeep(nn.Module):
         #    nn.Embedding(cardinality, embedding_dim) for cardinality, embedding_dim in zip(categorical_len, embedding_dim)
         #])
 
-        self.adep_embedding = nn.Embedding(10, hidden_dim)
-        self.ades_embedding = nn.Embedding(10, hidden_dim)
-        self.cluster_embedding = nn.Embedding(5, hidden_dim)
+        self.deep_embeddings = nn.ModuleList([
+            nn.Embedding(emdim, hidden_dim) for emdim in wide_and_deep_config.deep_layers
+        ])
+
+        #self.adep_embedding = nn.Embedding(10, hidden_dim)
+        #self.ades_embedding = nn.Embedding(10, hidden_dim)
+        #self.cluster_embedding = nn.Embedding(5, hidden_dim)
         #self.phase_embedding = nn.Embedding(5, hidden_dim)
 
         self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
@@ -168,15 +185,13 @@ class WideAndDeep(nn.Module):
 
         wide_out = self.wide_fc(continuous_attrs)
 
-        # Deep part: Processing categorical features
-        adep_embedding = self.adep_embedding(categorical_attrs[:, 0])
-        ades_embedding = self.ades_embedding(categorical_attrs[:, 1])
-        cluster_embedding = self.cluster_embedding(categorical_attrs[:, 2])
-        #phase_embedding = self.phase_embedding(categorical_attrs[:, 3])
-
-        categorical_embed = torch.cat(
-            (adep_embedding, ades_embedding, cluster_embedding), dim=1)
-            #(adep_embedding, ades_embedding, cluster_embedding, phase_embedding), dim=1)
+        deep_embeddings = [
+            embedding_layer(categorical_attrs[:, i]) 
+            for i, embedding_layer in enumerate(self.deep_embeddings)
+        ]
+        
+        # Concatenate all deep embeddings
+        categorical_embed = torch.cat(deep_embeddings, dim=1)
         deep_out = nonlinearity(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
         
@@ -209,11 +224,12 @@ class WeatherBlock(nn.Module):
         x = nonlinearity(x)
         x = self.fc2(x)
         return x
-       
+
 
 class EmbeddingBlock(nn.Module):
     def __init__(self, continuous_len, categorical_len, embedding_dim=128, hidden_dim=256, weather_config = None) -> None:
         super().__init__()
+        wide_and_deep_config = WideAndDeepConfig(continuous_len, categorical_len, embedding_dim, hidden_dim)
         self.wide_and_deep = WideAndDeep(continuous_len, categorical_len, embedding_dim, hidden_dim)
         self.weather_config = weather_config
         self.weather = weather_config and weather_config['weather_grid']
