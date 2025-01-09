@@ -114,6 +114,7 @@ def run(args: argparse.Namespace):
     # Dataset preparation and loading.
     #dataset_config = configs["data"]
     dataset_config = load_config(args.dataset_config)
+    dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
     #conditional_features = load_conditions(dataset_config)
     """
