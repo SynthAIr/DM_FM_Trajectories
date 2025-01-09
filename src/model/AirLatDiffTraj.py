@@ -37,8 +37,7 @@ class LatentDiffusionTraj(L.LightningModule):
         with torch.no_grad():
             z = self.vae.get_latent(x, con, cat, grid)
             z = z.unsqueeze(1)
-            #z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
-            z_hat = z
+            z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
             z_hat = z_hat.squeeze(1)
             x_hat = self.vae.decode(z_hat)
         _ = []

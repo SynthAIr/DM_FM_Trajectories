@@ -648,7 +648,7 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
 def main_landing(base_path: str, data_source: str) -> None:
     from traffic.data.datasets import landing_zurich_2019
 
-    flights_points = (
+    flight_points = (
     landing_zurich_2019
     #.query("runway == '14' and initial_flow == '162-216'")
     .assign_id()
@@ -658,7 +658,9 @@ def main_landing(base_path: str, data_source: str) -> None:
     .eval()
     ).data
 
-    flights_points = add_time_based_features(flights_points, "timestamp")
+    flight_points = add_time_based_features(flight_points, "timestamp")
+    flight_points['ADEP'] = flight_points['origin']
+    flight_points['ADES'] = 'LSZH'
 
     avg_sequence_length = 200
 
@@ -666,8 +668,8 @@ def main_landing(base_path: str, data_source: str) -> None:
     #flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
 
     # Create Traffic object from flight points
-    trajectories = get_trajectories(flights_points)
-    del flights_points
+    trajectories = get_trajectories(flight_points)
+    del flight_points
 
     # Prepare trajectories for training
     #trajectories = prepare_trajectories(

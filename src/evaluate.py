@@ -97,7 +97,7 @@ def get_config_data(config_path: str, data_path: str, artifact_location: str):
     configs["data"]["data_path"] = data_path 
     configs["logger"]["artifact_location"] = artifact_location
     
-    dataset, traffic = load_and_prepare_data(configs)
+    dataset, traffic = load_and_prepare_data(configs['data'])
 
     condition_config = configs["data"]
 
@@ -669,6 +669,14 @@ if __name__ == "__main__":
         #required=True,
         default="./data/resampled/combined_traffic_resampled_600.pkl",
         help="Path to the training data file"
+    )
+
+    parser.add_argument(
+        "--dataset_config",
+        type=str,
+        #required=True,
+        default="./configs/dataset_opensky.yaml",
+        help="Path to the dataset config file"
     )
     
     args = parser.parse_args()
