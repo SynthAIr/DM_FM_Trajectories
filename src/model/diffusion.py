@@ -12,7 +12,7 @@ class Diffusion(Generative):
     def __init__(self, config):
         super().__init__()
         self.dataset_config = config["data"]
-        config = config["model"]
+        #config = config["model"]
         self.config = config
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]

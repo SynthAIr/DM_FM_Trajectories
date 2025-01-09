@@ -30,13 +30,13 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             # Load the Traffic object
             traffic_obj = load_traffic_object(filepath)
             print("object loaded")
-            traffic_obj = traffic_obj.drop_duplicates()
+            #traffic_obj = traffic_obj.drop_duplicates()
             print("duplicates dropped")
-            traffic_obj = traffic_obj.filter(altitude=(17, 53))
+            #traffic_obj = traffic_obj.filter(altitude=(17, 53))
             print("Filtering Altitude")
-            traffic_obj = traffic_obj.drop_duplicates()
+            #traffic_obj = traffic_obj.drop_duplicates()
             print("duplicates dropped")
-            traffic_obj = traffic_obj.resample(target_length).eval()
+            #traffic_obj = traffic_obj.resample(target_length).eval()
             print("resampled")
 
             #feet to m

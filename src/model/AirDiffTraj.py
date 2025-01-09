@@ -8,7 +8,7 @@ import lightning as L
 from tqdm import tqdm
 from utils.EMA import EMAHelper
 import torch.jit as jit
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 """
 Code from https://github.com/Yasoz/DiffTraj
@@ -148,8 +148,8 @@ class WideAndDeepConfig:
     categorical_len: int
     embedding_dim: int = 128
     hidden_dim: int = 256
-    deep_layers: List[int] = [10, 10, 5]
-
+    deep_layers: list = field(default_factory=lambda: [10, 10, 5])
+    
 class WideAndDeep(nn.Module):
     def __init__(self, wide_and_deep_config: WideAndDeepConfig):
         super(WideAndDeep, self).__init__()

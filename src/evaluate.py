@@ -72,6 +72,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         c["traj_length"] = model_config['traj_length']
         #print(c)
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
+        #print(model_config)
         diff = Diffusion(model_config)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
@@ -423,11 +424,11 @@ def run(args, logger = None):
 
     dataset_config = config["data"]
     dataset_config["data_path"] = args.data_path
-    configs["data"] = dataset_config
-    model_config['model']["data"] = dataset_config
 
     logger.experiment.log_dict(logger.run_id,config, config_file)
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
+    config["data"] = dataset_config
+    config['model']["data"] = dataset_config
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
