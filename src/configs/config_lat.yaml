@@ -62,7 +62,7 @@ data:
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/TCVAE_9"
+  vae: "./artifacts/VAE"
   h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   encoding_dim: 128

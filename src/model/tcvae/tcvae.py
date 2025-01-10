@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from utils import DatasetParams, TrafficDataset
-from model.tcvae.vae import VAE, VampPriorLSR
+from model.tcvae.vae import VAE, VampPriorLSR, NormalLSR
 from typing import Tuple
 
 
@@ -258,16 +258,21 @@ class TCVAE(VAE):
             h_activ=nn.ReLU(),
         )
         h_dim = self.hparams.h_dims[-1] * (int(self.config["traj_length"] / self.hparams.sampling_factor))
-
-        self.lsr = VampPriorLSR(
-            original_dim=self.config["in_channels"],
-            original_seq_len=self.config["traj_length"],
-            input_dim=h_dim,
-            cond_length=0,
-            out_dim=self.hparams.encoding_dim,
-            encoder=self.encoder,
-            n_components=self.hparams.n_components,
-        )
+        
+        if self.config['type'] == 'TCVAE':
+            self.lsr = VampPriorLSR(
+                original_dim=self.config["in_channels"],
+                original_seq_len=self.config["traj_length"],
+                input_dim=h_dim,
+                cond_length=0,
+                out_dim=self.hparams.encoding_dim,
+                encoder=self.encoder,
+                n_components=self.hparams.n_components,
+            )
+        else:
+            self.lsr = NormalLSR(
+                input_dim = h_dim,
+                out_dim=self.hparams.encoding_dim)
 
         self.out_activ = nn.Identity()
     

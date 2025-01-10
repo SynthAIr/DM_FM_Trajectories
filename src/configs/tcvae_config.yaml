@@ -1,17 +1,20 @@
 train:
-  epochs: 300
+  epochs: 100
   accelerator: 'auto'
   devices: '1'
   seed: 42
   gradient_clip_val: 0.5
   log_every_n_steps: 2
-  early_stop_patience: 40
+  early_stop_patience: 10
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: TCVAE
-  run_name: TCVAE
-  tags: {'model': 'tcvae', 'dataset': 'opensky'}
+  experiment_name: VAE
+  run_name: VAE
+  tags: {'model': 'vae', 'dataset': 'opensky'}
+  #experiment_name: TCVAE
+  #run_name: TCVAE
+  #tags: {'model': 'tcvae', 'dataset': 'opensky'}
 data:
   dataset: opensky
   data_path: ./data/traffic.pkl
@@ -71,7 +74,8 @@ data:
   length: 200
   
 model:
-  type: "TCVAE"
+  #type: "TCVAE"
+  type: "VAE"
   h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   encoding_dim: 128

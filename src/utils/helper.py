@@ -64,6 +64,8 @@ def get_model(configs):
             return TimeGAN
         case "TCVAE":
             return TCVAE
+        case "VAE":
+            return TCVAE
         case _:
             return AirDiffTrajDDPM
 
