@@ -8,7 +8,7 @@ from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
 from model.baselines import PerturbationModel, TimeGAN
-from model.AirLatDiffTraj import AirLatDiffTraj, LatentDiffusionTraj
+from model.AirLatDiffTraj import LatentDiffusionTraj
 from model.tcvae import TCVAE
 
 def sample_batch(size, noise=1.0):

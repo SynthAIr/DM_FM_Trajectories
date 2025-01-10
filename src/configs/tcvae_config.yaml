@@ -72,9 +72,9 @@ data:
   
 model:
   type: "TCVAE"
-  h_dims: [256, 256, 256, 256]
-  encoding_dim: 256
-  #encoding_dim: 128
+  h_dims: [128, 256, 256, 128]
+  #encoding_dim: 256
+  encoding_dim: 128
   lr: 0.001
   lr_step_size: 200
   lr_gamma: 0.5
@@ -82,7 +82,7 @@ model:
   in_channels: 8
   out_ch: 8
   llv_coef: 1.0
-  kld_coef: 0.0001
+  kld_coef: 0.01
   reg_pseudo: False
   scale: 1.0
   fix_prior: True

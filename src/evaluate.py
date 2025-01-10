@@ -74,9 +74,10 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
         #print(model_config)
         diff = Diffusion(model_config)
+        print("Loading", checkpoint_path)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
-        model.phase = Phase.EVAL
+        #model.phase = Phase.EVAL
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode
@@ -432,7 +433,7 @@ def run(args, logger = None):
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
-    model.eval()
+    #model.eval()
     batch_size = dataset_config["batch_size"]
     n = 100
     n_samples = 4

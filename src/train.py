@@ -131,6 +131,7 @@ def run(args: argparse.Namespace):
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         vae.eval()
         diff = Diffusion(model_config)
+        #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
         model = get_model(model_config)(model_config, vae, diff)
     else:
         model = get_model(model_config)(model_config)
