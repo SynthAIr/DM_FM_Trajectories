@@ -1,7 +1,7 @@
 train:
   epochs: 100
   accelerator: 'gpu'
-  devices: '1'
+  devices: 1
   seed: 37
   gradient_clip_val: 0.5
   log_every_n_steps: 2
@@ -57,12 +57,12 @@ data:
     function: True
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 128
+  batch_size: 256
   test_batch_size: 32
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/VAE"
+  vae: "./artifacts/VAE_1"
   h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   encoding_dim: 128

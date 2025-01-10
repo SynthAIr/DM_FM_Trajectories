@@ -1,7 +1,7 @@
 train:
   epochs: 100
   accelerator: 'auto'
-  devices: '1'
+  devices: 1
   seed: 42
   gradient_clip_val: 0.5
   log_every_n_steps: 2
@@ -86,7 +86,7 @@ model:
   in_channels: 8
   out_ch: 8
   llv_coef: 1.0
-  kld_coef: 0.01
+  kld_coef: 0.5
   reg_pseudo: False
   scale: 1.0
   fix_prior: True
