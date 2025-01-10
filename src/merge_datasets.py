@@ -76,6 +76,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
     # Feet to meters
 
     big_traffic = big_traffic.cumulative_distance().eval()
+    big_traffic = big_traffic = big_traffic.query('flight_id != "SWR983_17905"')
 
     # Save the combined Traffic object
     if big_traffic is not None:

@@ -260,6 +260,7 @@ class TCVAE(VAE):
         h_dim = self.hparams.h_dims[-1] * (int(self.config["traj_length"] / self.hparams.sampling_factor))
         
         if self.config['type'] == 'TCVAE':
+            print("Initing with VampPrior")
             self.lsr = VampPriorLSR(
                 original_dim=self.config["in_channels"],
                 original_seq_len=self.config["traj_length"],
@@ -270,6 +271,7 @@ class TCVAE(VAE):
                 n_components=self.hparams.n_components,
             )
         else:
+            print("Initing with NormalLSR")
             self.lsr = NormalLSR(
                 input_dim = h_dim,
                 out_dim=self.hparams.encoding_dim)

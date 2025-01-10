@@ -1,81 +1,79 @@
-data:
-  dataset: landing
-  data_path: ./data/traffic.pkl
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
-  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
-  data_shape: 'image'
-  conditional_features:
-    hour:
-      type: 'cyclic'
-      max_value: 24
-    month:
-      type: 'cyclic'
-      max_value: 12
-    day_of_week:
-      type: 'cyclic'
-      max_value: 6
-    cumdist:
-      type: 'continuous'
-      last: True
-      first: False
-    timedelta:
-      type: 'continuous'
-      last: True
-      first: False
-    runway:
-      type: 'categorical'
-      categories: ['14','16', '28', '34', 'N/A']
-    origin:
-      type: 'categorical'
-      categories: ['None', 'LIMF', 'LSGG', 'LIPE', 'LFPO', 'LFPB', 'EBBR', 'KPHL',
-       'LKPR', 'CYVR', 'CYYZ', 'LEMD', 'LGIR', 'LGRP', 'LGAV', 'LGKN',
-       'LIMJ', 'UUEE', 'LFPG', 'LMML', 'LPCS', 'EDDH', 'EDDF', 'LIRA',
-       'EGLF', 'EGLC', 'LJLJ', 'EGKB', 'LOWW', 'EDDB', 'ESSB', 'LIMZ',
-       'ENGM', 'LEPA', 'EDTB', 'LFBD', 'UKKK', 'EGHH', 'ULLI', 'EGBB',
-       'LHBP', 'OBBI', 'LIPZ', 'EDDN', 'UUWW', 'LPFR', 'EPKT', 'LIPX',
-       'EGGW', 'LIQL', 'LYBE', 'EDDS', 'EDDW', 'EDDM', 'LGKO', 'UKBB',
-       'EGKK', 'EDXW', 'EDSB', 'EHGG', 'EHEH', 'LEMG', 'LEAL', 'EHAM',
-       'UBBB', 'LLBG', 'LIRF', 'EDRZ', 'EGJB', 'LIML', 'ELLX', 'LOWI',
-       'EGLL', 'CYUL', 'EVRA', 'OMDW', 'LOWG', 'EDDL', 'LSZM', 'EDDV',
-       'OERK', 'EHRD', 'LFOT', 'EIDW', 'LIBR', 'EDFH', 'EFTP', 'KHPN',
-       'KMIA', 'KTEB', 'KBOS', 'EGNP', 'EDGS', 'KBFI', 'ZGSZ', 'RJBB',
-       'VHHH', 'LDSR', 'LDZA', 'LDSP', 'LIPQ', 'EHBK', 'KJFK', 'EBOS',
-       'EDTG', 'LOWK', 'EDMO', 'EDRY', 'EKAH', 'LZIB', 'EDTX', 'EKBI',
-       'EDTY', 'EDQA', 'EGTE', 'EDWE', 'EDFM', 'EDFQ', 'LOWS', 'EDLA',
-       'EPWA', 'EDDK', 'LIPO', 'EDFZ', 'EDDT', 'EDMF', 'LFBO', 'EDLN',
-       'LIMC', 'LRBS', 'LECU', 'EFHK', 'EGCC', 'GCLP', 'GCFV', 'LEZL',
-       'LEJR', 'GCRR', 'MMUN', 'LEIB', 'EGPH', 'LGSR', 'LGSM', 'LIEO',
-       'LCPH', 'MROC', 'MRPV', 'LICZ', 'KLAS', 'LDPL', 'LGMK', 'KTPA',
-       'FACT', 'LIEE', 'LIED', 'SAEZ', 'LFSG', '01FA', 'KMCO', 'LFST',
-       'EGHI', 'LPPT', 'LPAR', 'LPPR', 'LL59', 'UUMO', 'EKCH', 'LFLL',
-       'OMAA', 'YMML', 'VTBS', 'LFLY', 'BIRK', 'LFMV', 'LFTW', 'LFAV',
-       'EGGD', 'LEBL', 'EBMB', 'EBAW', 'LFRQ', 'EGSS', 'LIPB', 'LOWL',
-       'EDLW', 'EDDP', 'LFRG', 'LFKF', 'EKRK', 'OLBA', 'EDMS', 'EDKZ',
-       'LSGL', 'LIPR', 'LKCS', 'LFLC', 'LSZA', 'LSZL', 'LROP', 'KAUS',
-       'SBGR', 'LSZR', 'LIME', 'LSZC', 'EGHQ', 'LSMP', 'BIKF', 'KEWR',
-       'KIAD', 'KSEA', 'EBLG', 'LIPH', 'LIBD', 'ESOW', 'EDVE', 'EPGD',
-       'LSGK', 'LTFE', 'LKTB', 'RKSI', 'UWKD', 'EDLP', 'EDVK', 'LTAC',
-       'ESTA', 'KBED', 'EDJA', 'LTBA', 'VTBD', 'LFLI', 'KCMH', 'EDMA',
-       'EDDR', 'KSJC', 'VAPO', 'EGBJ', 'EGCN', 'VABB', 'EGTK', 'KHIO',
-       'LFBF', 'KBMG', 'KUGN', 'LIRZ', 'KRDU', 'KSTP', 'EGSC', 'ESMS',
-       'LZKZ', 'EDHK', 'EGNX', 'LPEV', 'LFCR', 'LFLP', 'EGNR', 'LFML',
-       'EDFE', 'EPPO', 'EGXE', 'LSZB', 'SBSJ', 'LKHK', 'RPLL', 'WMKK',
-       'EBKT', 'EGKC', 'EBCI', 'LTFJ', 'EHBD', 'EDDG', 'EDLV', 'LKMT',
-       'OTBD', 'OTHH', 'GMMN', 'OMDB', 'EPBY', 'ESSA', 'ETMN', 'ETAR',
-       'LHSM', 'FAGM', 'LSME', 'TXKF', 'VIDP', 'LIRP', 'OMRK', 'EGPF',
-       'WSSS', 'LILG', 'LIRQ', 'ESGG', 'UUDD', 'LKKL', 'EPKK', 'EPWR',
-       'EPMR', 'LYBT', 'VAJJ', 'RJAK', 'RJAA', 'KLDJ', 'LEMU', 'LFNR',
-       'EICK', 'LICJ', 'FAOR', 'KSFO', 'KLAX', 'EDDC', 'LFMN', 'LJMB',
-       'LIBG', 'KOPF', 'KPAE', 'KORD', 'CYHU', 'EDAM', 'GBYD', 'CYYC',
-       'LSGC', 'LTBW', 'DAAG', 'EGNM', 'LIEA', 'ESMT', 'LFLB', 'EHTW',
-       'LBWN']
-  weather_grid:
-    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
-    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
-    resolution: 1
-    function: True
-  train_ratio: 0.8
-  val_ratio: 0.2
-  batch_size: 256
-  test_batch_size: 32
- 
+dataset: landing
+data_path: ./data/traffic.pkl
+features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+#features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+data_shape: 'image'
+conditional_features:
+  hour:
+    type: 'cyclic'
+    max_value: 24
+  month:
+    type: 'cyclic'
+    max_value: 12
+  day_of_week:
+    type: 'cyclic'
+    max_value: 6
+  cumdist:
+    type: 'continuous'
+    last: True
+    first: False
+  timedelta:
+    type: 'continuous'
+    last: True
+    first: False
+  runway:
+    type: 'categorical'
+    categories: ['14','16', '28', '34', 'N/A']
+  origin:
+    type: 'categorical'
+    categories: ['None', 'LIMF', 'LSGG', 'LIPE', 'LFPO', 'LFPB', 'EBBR', 'KPHL',
+     'LKPR', 'CYVR', 'CYYZ', 'LEMD', 'LGIR', 'LGRP', 'LGAV', 'LGKN',
+     'LIMJ', 'UUEE', 'LFPG', 'LMML', 'LPCS', 'EDDH', 'EDDF', 'LIRA',
+     'EGLF', 'EGLC', 'LJLJ', 'EGKB', 'LOWW', 'EDDB', 'ESSB', 'LIMZ',
+     'ENGM', 'LEPA', 'EDTB', 'LFBD', 'UKKK', 'EGHH', 'ULLI', 'EGBB',
+     'LHBP', 'OBBI', 'LIPZ', 'EDDN', 'UUWW', 'LPFR', 'EPKT', 'LIPX',
+     'EGGW', 'LIQL', 'LYBE', 'EDDS', 'EDDW', 'EDDM', 'LGKO', 'UKBB',
+     'EGKK', 'EDXW', 'EDSB', 'EHGG', 'EHEH', 'LEMG', 'LEAL', 'EHAM',
+     'UBBB', 'LLBG', 'LIRF', 'EDRZ', 'EGJB', 'LIML', 'ELLX', 'LOWI',
+     'EGLL', 'CYUL', 'EVRA', 'OMDW', 'LOWG', 'EDDL', 'LSZM', 'EDDV',
+     'OERK', 'EHRD', 'LFOT', 'EIDW', 'LIBR', 'EDFH', 'EFTP', 'KHPN',
+     'KMIA', 'KTEB', 'KBOS', 'EGNP', 'EDGS', 'KBFI', 'ZGSZ', 'RJBB',
+     'VHHH', 'LDSR', 'LDZA', 'LDSP', 'LIPQ', 'EHBK', 'KJFK', 'EBOS',
+     'EDTG', 'LOWK', 'EDMO', 'EDRY', 'EKAH', 'LZIB', 'EDTX', 'EKBI',
+     'EDTY', 'EDQA', 'EGTE', 'EDWE', 'EDFM', 'EDFQ', 'LOWS', 'EDLA',
+     'EPWA', 'EDDK', 'LIPO', 'EDFZ', 'EDDT', 'EDMF', 'LFBO', 'EDLN',
+     'LIMC', 'LRBS', 'LECU', 'EFHK', 'EGCC', 'GCLP', 'GCFV', 'LEZL',
+     'LEJR', 'GCRR', 'MMUN', 'LEIB', 'EGPH', 'LGSR', 'LGSM', 'LIEO',
+     'LCPH', 'MROC', 'MRPV', 'LICZ', 'KLAS', 'LDPL', 'LGMK', 'KTPA',
+     'FACT', 'LIEE', 'LIED', 'SAEZ', 'LFSG', '01FA', 'KMCO', 'LFST',
+     'EGHI', 'LPPT', 'LPAR', 'LPPR', 'LL59', 'UUMO', 'EKCH', 'LFLL',
+     'OMAA', 'YMML', 'VTBS', 'LFLY', 'BIRK', 'LFMV', 'LFTW', 'LFAV',
+     'EGGD', 'LEBL', 'EBMB', 'EBAW', 'LFRQ', 'EGSS', 'LIPB', 'LOWL',
+     'EDLW', 'EDDP', 'LFRG', 'LFKF', 'EKRK', 'OLBA', 'EDMS', 'EDKZ',
+     'LSGL', 'LIPR', 'LKCS', 'LFLC', 'LSZA', 'LSZL', 'LROP', 'KAUS',
+     'SBGR', 'LSZR', 'LIME', 'LSZC', 'EGHQ', 'LSMP', 'BIKF', 'KEWR',
+     'KIAD', 'KSEA', 'EBLG', 'LIPH', 'LIBD', 'ESOW', 'EDVE', 'EPGD',
+     'LSGK', 'LTFE', 'LKTB', 'RKSI', 'UWKD', 'EDLP', 'EDVK', 'LTAC',
+     'ESTA', 'KBED', 'EDJA', 'LTBA', 'VTBD', 'LFLI', 'KCMH', 'EDMA',
+     'EDDR', 'KSJC', 'VAPO', 'EGBJ', 'EGCN', 'VABB', 'EGTK', 'KHIO',
+     'LFBF', 'KBMG', 'KUGN', 'LIRZ', 'KRDU', 'KSTP', 'EGSC', 'ESMS',
+     'LZKZ', 'EDHK', 'EGNX', 'LPEV', 'LFCR', 'LFLP', 'EGNR', 'LFML',
+     'EDFE', 'EPPO', 'EGXE', 'LSZB', 'SBSJ', 'LKHK', 'RPLL', 'WMKK',
+     'EBKT', 'EGKC', 'EBCI', 'LTFJ', 'EHBD', 'EDDG', 'EDLV', 'LKMT',
+     'OTBD', 'OTHH', 'GMMN', 'OMDB', 'EPBY', 'ESSA', 'ETMN', 'ETAR',
+     'LHSM', 'FAGM', 'LSME', 'TXKF', 'VIDP', 'LIRP', 'OMRK', 'EGPF',
+     'WSSS', 'LILG', 'LIRQ', 'ESGG', 'UUDD', 'LKKL', 'EPKK', 'EPWR',
+     'EPMR', 'LYBT', 'VAJJ', 'RJAK', 'RJAA', 'KLDJ', 'LEMU', 'LFNR',
+     'EICK', 'LICJ', 'FAOR', 'KSFO', 'KLAX', 'EDDC', 'LFMN', 'LJMB',
+     'LIBG', 'KOPF', 'KPAE', 'KORD', 'CYHU', 'EDAM', 'GBYD', 'CYYC',
+     'LSGC', 'LTBW', 'DAAG', 'EGNM', 'LIEA', 'ESMT', 'LFLB', 'EHTW',
+     'LBWN']
+weather_grid:
+  #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
+  variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+  resolution: 1
+  function: True
+train_ratio: 0.8
+val_ratio: 0.2
+batch_size: 256
+test_batch_size: 32

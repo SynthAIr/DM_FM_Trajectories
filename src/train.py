@@ -14,6 +14,7 @@ from utils.condition_utils import load_conditions
 from model.AirLatDiffTraj import Phase
 from model.diffusion import Diffusion
 from model.tcvae import TCVAE
+from lightning.pytorch.accelerators import find_usable_cuda_devices
 
 
 def train(
@@ -30,7 +31,7 @@ def train(
     # Configure the trainer with specifics from the train_config.
     trainer = Trainer(
         accelerator=train_config["accelerator"],
-        devices=train_config["devices"],
+        devices=find_usable_cuda_devices(train_config["devices"]),
         max_epochs=train_config["epochs"],
         gradient_clip_val=train_config["gradient_clip_val"],
         log_every_n_steps=train_config["log_every_n_steps"],

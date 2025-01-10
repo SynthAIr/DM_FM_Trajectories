@@ -654,22 +654,23 @@ def main_landing(base_path: str, data_source: str) -> None:
     .assign_id()
     .unwrap()
     .resample(200)
-    .drop_duplicates()
+    #.drop_duplicates()
     .eval()
-    ).data
+    )
 
-    flight_points = add_time_based_features(flight_points, "timestamp")
-    flight_points['ADEP'] = flight_points['origin']
-    flight_points['ADES'] = 'LSZH'
+    flight_points.data = add_time_based_features(flight_points.data, "timestamp")
+    flight_points.data['ADEP'] = flight_points.data['origin']
+    flight_points.data['ADES'] = 'LSZH'
 
-    avg_sequence_length = 200
 
     print("Adding weather data")
     #flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
 
     # Create Traffic object from flight points
-    trajectories = get_trajectories(flight_points)
-    del flight_points
+    flight_points.data["timestamp"] = pd.to_datetime(flight_points.data["timestamp"], format="%d-%m-%Y %H:%M:%S", utc=True)
+    #trajectories = Traffic.from_flights(flight_points)
+    #trajectories = get_trajectories(flight_points)
+    #del flight_points
 
     # Prepare trajectories for training
     #trajectories = prepare_trajectories(
@@ -681,9 +682,10 @@ def main_landing(base_path: str, data_source: str) -> None:
                 lambda t: t.total_seconds()
             )
         )
-        for flight in trajectories
+        for flight in flight_points
     )
 
+    avg_sequence_length = 200
     # Save the prepared trajectories to a pickle file in the parent directory of the base_path
     save_path = (
         Path(base_path).parent
