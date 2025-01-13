@@ -264,7 +264,7 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         grid = grid.unsqueeze(dim=0).to("cuda")
         
         # Generate samples and steps using the model
-        samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[0])
+        samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[1])
         # (steps=50, n, 7, len)
         # list (steps=50) of tensors (n, 7, len)
         

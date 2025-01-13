@@ -24,9 +24,9 @@ conditional_features:
   runway:
     type: 'categorical'
     categories: ['14','16', '28', '34', 'N/A']
-  ADES:
+  ADEP:
     type: 'categorical'
-    categories: ['None', 'LIMF', 'LSGG', 'LIPE', 'LFPO', 'LFPB', 'EBBR', 'KPHL',
+    categories: ['ZZZZ', 'LIMF', 'LSGG', 'LIPE', 'LFPO', 'LFPB', 'EBBR', 'KPHL',
      'LKPR', 'CYVR', 'CYYZ', 'LEMD', 'LGIR', 'LGRP', 'LGAV', 'LGKN',
      'LIMJ', 'UUEE', 'LFPG', 'LMML', 'LPCS', 'EDDH', 'EDDF', 'LIRA',
      'EGLF', 'EGLC', 'LJLJ', 'EGKB', 'LOWW', 'EDDB', 'ESSB', 'LIMZ',
@@ -68,7 +68,7 @@ conditional_features:
      'LIBG', 'KOPF', 'KPAE', 'KORD', 'CYHU', 'EDAM', 'GBYD', 'CYYC',
      'LSGC', 'LTBW', 'DAAG', 'EGNM', 'LIEA', 'ESMT', 'LFLB', 'EHTW',
      'LBWN','LSZH']
-  ADEP:
+  ADES:
     type: 'categorical'
     categories: ['LSZH']
 weather_grid:
