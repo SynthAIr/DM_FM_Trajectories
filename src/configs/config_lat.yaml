@@ -54,7 +54,7 @@ data:
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
     resolution: 1
-    function: True
+    function: False
   train_ratio: 0.8
   val_ratio: 0.2
   batch_size: 256
@@ -62,10 +62,10 @@ data:
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/VAE_1"
-  h_dims: [128, 256, 256, 128]
+  vae: "./artifacts/VAE_3"
+  #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
-  encoding_dim: 128
+  #encoding_dim: 128
   lr: 4.9e-5
   lr_step_size: 200
   lr_gamma: 0.5
@@ -73,7 +73,7 @@ model:
   guidance_scale: 0
   in_channels: 8
   out_ch: 8
-  ch: 32
+  ch: 16
   ch_mult: [ 1, 2, 4, 4, 8 ]
   num_res_blocks: 10
   attn_resolutions: [64, 32, 16]
@@ -81,14 +81,14 @@ model:
   resamp_with_conv: True
   cnn: True
   diffusion:
-    beta_schedule: 'linear'
+    beta_schedule: 'cosine'
     beta_start: 0.0001            # Slightly increased for faster diffusion
     beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 1000
+    num_diffusion_timesteps: 500
     ema: True
     ema_rate: 0.999999
   weather_config:
-    weather_grid: True
+    weather_grid: False
     variables: 4
     levels: 4
     lon: 5

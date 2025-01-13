@@ -341,6 +341,14 @@ class VAE(AE):
         z = q.rsample()
         return z
 
+    def get_latent_n(self, x, con, cat, grid, n):
+        h = self.encoder(x)
+        q = self.lsr(h)
+        z = q.rsample([n])
+        z = z.view(-1, *z.shape[2:])
+        z = z.unsqueeze(1)
+        return z
+
     def training_step(self, batch, batch_idx):
         x, con, cat, grid = batch
         dist_params, z, x_hat = self.forward(x,con, cat, grid)

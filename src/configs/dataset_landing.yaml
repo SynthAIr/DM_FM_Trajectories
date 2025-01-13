@@ -24,7 +24,7 @@ conditional_features:
   runway:
     type: 'categorical'
     categories: ['14','16', '28', '34', 'N/A']
-  origin:
+  ADES:
     type: 'categorical'
     categories: ['None', 'LIMF', 'LSGG', 'LIPE', 'LFPO', 'LFPB', 'EBBR', 'KPHL',
      'LKPR', 'CYVR', 'CYYZ', 'LEMD', 'LGIR', 'LGRP', 'LGAV', 'LGKN',
@@ -67,7 +67,10 @@ conditional_features:
      'EICK', 'LICJ', 'FAOR', 'KSFO', 'KLAX', 'EDDC', 'LFMN', 'LJMB',
      'LIBG', 'KOPF', 'KPAE', 'KORD', 'CYHU', 'EDAM', 'GBYD', 'CYYC',
      'LSGC', 'LTBW', 'DAAG', 'EGNM', 'LIEA', 'ESMT', 'LFLB', 'EHTW',
-     'LBWN']
+     'LBWN','LSZH']
+  ADEP:
+    type: 'categorical'
+    categories: ['LSZH']
 weather_grid:
   #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
   variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
