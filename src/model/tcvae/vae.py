@@ -35,7 +35,7 @@ class LSR(nn.Module):
     def get_posterior(self, dist_params: Tuple) -> Distribution:
         raise NotImplementedError()
 
-    def get_prior(self, batch_size: int) -> Distribution:
+    def get_prior(self) -> Distribution:
         raise NotImplementedError()
 
     def get_distribution(self, condition = None) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -421,7 +421,7 @@ class VAE(AE):
         return (torch.square(mu) + torch.square(std) - 2 * logstd - 1) / 2.0
 
     def sample(self, num_samples: int, con, cat, grid, length, features) -> torch.Tensor:
-        z = self.lsr.get_prior(num_samples).sample()
+        z = self.lsr.get_prior().sample(num_samples)
         return self.decode(z)
 
     def get_distribution(self, c=None) -> torch.Tensor:
