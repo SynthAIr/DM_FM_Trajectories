@@ -8,7 +8,6 @@ from tqdm import tqdm
 from torch.nn import functional as F
 from flow_matching.path import CondOTProbPath, MixtureDiscreteProbPath
 from flow_matching.path.scheduler import PolynomialConvexScheduler
-from models.ema import EMA
 from torch.nn.parallel import DistributedDataParallel
 from torchmetrics.aggregation import MeanMetric
 from model.generative import Generative
