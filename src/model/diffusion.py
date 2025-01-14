@@ -190,3 +190,9 @@ class Diffusion(Generative):
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        """This is called after the optimizer step, at the end of the batch."""
+        #print("Called this on train batch end hooks")
+        if self.config['diffusion']['ema']:
+            self.ema_helper.update(self)

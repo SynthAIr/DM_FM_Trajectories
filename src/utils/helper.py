@@ -10,6 +10,7 @@ from typing import Tuple
 from model.baselines import PerturbationModel, TimeGAN
 from model.AirLatDiffTraj import LatentDiffusionTraj
 from model.tcvae import TCVAE
+from model.flow_matching import FlowMatching
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -66,6 +67,8 @@ def get_model(configs):
             return TCVAE
         case "VAE":
             return TCVAE
+        case "FM":
+            return FlowMatching
         case _:
             return AirDiffTrajDDPM
 
