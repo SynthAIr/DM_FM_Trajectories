@@ -106,6 +106,7 @@ class FlowMatching(Generative):
 
         return loss
 
+
     def training_epoch_end(self, outputs):
         self.log("epoch_loss", self.epoch_loss.compute(), on_epoch=True, prog_bar=True)
         self.epoch_loss.reset()
@@ -122,9 +123,6 @@ class FlowMatching(Generative):
             "optimizer": optimizer,
             "lr_scheduler": scheduler,
         }
-
-    def on_train_epoch_start(self):
-        gc.collect()
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
@@ -196,9 +194,41 @@ class Wrapper(ModelWrapper):
         """This is called after the optimizer step, at the end of the batch."""
         self.model.on_train_batch_end(outputs, batch, batch_idx)
 
+    def reconstruct(self, x, con, cat, grid):
+        self.eval()
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        steps = []
+        with torch.no_grad():
+            x_0 = torch.randn((x.shape()), dtype=torch.float32, device=self.device)
 
+            if False:
+                time_grid = get_time_discretization(nfes=ode_opts["nfe"])
+            else:
+                time_grid = torch.tensor([0.0, 1.0], device=self.device)
 
-
+            synthetic_samples = self.solver.sample(
+                time_grid=time_grid,
+                x_init=x_0,
+                method="midpoint", ### Change this to "midpoint" for DDIM
+                return_intermediates=False,
+                #atol=ode_opts["atol"] if "atol" in ode_opts else 1e-5,
+                #rtol=ode_opts["rtol"] if "atol" in ode_opts else 1e-5,
+                #step_size=ode_opts["step_size"] if "step_size" in ode_opts else None,
+                atol= 1e-5,
+                rtol= 1e-5,
+                step_size= 0.1,
+                label=(con, cat, grid),
+                cfg_scale=self.model.guidance_scale,
+            )
+            # Scaling to [0, 1] from [-1, 1]
+            #synthetic_samples = torch.clamp(
+                #synthetic_samples * 0.5 + 0.5, min=0.0, max=1.0
+            #)
+            #synthetic_samples = torch.floor(synthetic_samples * 255)
+            #synthetic_samples = synthetic_samples.to(torch.float32) / 255.0
+            print(synthetic_samples.shape)
+        return synthetic_samples, []
 
 class AirFMTraj(L.LightningModule):
 
@@ -235,6 +265,10 @@ class AirFMTraj(L.LightningModule):
         """This is called after the optimizer step, at the end of the batch."""
         self.model.on_train_batch_end(outputs, batch, batch_idx)
 
+    def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
+        return self.model.sample(n, con, cat, grid, features, length)
 
-
+    def reconstruct(self, x, con, cat, grid):
+        #return self.vae.reconstruct(x, con, cat, grid)
+        return self.model.reconstruct(x, con, cat, grid)
 
