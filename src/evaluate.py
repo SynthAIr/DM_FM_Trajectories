@@ -264,10 +264,10 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         grid = grid.unsqueeze(dim=0).to("cuda")
         print("Shapes:", con.shape, cat.shape, x.shape)
         print("Length", length)
-        print("Features", x.shape[1])
+        print("Features", x.shape)
         
         # Generate samples and steps using the model
-        samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[1])
+        samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[0])
         # (steps=50, n, 7, len)
         # list (steps=50) of tensors (n, 7, len)
         
@@ -458,9 +458,10 @@ def run(args, logger = None):
     length = config['model']['traj_length']
     
     samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
-    fig_99 = get_figure_from_sample_steps(steps, dataset, length)
-    fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
-    logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
+    
+    #fig_99 = get_figure_from_sample_steps(steps, dataset, length)
+    #fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
+    #logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
 
 
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
