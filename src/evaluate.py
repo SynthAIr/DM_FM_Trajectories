@@ -262,6 +262,9 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         
         # Move grid to the device and adjust dimensions
         grid = grid.unsqueeze(dim=0).to("cuda")
+        print("Shapes:", con.shape, cat.shape, x.shape)
+        print("Length", length)
+        print("Features", x.shape[1])
         
         # Generate samples and steps using the model
         samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[1])

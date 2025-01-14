@@ -51,7 +51,13 @@ class LatentDiffusionTraj(L.LightningModule):
 
     def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
         self.eval()
-        x_t, steps = self.generative_model.sample(n, con, cat, grid, 1, 256, sampling)
+        x_t, steps = self.generative_model.sample(n = n, 
+                                                  con = con,
+                                                  cat = cat,
+                                                  grid = grid,
+                                                  features=features,
+                                                  length=length,
+                                                  sampling = sampling)
         with torch.no_grad():
             x_hat = self.out_activ(self.decoder(x_t))
         return x_hat, steps

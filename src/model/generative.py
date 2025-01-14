@@ -20,7 +20,7 @@ class Generative(torch.nn.Module):
     def configure_optimizers(self):
         pass
 
-    def sample(self, n, features, length, con, cat, grid, sampling="ddpm"):
+    def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
         pass
 
     def reconstruct(self, x, con, cat, grid):

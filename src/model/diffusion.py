@@ -122,7 +122,7 @@ class Diffusion(Generative):
 
         return x_t, steps
 
-    def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
+    def sample(self, n, con, cat, grid, length = 200, features=8, sampling="ddpm"):
         self.eval()
         con = con.to(self.device)
         cat = cat.to(self.device)
