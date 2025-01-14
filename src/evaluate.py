@@ -438,7 +438,7 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
-    n = 100
+    n = 5
     n_samples = 4
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
@@ -586,8 +586,8 @@ def run_perturbation(args, logger = None):
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, "")
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
-    n = 100
-    n_samples = 1
+    n = 10
+    n_samples = 3
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     length = config['data']['length']
 
