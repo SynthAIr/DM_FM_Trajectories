@@ -15,6 +15,7 @@ from model.AirLatDiffTraj import Phase
 from model.diffusion import Diffusion
 from model.tcvae import TCVAE
 from lightning.pytorch.accelerators import find_usable_cuda_devices
+from model.flow_matching import FlowMatching
 
 
 def train(
@@ -134,6 +135,10 @@ def run(args: argparse.Namespace):
         diff = Diffusion(model_config)
         #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
         model = get_model(model_config)(model_config, vae, diff)
+    elif model_config["type"] == "FM":
+        model_config["traj_length"] = dataset.parameters['seq_len']
+        fm = FlowMatching(model_config)
+        model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config)(model_config)
 

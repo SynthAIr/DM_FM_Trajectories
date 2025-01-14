@@ -33,6 +33,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
+from model.flow_matching import FlowMatching
 
 
 
@@ -78,6 +79,9 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
         #model.phase = Phase.EVAL
+    elif model_config["type"] == "FM":
+        fm = FlowMatching(model_config)
+        model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model.eval()  # Set the model to evaluation mode
@@ -438,7 +442,7 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
-    n = 5
+    n = 50
     n_samples = 4
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     

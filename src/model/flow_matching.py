@@ -33,12 +33,14 @@ class FlowMatching(Generative):
 
     def __init__(self, config):
         super().__init__()
+        self.config = config
+        self.dataset_config = config["data"]
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.ch = config["ch"] * 4
-        self.in_channels = 1
-        self.resolution = self.ch
+        self.in_channels = 8
+        self.resolution = config['traj_length']
 
-        self.model = UNET(config, resolution = self.resolution, in_channels = self.in_channels)
+        self.unet = UNET(config, resolution = self.resolution, in_channels = self.in_channels)
         #self.optimizer_cfg = optimizer_cfg
         #self.lr_scheduler_cfg = lr_scheduler_cfg
         self.discrete = False
@@ -130,16 +132,11 @@ class FlowMatching(Generative):
         if self.config['diffusion']['ema']:
             self.ema_helper.update(self)
 
-class AirFMTraj(L.LightningModule, ModelWrapper):
-
-    def __init__(self, config):
-        super().__init__()
-        self.lr = config["lr"]
-        self.model = FlowMatching(config)
-
+class Wrapper(ModelWrapper):
+    def __init__(self, config, model):
+        super().__init__(model)
+        self.model = model
         self.solver = ODESolver(velocity_model=self.model)
-
-
 
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch
@@ -163,9 +160,6 @@ class AirFMTraj(L.LightningModule, ModelWrapper):
         self.log("test_loss", loss)
         return loss
         #raise NotImplementedError("Test step not implemented")
-
-    def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
     def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
         x_0 = torch.randn((features, length, n), dtype=torch.float32, device=self.device)
@@ -197,6 +191,45 @@ class AirFMTraj(L.LightningModule, ModelWrapper):
         #synthetic_samples = synthetic_samples.to(torch.float32) / 255.0
         print(synthetic_samples.shape)
         return synthetic_samples
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        """This is called after the optimizer step, at the end of the batch."""
+        self.model.on_train_batch_end(outputs, batch, batch_idx)
+
+
+
+
+
+class AirFMTraj(L.LightningModule):
+
+    def __init__(self, config, model):
+        super().__init__()
+        self.model = Wrapper(config, model)
+        self.lr = config["lr"]
+
+    def step(self, batch, batch_idx):
+        return self.model.step(batch, batch_idx)
+
+    def training_step(self, batch, batch_idx):  
+        loss = self.step(batch, batch_idx)
+        self.log("train_loss", loss)
+        return loss
+        #raise NotImplementedError("Training step not implemented")
+
+    def validation_step(self, batch, batch_idx):
+        loss = self.step(batch, batch_idx)
+        self.log("valid_loss", loss)
+        return loss
+        #raise NotImplementedError("Validation step not implemented")
+
+    def test_step(self, batch, batch_idx):
+        loss = self.step(batch, batch_idx)
+        self.log("test_loss", loss)
+        return loss
+        #raise NotImplementedError("Test step not implemented")
+
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
