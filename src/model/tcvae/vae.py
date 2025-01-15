@@ -15,18 +15,20 @@ from torch.distributions import (
 )
 from torch.distributions.categorical import Categorical
 from utils.data_utils import DatasetParams
+from model.AirDiffTraj import EmbeddingBlock
 
 
 class LSR(nn.Module):
 
-    def __init__(self, input_dim: int, out_dim: int, fix_prior: bool = False):
+    def __init__(self, input_dim: int, out_dim: int, fix_prior: bool = False, config = None):
         super().__init__()
 
         self.input_dim = input_dim
         self.out_dim = out_dim
         self.fix_prior = fix_prior
+        self.config = config
 
-    def forward(self, hidden: torch.Tensor) -> Distribution:
+    def forward(self, hidden: torch.Tensor, con = None, cat = None, grid = None) -> Distribution:
         raise NotImplementedError()
 
     def dist_params(self, p: Distribution) -> Tuple:
@@ -55,8 +57,8 @@ class CustomMSF(MixtureSameFamily):
 
 
 class NormalLSR(LSR):
-    def __init__(self, input_dim: int, out_dim: int):
-        super().__init__(input_dim, out_dim)
+    def __init__(self, input_dim: int, out_dim: int, config = None):
+        super().__init__(input_dim, out_dim, config = config)
 
         self.z_loc = nn.Linear(input_dim, out_dim)
         z_log_var_layers = []
@@ -71,10 +73,18 @@ class NormalLSR(LSR):
         self.prior_log_var = nn.Parameter(torch.zeros((1, out_dim)), requires_grad=False)
         self.register_parameter("prior_loc", self.prior_loc)
         self.register_parameter("prior_log_var", self.prior_log_var)
+        self.continuous_len = self.config["continuous_len"] if self.config != None else 0
+        self.weather_config = self.config["weather_config"] if self.config != None else None
+        self.dataset_config = self.config["data"] if self.config != None else None
 
-    def forward(self, hidden) -> Distribution:
+        self.cond = EmbeddingBlock(self.continuous_len, 0, out_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
+
+    def forward(self, hidden, con, cat, grid) -> Distribution:
         loc = self.z_loc(hidden)
         log_var = self.z_log_var(hidden)
+        if con is not None:
+            cond = self.cond(con, cat, grid)
+            return Independent(self.dist(loc, (log_var / 2).exp()), 1) + cond
         return Independent(self.dist(loc, (log_var / 2).exp()), 1)
 
     def dist_params(self, p: Independent) -> List[torch.Tensor]:

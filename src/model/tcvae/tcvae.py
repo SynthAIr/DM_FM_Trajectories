@@ -274,13 +274,14 @@ class TCVAE(VAE):
             print("Initing with NormalLSR")
             self.lsr = NormalLSR(
                 input_dim = h_dim,
-                out_dim=self.hparams.encoding_dim)
+                out_dim=self.hparams.encoding_dim,
+                config=self.config)
 
         self.out_activ = nn.Identity()
     
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         h = self.encoder(x)
-        q = self.lsr(h)
+        q = self.lsr(h, con, cat, grid)
         z = q.rsample()
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
