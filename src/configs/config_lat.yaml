@@ -1,5 +1,5 @@
 train:
-  epochs: 500
+  epochs: 200
   accelerator: 'gpu'
   devices: 1
   seed: 37
@@ -75,7 +75,7 @@ model:
   out_ch: 8
   ch: 32
   ch_mult: [ 1, 2, 4, 4, 8 ]
-  num_res_blocks: 6
+  num_res_blocks: 8
   attn_resolutions: [32, 16]
   dropout: 0.0
   resamp_with_conv: True
@@ -86,7 +86,8 @@ model:
     beta_end: 0.05               # Slightly increased for faster diffusion
     num_diffusion_timesteps: 1000
     ema: True
-    ema_rate: 0.999999
+    #ema_rate: 0.999999
+    ema_rate: 0.99999
   weather_config:
     weather_grid: False
     variables: 4

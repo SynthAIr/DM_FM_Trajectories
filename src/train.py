@@ -15,7 +15,7 @@ from model.AirLatDiffTraj import Phase
 from model.diffusion import Diffusion
 from model.tcvae import TCVAE
 from lightning.pytorch.accelerators import find_usable_cuda_devices
-from model.flow_matching import FlowMatching
+from model.flow_matching import FlowMatching, Wrapper
 
 
 def train(
@@ -67,9 +67,11 @@ def train(
 def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
     configs["logger"]["artifact_location"] = args.artifact_location
+    dataset_config = load_config(args.dataset_config)
 
     # Setup logger with MLFlow with configurations read from the file.
     logger_config = configs["logger"]
+    logger_config["tags"]["dataset"] = dataset_config["dataset"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
     l_logger = MLFlowLogger(
         experiment_name=logger_config["experiment_name"],
@@ -82,7 +84,6 @@ def run(args: argparse.Namespace):
 
     # Dataset preparation and loading.
     #dataset_config = configs["data"]
-    dataset_config = load_config(args.dataset_config)
     dataset_config["data_path"] = args.data_path
     configs["data"] = dataset_config
     dataset, traffic = load_and_prepare_data(dataset_config)
@@ -132,7 +133,9 @@ def run(args: argparse.Namespace):
         c["traj_length"] = dataset.parameters['seq_len']
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         vae.eval()
-        diff = Diffusion(model_config)
+        #diff = Diffusion(model_config)
+        m = FlowMatching(model_config)
+        diff = Wrapper(model_config, m)
         #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
         model = get_model(model_config)(model_config, vae, diff)
     elif model_config["type"] == "FM":

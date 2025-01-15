@@ -37,19 +37,18 @@ class FlowMatching(Generative):
         self.dataset_config = config["data"]
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.ch = config["ch"] * 4
-        self.in_channels = 8
-        self.resolution = config['traj_length']
+        self.in_channels = 1
+        #self.resolution = config['traj_length']
+        self.resolution = self.ch
 
         self.unet = UNET(config, resolution = self.resolution, in_channels = self.in_channels)
         #self.optimizer_cfg = optimizer_cfg
         #self.lr_scheduler_cfg = lr_scheduler_cfg
         self.discrete = False
         # Metrics
-        #self.batch_loss = MeanMetric()
-        #self.epoch_loss = MeanMetric()
         self.path = CondOTProbPath()
         self.skewed_timesteps = True
-        self.MASK_TOKEN = 256
+        #self.MASK_TOKEN = 256
         self.weather_config = config["weather_config"]
         self.continuous_len = config["continuous_len"]
         self.guidance_scale = 0.0
@@ -91,7 +90,8 @@ class FlowMatching(Generative):
 
         # Generate conditioning
         # Scaling from [-1, 1] to [0, 1]
-        samples = x * 2.0 - 1.0
+        #samples = x * 2.0 - 1.0
+        samples = x
         noise = torch.randn_like(samples, device=self.device)
 
         t = (
@@ -122,6 +122,7 @@ class Wrapper(ModelWrapper):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
         self.solver = ODESolver(velocity_model=self.model)
+        self.ch = self.model.ch
 
     def step(self, batch, batch_idx):
         x, con, cat, grid = batch
@@ -130,19 +131,19 @@ class Wrapper(ModelWrapper):
 
     def training_step(self, batch, batch_idx):  
         loss = self.step(batch, batch_idx)
-        self.log("train_loss", loss)
+        #self.log("train_loss", loss)
         return loss
         #raise NotImplementedError("Training step not implemented")
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
-        self.log("valid_loss", loss)
+        #self.log("valid_loss", loss)
         return loss
         #raise NotImplementedError("Validation step not implemented")
 
     def test_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
-        self.log("test_loss", loss)
+        #self.log("test_loss", loss)
         return loss
         #raise NotImplementedError("Test step not implemented")
 

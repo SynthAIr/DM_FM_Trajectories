@@ -33,7 +33,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
-from model.flow_matching import FlowMatching
+from model.flow_matching import FlowMatching, Wrapper
 
 
 
@@ -74,7 +74,9 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         #print(c)
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
         #print(model_config)
-        diff = Diffusion(model_config)
+        #diff = Diffusion(model_config)
+        m = FlowMatching(model_config)
+        diff = Wrapper(model_config, m)
         print("Loading", checkpoint_path)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
@@ -413,12 +415,14 @@ def run(args, logger = None):
     config_file = f"./artifacts/{model_name}/config.yaml"
 
     config = load_config(config_file)
+    dataset_config = config["data"]
     runid = None
     if logger is not None:
         runid = logger.run_id
 
     if logger is None:
         logger_config = config["logger"]
+        logger_config["tags"]["dataset"] = dataset_config["dataset"]
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
@@ -430,7 +434,6 @@ def run(args, logger = None):
         if runid is not None:
             logger.run_id = runid
 
-    dataset_config = config["data"]
     dataset_config["data_path"] = args.data_path
 
     logger.experiment.log_dict(logger.run_id,config, config_file)
