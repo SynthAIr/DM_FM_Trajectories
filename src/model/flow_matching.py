@@ -65,6 +65,8 @@ class FlowMatching(Generative):
             self.ema_helper = None
 
     def forward(self, x, t, con, cat, grid):
+        t = torch.zeros(x.shape[0], device=x.device) + t
+
         if self.guidance_scale == 0.0:
             guide_emb = self.guide_emb(con, cat, grid)
             return self.unet(x, t, guide_emb)
@@ -107,22 +109,6 @@ class FlowMatching(Generative):
         return loss
 
 
-    def training_epoch_end(self, outputs):
-        self.log("epoch_loss", self.epoch_loss.compute(), on_epoch=True, prog_bar=True)
-        self.epoch_loss.reset()
-
-    def configure_optimizers(self) -> dict:
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer,
-            step_size=self.hparams.lr_step_size,
-            gamma=self.hparams.lr_gamma,
-        )
-
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler,
-        }
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
@@ -133,7 +119,8 @@ class FlowMatching(Generative):
 class Wrapper(ModelWrapper):
     def __init__(self, config, model):
         super().__init__(model)
-        self.model = model
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = model.to(self.device)
         self.solver = ODESolver(velocity_model=self.model)
 
     def step(self, batch, batch_idx):
@@ -178,8 +165,10 @@ class Wrapper(ModelWrapper):
             atol= 1e-5,
             rtol= 1e-5,
             step_size= 0.1,
-            label=(con, cat, grid),
-            cfg_scale=self.model.guidance_scale,
+            con= con,
+            cat = cat,
+            grid = grid,
+            #cfg_scale=self.model.guidance_scale,
         )
                 # Scaling to [0, 1] from [-1, 1]
         #synthetic_samples = torch.clamp(
@@ -200,7 +189,7 @@ class Wrapper(ModelWrapper):
         cat = cat.to(self.device)
         steps = []
         with torch.no_grad():
-            x_0 = torch.randn((x.shape()), dtype=torch.float32, device=self.device)
+            x_0 = torch.randn(x.shape, dtype=torch.float32, device=self.device)
 
             if False:
                 time_grid = get_time_discretization(nfes=ode_opts["nfe"])
@@ -218,8 +207,10 @@ class Wrapper(ModelWrapper):
                 atol= 1e-5,
                 rtol= 1e-5,
                 step_size= 0.1,
-                label=(con, cat, grid),
-                cfg_scale=self.model.guidance_scale,
+                con= con,
+                cat = cat,
+                grid = grid,
+                #cfg_scale=self.model.guidance_scale,
             )
             # Scaling to [0, 1] from [-1, 1]
             #synthetic_samples = torch.clamp(

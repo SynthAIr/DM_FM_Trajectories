@@ -33,6 +33,7 @@ def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2
     return betas
 
 def get_timestep_embedding(timesteps, embedding_dim):
+    #print(timesteps.shape)
     assert len(timesteps.shape) == 1
 
     half_dim = embedding_dim // 2

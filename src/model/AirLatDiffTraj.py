@@ -31,7 +31,7 @@ class LatentDiffusionTraj(L.LightningModule):
         self.generative_model = generative
         self.vae = vae
         self.phase = Phase.DIFFUSION
-        self.s = 2
+        self.s = 4
 
     def reconstruct(self, x, con, cat, grid):
         #return self.vae.reconstruct(x, con, cat, grid)

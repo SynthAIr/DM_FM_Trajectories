@@ -1,5 +1,5 @@
 train:
-  epochs: 300
+  epochs: 500
   accelerator: 'gpu'
   devices: 1
   seed: 37

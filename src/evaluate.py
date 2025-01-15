@@ -442,8 +442,8 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
-    n = 50
-    n_samples = 4
+    n = 200
+    n_samples = 2
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
