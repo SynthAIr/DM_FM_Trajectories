@@ -84,7 +84,7 @@ class NormalLSR(LSR):
         log_var = self.z_log_var(hidden)
         if con is not None:
             cond = self.cond(con, cat, grid)
-            return Independent(self.dist(loc, (log_var / 2).exp()), 1) + cond
+            return Independent(self.dist(loc, (log_var / 2).exp()), 1), cond
         return Independent(self.dist(loc, (log_var / 2).exp()), 1)
 
     def dist_params(self, p: Independent) -> List[torch.Tensor]:
@@ -340,21 +340,24 @@ class VAE(AE):
 
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
         h = self.encoder(x)
-        q = self.lsr(h)
-        z = q.rsample()
+        q, cond = self.lsr(h, con, cat, grid)
+        z = q.rsample() 
+        z = torch.cat((z , cond), dim=1)
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
 
     def get_latent(self, x, con, cat, grid):
         h = self.encoder(x)
-        q = self.lsr(h)
-        z = q.rsample()
+        q, cond = self.lsr(h)
+        z = q.rsample() 
+        z = torch.cat((z , cond), dim=1)
         return z
 
     def get_latent_n(self, x, con, cat, grid, n):
         h = self.encoder(x)
-        q = self.lsr(h)
+        q, cond = self.lsr(h)
         z = q.rsample([n])
+        z[:] = z[:] + cond
         z = z.view(-1, *z.shape[2:])
         z = z.unsqueeze(1)
         return z

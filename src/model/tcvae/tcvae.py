@@ -247,7 +247,7 @@ class TCVAE(VAE):
             )
 
         self.decoder = TCDecoder(
-            input_dim=self.hparams.encoding_dim,
+            input_dim=self.hparams.encoding_dim*2,
             out_dim=self.config["in_channels"],
             h_dims=self.hparams.h_dims[::-1],
             seq_len=self.config["traj_length"],
@@ -281,8 +281,9 @@ class TCVAE(VAE):
     
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         h = self.encoder(x)
-        q = self.lsr(h, con, cat, grid)
+        q, cond= self.lsr(h, con, cat, grid)
         z = q.rsample()
+        z = torch.cat((z , cond), dim=1)
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
     
