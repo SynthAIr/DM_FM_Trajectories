@@ -77,14 +77,10 @@ class NormalLSR(LSR):
         self.weather_config = self.config["weather_config"] if self.config != None else None
         self.dataset_config = self.config["data"] if self.config != None else None
 
-        self.cond = EmbeddingBlock(self.continuous_len, 0, out_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
 
     def forward(self, hidden, con, cat, grid) -> Distribution:
         loc = self.z_loc(hidden)
         log_var = self.z_log_var(hidden)
-        if con is not None:
-            cond = self.cond(con, cat, grid)
-            return Independent(self.dist(loc, (log_var / 2).exp()), 1), cond
         return Independent(self.dist(loc, (log_var / 2).exp()), 1)
 
     def dist_params(self, p: Independent) -> List[torch.Tensor]:
@@ -340,7 +336,7 @@ class VAE(AE):
 
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:
         h = self.encoder(x)
-        q, cond = self.lsr(h, con, cat, grid)
+        q = self.lsr(h, con, cat, grid)
         z = q.rsample() 
         z = torch.cat((z , cond), dim=1)
         x_hat = self.out_activ(self.decoder(z))
@@ -348,14 +344,14 @@ class VAE(AE):
 
     def get_latent(self, x, con, cat, grid):
         h = self.encoder(x)
-        q, cond = self.lsr(h)
+        q = self.lsr(h)
         z = q.rsample() 
         z = torch.cat((z , cond), dim=1)
         return z
 
     def get_latent_n(self, x, con, cat, grid, n):
         h = self.encoder(x)
-        q, cond = self.lsr(h)
+        q = self.lsr(h)
         z = q.rsample([n])
         z[:] = z[:] + cond
         z = z.view(-1, *z.shape[2:])
@@ -436,7 +432,7 @@ class VAE(AE):
     def sample(self, num_samples: int, con, cat, grid, length, features) -> torch.Tensor:
         z = self.lsr.get_prior().sample((num_samples,)).squeeze(1)
         #print(z.shape)
-        return self.decode(z), []
+        return self.decode(z,con, cat, grid), []
 
     def get_distribution(self, c=None) -> torch.Tensor:
         raise NotImplementedError("get_distribution() must be implemented in subclass.")

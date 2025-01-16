@@ -277,12 +277,14 @@ class TCVAE(VAE):
                 out_dim=self.hparams.encoding_dim,
                 config=self.config)
 
+        self.cond = EmbeddingBlock(self.continuous_len, 0, self.hparams.encoding_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
         self.out_activ = nn.Identity()
     
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         h = self.encoder(x)
-        q, cond= self.lsr(h, con, cat, grid)
+        q = self.lsr(h, con, cat, grid)
         z = q.rsample()
+        cond = self.cond(con, cat, grid)
         z = torch.cat((z , cond), dim=1)
         x_hat = self.out_activ(self.decoder(z))
         return self.lsr.dist_params(q), z, x_hat
@@ -295,4 +297,9 @@ class TCVAE(VAE):
     def get_distribution(self, c=None) -> torch.Tensor:
         pseudo_means, pseudo_scales = self.lsr.get_distribution(c)
         return pseudo_means, pseudo_scales
+
+    def decode(self, z, con, cat, grid):
+        cond = self.cond(con, cat, grid)
+        z = torch.cat((z , cond), dim=1)
+        return self.out_activ(self.decoder(z))
 

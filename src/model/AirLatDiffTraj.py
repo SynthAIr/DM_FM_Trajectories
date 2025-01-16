@@ -45,7 +45,7 @@ class LatentDiffusionTraj(L.LightningModule):
             print(z_hat[0])
             #z_hat = z
             z_hat = z_hat.squeeze(1)
-            x_hat = self.vae.decode(z_hat)
+            x_hat = self.vae.decode(z_hat, con, cat, grid)
         _ = []
         return x_hat, _
 
@@ -63,7 +63,7 @@ class LatentDiffusionTraj(L.LightningModule):
                                                   sampling = sampling)
         x_t = x_t.squeeze(1)
         with torch.no_grad():
-            x_hat = self.vae.decode(x_t)
+            x_hat = self.vae.decode(x_t, con, cat, grid)
             #x_hat = self.out_activ(self.decoder(x_t))
         return x_hat, steps
 
@@ -96,7 +96,7 @@ class LatentDiffusionTraj(L.LightningModule):
         #print("z", z.shape)
         z_hat = self.generative_model(z, con, cat, grid)
         z_hat = z_hat.squeeze(1)
-        return self.vae.decode(z_hat)
+        return self.vae.decode(z_hat, con, cat, grid)
 
     def validation_step(self, batch, batch_idx):
         match self.phase:
