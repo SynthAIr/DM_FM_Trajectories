@@ -17,6 +17,7 @@ from torch.nn import functional as F
 from utils import DatasetParams, TrafficDataset
 from model.tcvae.vae import VAE, VampPriorLSR, NormalLSR
 from typing import Tuple
+from model.AirDiffTraj import EmbeddingBlock
 
 
 class TemporalBlock(nn.Module):
@@ -277,6 +278,11 @@ class TCVAE(VAE):
                 out_dim=self.hparams.encoding_dim,
                 config=self.config)
 
+        self.weather_config = self.config["weather_config"] if self.config != None else None
+        self.dataset_config = self.config["data"] if self.config != None else None
+        self.continuous_len = self.config["continuous_len"] if self.config != None else 0
+        #print(self.continuous_len)
+        #print(self.hparams.encoding_dim)
         self.cond = EmbeddingBlock(self.continuous_len, 0, self.hparams.encoding_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
         self.out_activ = nn.Identity()
     
@@ -285,13 +291,19 @@ class TCVAE(VAE):
         q = self.lsr(h, con, cat, grid)
         z = q.rsample()
         cond = self.cond(con, cat, grid)
-        z = torch.cat((z , cond), dim=1)
-        x_hat = self.out_activ(self.decoder(z))
+        z_lat = torch.cat((z , cond), dim=1)
+        x_hat = self.out_activ(self.decoder(z_lat))
         return self.lsr.dist_params(q), z, x_hat
     
     def reconstruct(self, x, con, cat, grid):
+        self.eval()
+        #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(self.device)
+        con = con.to(self.device)
+        cat = cat.to(self.device)
+        grid = grid.to(self.device)
         with torch.no_grad():
-            print("recon vae")
+            #print("recon vae")
             return self.forward(x, con, cat, grid)[2], []
 
     def get_distribution(self, c=None) -> torch.Tensor:

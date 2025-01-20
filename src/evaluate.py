@@ -100,8 +100,8 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
     print("Trajectory generation model created!")
     return model, trajectory_generation_model
 
-def get_config_data(config_path: str, data_path: str, artifact_location: str):
-    configs = load_config(config_path)
+def get_config_data(configs, data_path: str, artifact_location: str):
+    #configs = load_config(config_path)
     configs["data"]["data_path"] = data_path 
     configs["logger"]["artifact_location"] = artifact_location
     
@@ -415,8 +415,8 @@ def run(args, logger = None):
     #dataset_config_file = f"./artifacts/{model_name}/dataset_config.yaml"
 
     config = load_config(config_file)
-    #dataset_config = load_config(dataset_config_file)
     dataset_config = config["data"]
+    #dataset_config = load_config(args.dataset_config)
     runid = None
     if logger is not None:
         runid = logger.run_id
@@ -437,9 +437,14 @@ def run(args, logger = None):
 
     dataset_config["data_path"] = args.data_path
     logger.experiment.log_dict(logger.run_id,config, config_file)
+<<<<<<< HEAD
     #_, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     dataset, traffic = load_and_prepare_data(dataset_config)
     #config["data"] = dataset_config
+=======
+    config["data"] = dataset_config
+    config, dataset, traffic, conditions = get_config_data(config, data_path, artifact_location)
+>>>>>>> 5b6fbe6 (WIP)
     config['model']["data"] = dataset_config
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]

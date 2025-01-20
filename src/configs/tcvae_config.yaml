@@ -1,5 +1,5 @@
 train:
-  epochs: 100
+  epochs: 10
   accelerator: 'auto'
   devices: 1
   seed: 42
@@ -15,52 +15,6 @@ logger:
   #experiment_name: TCVAE
   #run_name: TCVAE
   #tags: {'model': 'tcvae', 'dataset': 'opensky'}
-data:
-  dataset: opensky
-  data_path: ./data/traffic.pkl
-  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
-  #features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track']
-  #features: [ 'latitude', 'longitude', 'altitude', 'groundspeed', 'track_cos', 'track_sin']
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
-  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin']
-  #features: [ 'latitude_sin', 'latitude_cos', 'longitude_sin', 'longitude_cos', 'altitude', 'timedelta', 'groundspeed', 'track']
-  #features: [ 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate','timedelta' ]
-  conditional_features:
-    hour:
-      type: 'cyclic'
-      max_value: 24
-    month:
-      type: 'cyclic'
-      max_value: 12
-    day_of_week:
-      type: 'cyclic'
-      max_value: 6
-    ADEP:
-      type: 'categorical'
-      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
-    ADES:
-      type: 'categorical'
-      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
-      #phase:
-      #type: 'categorical'
-      #categories: ['CLIMB', 'LEVEL', 'DESCENT', 'NA', 'CRUISE']
-    cluster:
-      type: 'categorical'
-      categories: [0, 1, 2, 3, 4]
-      ##timedelta:
-      #type: 'continuous'
-    cumdist:
-      type: 'continuous'
-      last: True
-      first: False
-    timedelta:
-      type: 'continuous'
-      last: True
-      first: False
-      #groundspeed:
-      #type: 'continuous'
-      #track:
-      #type: 'continuous'
   weather_grid:
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']

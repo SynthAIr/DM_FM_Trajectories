@@ -118,6 +118,7 @@ def run(args: argparse.Namespace):
         c = load_config(config_file)
         c = c['model']
         c["traj_length"] = dataset.parameters['seq_len']
+        c['data'] = dataset_config
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         vae.eval()
         #diff = Diffusion(model_config)

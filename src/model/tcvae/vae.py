@@ -73,9 +73,6 @@ class NormalLSR(LSR):
         self.prior_log_var = nn.Parameter(torch.zeros((1, out_dim)), requires_grad=False)
         self.register_parameter("prior_loc", self.prior_loc)
         self.register_parameter("prior_log_var", self.prior_log_var)
-        self.continuous_len = self.config["continuous_len"] if self.config != None else 0
-        self.weather_config = self.config["weather_config"] if self.config != None else None
-        self.dataset_config = self.config["data"] if self.config != None else None
 
 
     def forward(self, hidden, con, cat, grid) -> Distribution:
@@ -338,22 +335,21 @@ class VAE(AE):
         h = self.encoder(x)
         q = self.lsr(h, con, cat, grid)
         z = q.rsample() 
-        z = torch.cat((z , cond), dim=1)
-        x_hat = self.out_activ(self.decoder(z))
+        z_lat = torch.cat((z , cond), dim=1)
+        x_hat = self.out_activ(self.decoder(z_lat))
         return self.lsr.dist_params(q), z, x_hat
 
     def get_latent(self, x, con, cat, grid):
         h = self.encoder(x)
         q = self.lsr(h)
         z = q.rsample() 
-        z = torch.cat((z , cond), dim=1)
+        #z = torch.cat((z , cond), dim=1)
         return z
 
     def get_latent_n(self, x, con, cat, grid, n):
         h = self.encoder(x)
         q = self.lsr(h)
         z = q.rsample([n])
-        z[:] = z[:] + cond
         z = z.view(-1, *z.shape[2:])
         z = z.unsqueeze(1)
         return z
