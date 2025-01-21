@@ -19,7 +19,7 @@ logger:
     function: False
   train_ratio: 0.8
   val_ratio: 0.2
-  batch_size: 256
+  batch_size: 128
   test_batch_size: 32
   
 model:
@@ -35,7 +35,7 @@ model:
   guidance_scale: 0
   in_channels: 8
   out_ch: 8
-  ch: 32
+  ch: 64
   ch_mult: [ 1, 2, 4, 4, 8 ]
   num_res_blocks: 8
   attn_resolutions: [32, 16]

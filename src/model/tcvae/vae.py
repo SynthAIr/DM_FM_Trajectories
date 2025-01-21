@@ -341,14 +341,14 @@ class VAE(AE):
 
     def get_latent(self, x, con, cat, grid):
         h = self.encoder(x)
-        q = self.lsr(h)
+        q = self.lsr(h, con, cat, grid)
         z = q.rsample() 
         #z = torch.cat((z , cond), dim=1)
         return z
 
     def get_latent_n(self, x, con, cat, grid, n):
         h = self.encoder(x)
-        q = self.lsr(h)
+        q = self.lsr(h, con, cat, grid)
         z = q.rsample([n])
         z = z.view(-1, *z.shape[2:])
         z = z.unsqueeze(1)
