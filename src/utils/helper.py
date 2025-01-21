@@ -51,7 +51,7 @@ def load_and_prepare_data(dataset_config):
 
     return dataset, traffic
 
-def get_model(configs):
+def get_model_type(configs):
     match configs["type"]:
         case "DDPM":
             return AirDiffTrajDDPM
@@ -71,6 +71,8 @@ def get_model(configs):
             return AirFMTraj
         case _:
             return AirDiffTrajDDPM
+
+#def get_model(configs):
 
 def extract_geographic_info(
     trajectories: Traffic,

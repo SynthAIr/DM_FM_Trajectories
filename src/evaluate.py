@@ -408,13 +408,14 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
 def run(args, logger = None):
     np.random.seed(42)
     model_name = args.model_name
-
     data_path = args.data_path
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
     config_file = f"./artifacts/{model_name}/config.yaml"
+    #dataset_config_file = f"./artifacts/{model_name}/dataset_config.yaml"
 
     config = load_config(config_file)
+    #dataset_config = load_config(dataset_config_file)
     dataset_config = config["data"]
     runid = None
     if logger is not None:
@@ -435,10 +436,10 @@ def run(args, logger = None):
             logger.run_id = runid
 
     dataset_config["data_path"] = args.data_path
-
     logger.experiment.log_dict(logger.run_id,config, config_file)
-    config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
-    config["data"] = dataset_config
+    #_, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
+    dataset, traffic = load_and_prepare_data(dataset_config)
+    #config["data"] = dataset_config
     config['model']["data"] = dataset_config
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]

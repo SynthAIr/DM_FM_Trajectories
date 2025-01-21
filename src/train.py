@@ -63,46 +63,33 @@ def train(
     # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
-
-def run(args: argparse.Namespace):
-    configs = load_config(args.config_file)
+def setup_logger(args, configs):
+    """Setup the logger with MLFlow configurations."""
     configs["logger"]["artifact_location"] = args.artifact_location
-    dataset_config = load_config(args.dataset_config)
-
-    # Setup logger with MLFlow with configurations read from the file.
     logger_config = configs["logger"]
-    logger_config["tags"]["dataset"] = dataset_config["dataset"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
-    l_logger = MLFlowLogger(
+
+    logger = MLFlowLogger(
         experiment_name=logger_config["experiment_name"],
         run_name=run_name,
         tracking_uri=logger_config["mlflow_uri"],
         tags=logger_config["tags"],
-        #artifact_location=artifact_location,
     )
     print("Logger setup!")
+    return logger
 
-    # Dataset preparation and loading.
+
+def run(args: argparse.Namespace):
+    configs = load_config(args.config_file)
+    dataset_config = load_config(args.dataset_config)
+
+    # Setup logger with MLFlow with configurations read from the file.
+    l_logger = setup_logger(args, configs)
+
     #dataset_config = configs["data"]
     dataset_config["data_path"] = args.data_path
-    configs["data"] = dataset_config
     dataset, traffic = load_and_prepare_data(dataset_config)
     #conditional_features = load_conditions(dataset_config)
-    """
-    dataset = TrafficDataset.from_file(
-        dataset_config["data_path"],
-        features=dataset_config["features"],
-        shape=dataset_config["data_shape"],
-        scaler=MinMaxScaler(feature_range=(-1, 1)),
-        info_params={
-            "features": dataset_config["info_features"],
-            "index": dataset_config["info_index"],
-        },
-        conditional_features= conditional_features,
-        down_sample_factor=dataset_config["down_sample_factor"],
-        variables = dataset_config["weather_grid"]["variables"]
-    )
-    """
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
 
@@ -153,6 +140,7 @@ def run(args: argparse.Namespace):
     train_config = configs["train"]
     train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
     # Save configuration used for the training in the logger's artifact location.
+    configs["data"] = dataset_config
     save_config(configs, os.path.join(artifact_location, "config.yaml"))
 
     return l_logger, run_name, artifact_location
