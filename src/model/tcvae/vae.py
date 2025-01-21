@@ -229,6 +229,7 @@ class Abstract(L.LightningModule):
         self.config = config
         self._check_hparams(config)
         self.save_hyperparameters(config)
+        self.conditional = self.config["conditional"] if self.config["conditional"] else False
 
 
     def _check_hparams(self, hparams: Union[Dict, Namespace]):
@@ -335,7 +336,7 @@ class VAE(AE):
         h = self.encoder(x)
         q = self.lsr(h, con, cat, grid)
         z = q.rsample() 
-        z_lat = torch.cat((z , cond), dim=1)
+        z_lat = torch.cat((z , cond), dim=1) if self.conditional else z
         x_hat = self.out_activ(self.decoder(z_lat))
         return self.lsr.dist_params(q), z, x_hat
 

@@ -248,7 +248,7 @@ class TCVAE(VAE):
             )
 
         self.decoder = TCDecoder(
-            input_dim=self.hparams.encoding_dim*2,
+            input_dim=self.hparams.encoding_dim* (2 if self.conditional else 1),
             out_dim=self.config["in_channels"],
             h_dims=self.hparams.h_dims[::-1],
             seq_len=self.config["traj_length"],
@@ -283,15 +283,19 @@ class TCVAE(VAE):
         self.continuous_len = self.config["continuous_len"] if self.config != None else 0
         #print(self.continuous_len)
         #print(self.hparams.encoding_dim)
-        self.cond = EmbeddingBlock(self.continuous_len, 0, self.hparams.encoding_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
+        if self.conditional:
+            self.cond = EmbeddingBlock(self.continuous_len, 0, self.hparams.encoding_dim, weather_config = self.weather_config, dataset_config = self.dataset_config)
         self.out_activ = nn.Identity()
     
     def forward(self, x, con, cat, grid) -> Tuple[Tuple, torch.Tensor, torch.Tensor]:               # Overwrite the forward method for conditioning
         h = self.encoder(x)
         q = self.lsr(h, con, cat, grid)
         z = q.rsample()
-        cond = self.cond(con, cat, grid)
-        z_lat = torch.cat((z , cond), dim=1)
+        if self.conditional:
+            cond = self.cond(con, cat, grid)
+            z_lat = torch.cat((z , cond), dim=1)
+        else:
+            z_lat = z
         x_hat = self.out_activ(self.decoder(z_lat))
         return self.lsr.dist_params(q), z, x_hat
     
@@ -311,7 +315,8 @@ class TCVAE(VAE):
         return pseudo_means, pseudo_scales
 
     def decode(self, z, con, cat, grid):
-        cond = self.cond(con, cat, grid)
-        z = torch.cat((z , cond), dim=1)
+        if self.conditional:
+            cond = self.cond(con, cat, grid)
+            z = torch.cat((z , cond), dim=1)
         return self.out_activ(self.decoder(z))
 

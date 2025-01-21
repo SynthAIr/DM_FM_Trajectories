@@ -103,8 +103,11 @@ class FlowMatching(Generative):
         path_sample = self.path.sample(t=t, x_0=noise, x_1=samples)
         x_t, u_t = path_sample.x_t, path_sample.dx_t
 
-        with torch.cuda.amp.autocast():
-            loss = (self(x_t, t, con, cat, grid) - u_t).pow(2).mean()
+        #with torch.cuda.amp.autocast():
+        loss = (self(x_t, t, con, cat, grid) - u_t).pow(2).mean()
+        if torch.isnan(loss):
+            print("Loss is Nan, SElf-Ut",(self(x_t, t, con, cat, grid) - u_t).mean())
+            print("Loss is Nan, SELF",(self(x_t, t, con, cat, grid)).mean())
 
         return loss
 

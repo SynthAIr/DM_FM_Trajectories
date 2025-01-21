@@ -31,7 +31,7 @@ class LatentDiffusionTraj(L.LightningModule):
         self.generative_model = generative
         self.vae = vae
         self.phase = Phase.DIFFUSION
-        self.s = 4
+        self.s = 2
 
     def reconstruct(self, x, con, cat, grid):
         #return self.vae.reconstruct(x, con, cat, grid)
@@ -41,8 +41,8 @@ class LatentDiffusionTraj(L.LightningModule):
             z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
             self.log("reconstruction_loss", F.mse_loss(z_hat.float(), z))
             print("Reconstruction loss", F.mse_loss(z_hat.float(), z))
-            print(z[0])
-            print(z_hat[0])
+            #print(z[0])
+            #print(z_hat[0])
             #z_hat = z
             z_hat = z_hat.squeeze(1)
             x_hat = self.vae.decode(z_hat, con, cat, grid)

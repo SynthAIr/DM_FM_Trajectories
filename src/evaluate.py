@@ -125,8 +125,9 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     # Move data to GPU if available
     grid = grid.to("cuda")
     X_ = X2.reshape(n, len(dataset.features), -1).to("cuda")
-    con_ = con.reshape(n, -1)
-    cat_ = cat.reshape(n, -1)
+    con_ = con.reshape(n, -1).to("cuda")
+    cat_ = cat.reshape(n, -1).to("cuda")
+    model = model.to("cuda")
     
     print("Shapes:", con.shape, cat.shape, X_.shape)
     
@@ -260,8 +261,8 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         x, con, cat, grid = dataset[i]
         
         # Reshape con and cat as required
-        con = con.reshape(1, -1)
-        cat = cat.reshape(1, -1)
+        con = con.reshape(1, -1).to("cuda")
+        cat = cat.reshape(1, -1).to("cuda")
         
         # Adjust the shape of x
         #x = x.view(-1, 1, 28, 28)
