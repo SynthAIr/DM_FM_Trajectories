@@ -23,17 +23,34 @@ def extract(input, t, x):
     return out.reshape(*reshape)
 
 
-def load_config(config_file):
+def load_config_2(config_file):
     with open(config_file, "r") as stream:
         try:
             return yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
+#from ruamel.yaml import YAML
+def load_config(file_path):
+    """Load YAML and sort keys alphabetically."""
+    """Load YAML file and sort keys alphabetically."""
+    def recursively_sort_dict(d):
+        if isinstance(d, dict):
+            return {k: recursively_sort_dict(v) for k, v in sorted(d.items())}
+        elif isinstance(d, list):
+            return [recursively_sort_dict(i) for i in d]
+        return d
+
+    with open(file_path, "r") as f:
+        data = yaml.safe_load(f)
+    return recursively_sort_dict(data)
+
 
 def save_config(config, config_file):
+    #with open(config_file, "w") as f:
+    #    yaml.dump(config, f)
     with open(config_file, "w") as f:
-        yaml.dump(config, f)
+        yaml.dump(config, f, sort_keys=True, default_flow_style=False)
 
 def load_and_prepare_data(dataset_config):
     """
@@ -51,7 +68,7 @@ def load_and_prepare_data(dataset_config):
 
     return dataset, traffic
 
-def get_model_type(configs):
+def get_model(configs):
     match configs["type"]:
         case "DDPM":
             return AirDiffTrajDDPM

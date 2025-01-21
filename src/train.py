@@ -65,7 +65,6 @@ def train(
 
 def setup_logger(args, configs):
     """Setup the logger with MLFlow configurations."""
-    configs["logger"]["artifact_location"] = args.artifact_location
     logger_config = configs["logger"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
 
@@ -76,15 +75,16 @@ def setup_logger(args, configs):
         tags=logger_config["tags"],
     )
     print("Logger setup!")
-    return logger
+    return logger, run_name, artifact_location
 
 
 def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
     dataset_config = load_config(args.dataset_config)
+    configs["logger"]["artifact_location"] = args.artifact_location
 
     # Setup logger with MLFlow with configurations read from the file.
-    l_logger = setup_logger(args, configs)
+    l_logger, run_name, artifact_location = setup_logger(args, configs)
 
     #dataset_config = configs["data"]
     dataset_config["data_path"] = args.data_path
