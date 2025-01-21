@@ -437,14 +437,9 @@ def run(args, logger = None):
 
     dataset_config["data_path"] = args.data_path
     logger.experiment.log_dict(logger.run_id,config, config_file)
-<<<<<<< HEAD
     #_, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     dataset, traffic = load_and_prepare_data(dataset_config)
     #config["data"] = dataset_config
-=======
-    config["data"] = dataset_config
-    config, dataset, traffic, conditions = get_config_data(config, data_path, artifact_location)
->>>>>>> 5b6fbe6 (WIP)
     config['model']["data"] = dataset_config
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
