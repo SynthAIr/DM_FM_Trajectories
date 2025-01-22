@@ -153,7 +153,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     colors = ["red", "blue"]
     labels = ["real", "synthetic"]
     reconstructions = []
-    simple = True
+    simple = False
     for c, data in enumerate([X_, x_rec]):
         print("Data shape:", data.cpu().numpy().shape)
         
@@ -169,7 +169,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             forward=False
         )
         if simple:
-            reconstructed_traf = reconstructed_traf.simplify(1e3, altitude="altitude")
+            reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
 
         def convert_sin_cos_to_lat_lon(traffic):
             df = traffic.data

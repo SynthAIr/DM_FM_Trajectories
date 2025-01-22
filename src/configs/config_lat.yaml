@@ -24,7 +24,7 @@ logger:
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/VAE_11"
+  vae: "./artifacts/VAE_14"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128

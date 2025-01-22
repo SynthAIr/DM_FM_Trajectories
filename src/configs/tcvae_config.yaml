@@ -36,12 +36,12 @@ model:
   lr: 0.001
   lr_step_size: 200
   lr_gamma: 0.5
-  dropout: 0.1
+  dropout: 0.0
   in_channels: 8
   out_ch: 8
   llv_coef: 1.0
   #kld_coef: 1.0
-  kld_coef: 0.001
+  kld_coef: 0.000001
   reg_pseudo: False
   scale: 1.0
   fix_prior: True
