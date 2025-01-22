@@ -1,5 +1,5 @@
 train:
-  epochs: 10
+  epochs: 100
   accelerator: 'auto'
   devices: 1
   seed: 42
@@ -41,7 +41,7 @@ model:
   out_ch: 8
   llv_coef: 1.0
   #kld_coef: 1.0
-  kld_coef: 0.01
+  kld_coef: 0.001
   reg_pseudo: False
   scale: 1.0
   fix_prior: True
@@ -52,7 +52,7 @@ model:
   #kernel_size: 32
   dilation_base: 2
   exemplar_path: ./data/traffic.pkl
-  conditional: True
+  conditional: False
   weather_config:
     weather_grid: False
     variables: 4

@@ -151,7 +151,7 @@ class Wrapper(ModelWrapper):
         #raise NotImplementedError("Test step not implemented")
 
     def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
-        x_0 = torch.randn((features, length, n), dtype=torch.float32, device=self.device)
+        x_0 = torch.randn((n, features, length), dtype=torch.float32, device=self.device)
 
         if False:
             time_grid = get_time_discretization(nfes=ode_opts["nfe"])
