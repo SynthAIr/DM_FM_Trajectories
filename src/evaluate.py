@@ -64,7 +64,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
     """
     Load the trained model and create the trajectory generation model.
     """
-    if model_config["type"] == "LatDiff":
+    if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
         checkpoint = f"{model_config['vae']}/best_model.ckpt"
@@ -75,8 +75,13 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
         #print(model_config)
         #diff = Diffusion(model_config)
-        m = FlowMatching(model_config)
-        diff = Wrapper(model_config, m)
+        if model_config["type"] == "LatDiff":
+            diff = Diffusion(model_config)
+        else:
+            m = FlowMatching(model_config)
+            diff = Wrapper(model_config, m)
+        #m = FlowMatching(model_config)
+        #diff = Wrapper(model_config, m)
         print("Loading", checkpoint_path)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])

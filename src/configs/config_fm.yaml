@@ -1,0 +1,100 @@
+train:
+  epochs: 100
+  accelerator: 'gpu'
+  devices: 1
+  seed: 37
+  gradient_clip_val: 0.5
+  log_every_n_steps: 2
+  early_stop_patience: 60
+  precision: 'high'
+logger:
+  mlflow_uri: http://100.64.0.15:7979
+  experiment_name: AirFMTraj
+  run_name: AirFMTraj
+  tags: {'model': 'Flow Matching', 'dataset': 'opensky'}
+data:
+  dataset: opensky
+  data_path: ./data/traffic.pkl
+  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+  data_shape: 'image'
+  conditional_features:
+    hour:
+      type: 'cyclic'
+      max_value: 24
+    month:
+      type: 'cyclic'
+      max_value: 12
+    day_of_week:
+      type: 'cyclic'
+      max_value: 6
+    ADEP:
+      type: 'categorical'
+      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
+    ADES:
+      type: 'categorical'
+      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
+      #phase:
+      #type: 'categorical'
+      #categories: ['CLIMB', 'LEVEL', 'DESCENT', 'NA', 'CRUISE']
+    cluster:
+      type: 'categorical'
+      categories: [0, 1, 2, 3, 4]
+      ##timedelta:
+      #type: 'continuous'
+    cumdist:
+      type: 'continuous'
+      last: True
+      first: False
+    timedelta:
+      type: 'continuous'
+      last: True
+      first: False
+  weather_grid:
+    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
+    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+    resolution: 1
+    function: False
+  train_ratio: 0.8
+  val_ratio: 0.2
+  batch_size: 512
+  test_batch_size: 32
+  
+model:
+  type: "FM"
+  vae: "./artifacts/VAE_8"
+  #h_dims: [128, 256, 256, 128]
+  #encoding_dim: 256
+  #encoding_dim: 128
+  lr: 4.9e-5
+  lr_step_size: 200
+  lr_gamma: 0.5
+  attr_dim: 64
+  guidance_scale: 0
+  in_channels: 8
+  out_ch: 8
+  ch: 64
+  ch_mult: [ 1, 2, 4, 8 ]
+  num_res_blocks: 8
+  attn_resolutions: [32, 16]
+  dropout: 0.1
+  resamp_with_conv: True
+  cnn: True
+  diffusion:
+    beta_schedule: 'linear'
+    beta_start: 0.0001            # Slightly increased for faster diffusion
+    beta_end: 0.05               # Slightly increased for faster diffusion
+    num_diffusion_timesteps: 1000
+    ema: True
+    ema_rate: 0.999999
+  weather_config:
+    weather_grid: False
+    variables: 4
+    levels: 4
+    lon: 5
+    lat: 5
+    type: "ADES"
+      #type: "Function"
+      #type: "Grid"
+      #lon: 81
+      #lat: 106

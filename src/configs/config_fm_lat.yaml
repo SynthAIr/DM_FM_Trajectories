@@ -9,9 +9,9 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirLatDiffTraj
-  run_name: AirLatDiffTraj
-  tags: {'model': 'Latent diffusion', 'dataset': 'opensky'}
+  experiment_name: AirLatFMTraj
+  run_name: AirLatFMTraj
+  tags: {'model': 'Latent Flow Matching', 'dataset': 'opensky'}
   weather_grid:
     #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
     variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
@@ -23,7 +23,7 @@ logger:
   test_batch_size: 32
   
 model:
-  type: "LatDiff"
+  type: "LatFM"
   vae: "./artifacts/VAE_14"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
