@@ -12,57 +12,9 @@ logger:
   experiment_name: AirFMTraj
   run_name: AirFMTraj
   tags: {'model': 'Flow Matching', 'dataset': 'opensky'}
-data:
-  dataset: opensky
-  data_path: ./data/traffic.pkl
-  features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
-  #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
-  data_shape: 'image'
-  conditional_features:
-    hour:
-      type: 'cyclic'
-      max_value: 24
-    month:
-      type: 'cyclic'
-      max_value: 12
-    day_of_week:
-      type: 'cyclic'
-      max_value: 6
-    ADEP:
-      type: 'categorical'
-      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
-    ADES:
-      type: 'categorical'
-      categories: ['EHAM', 'LIMC', 'LFPG', 'EGKK', 'LIRF', 'LOWW', 'EGLL', 'ESSA', 'EDDF', 'EDDT']
-      #phase:
-      #type: 'categorical'
-      #categories: ['CLIMB', 'LEVEL', 'DESCENT', 'NA', 'CRUISE']
-    cluster:
-      type: 'categorical'
-      categories: [0, 1, 2, 3, 4]
-      ##timedelta:
-      #type: 'continuous'
-    cumdist:
-      type: 'continuous'
-      last: True
-      first: False
-    timedelta:
-      type: 'continuous'
-      last: True
-      first: False
-  weather_grid:
-    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
-    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
-    resolution: 1
-    function: False
-  train_ratio: 0.8
-  val_ratio: 0.2
-  batch_size: 512
-  test_batch_size: 32
-  
+ 
 model:
   type: "FM"
-  vae: "./artifacts/VAE_8"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128

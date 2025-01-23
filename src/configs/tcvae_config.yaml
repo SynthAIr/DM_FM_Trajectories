@@ -15,21 +15,10 @@ logger:
   #experiment_name: TCVAE
   #run_name: TCVAE
   #tags: {'model': 'tcvae', 'dataset': 'opensky'}
-  weather_grid:
-    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
-    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
-    resolution: 1
-    function: True
-  data_shape: 'image'
-  train_ratio: 0.8
-  val_ratio: 0.2
-  batch_size: 512
-  test_batch_size: 32
-  length: 200
-  
+  #
 model:
-  #type: "TCVAE"
-  type: "VAE"
+  type: "TCVAE"
+  #type: "VAE"
   h_dims: [256, 256, 256, 256]
   encoding_dim: 256
   #encoding_dim: 64

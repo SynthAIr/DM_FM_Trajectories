@@ -456,7 +456,7 @@ def run(args, logger = None):
     #model.eval()
     batch_size = dataset_config["batch_size"]
     n = 200
-    n_samples = 2
+    n_samples = 5
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
@@ -490,9 +490,9 @@ def run(args, logger = None):
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
     X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
     fig_pca = data_diversity(X, X_gen, 'PCA', 'samples', model_name=model_name)
-    #fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
+    fig_tsne = data_diversity(X, X_gen, 't-SNE', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
-    #logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
+    logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
 
     ### SECOND
 

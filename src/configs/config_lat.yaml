@@ -1,5 +1,5 @@
 train:
-  epochs: 200
+  epochs: 100
   accelerator: 'gpu'
   devices: 1
   seed: 37
@@ -12,15 +12,6 @@ logger:
   experiment_name: AirLatDiffTraj
   run_name: AirLatDiffTraj
   tags: {'model': 'Latent diffusion', 'dataset': 'opensky'}
-  weather_grid:
-    #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
-    variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
-    resolution: 1
-    function: False
-  train_ratio: 0.8
-  val_ratio: 0.2
-  batch_size: 128
-  test_batch_size: 32
   
 model:
   type: "LatDiff"
@@ -51,7 +42,7 @@ model:
     #ema_rate: 0.999999
     ema_rate: 0.99999
   weather_config:
-    weather_grid: True
+    weather_grid: False
     variables: 4
     levels: 4
     lon: 5

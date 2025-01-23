@@ -275,7 +275,8 @@ class EmbeddingBlock(nn.Module):
         if self.weather:
             #x = torch.cat([x, self.weather_block(grid)], dim=1)
             #print(x.shape, self.weather_block(grid).shape)
-            x = x + self.weather_block(grid).repeat(2, 1)
+            x = x + self.weather_block(grid)
+            #x = x + self.weather_block(grid).repeat(2, 1)
             #x = self.fc1(nn.functional.relu(x))
 
         return x

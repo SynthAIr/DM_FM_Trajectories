@@ -83,6 +83,7 @@ def run(args: argparse.Namespace):
     dataset_config = load_config(args.dataset_config)
     configs["logger"]["artifact_location"] = args.artifact_location
     configs["logger"]["tags"]['dataset'] = dataset_config["dataset"]
+    #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.
     l_logger, run_name, artifact_location = setup_logger(args, configs)
@@ -146,6 +147,10 @@ def run(args: argparse.Namespace):
     # Save configuration used for the training in the logger's artifact location.
     configs["data"] = dataset_config
     save_config(configs, os.path.join(artifact_location, "config.yaml"))
+    #l_logger.
+    checkpoint_path = artifact_location + "/best_model.ckpt"
+    model_size = os.path.getsize(checkpoint_path) / (1024 * 1024)  #
+    l_logger.log_metrics({"Size (MB)": model_size})
 
     return l_logger, run_name, artifact_location
 
