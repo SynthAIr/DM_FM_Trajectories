@@ -123,9 +123,12 @@ def run(args: argparse.Namespace):
         c['data'] = dataset_config
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         vae.eval()
+
         if model_config["type"] == "LatDiff":
+            print("Initing LatDiff")
             diff = Diffusion(model_config)
         else:
+            print("Initing LatFM")
             m = FlowMatching(model_config)
             diff = Wrapper(model_config, m)
         #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)

@@ -20,7 +20,7 @@ model:
   guidance_scale: 0
   in_channels: 8
   out_ch: 8
-  ch: 256
+  ch: 128
   ch_mult: [ 1, 2, 2, 4 ]
   num_res_blocks: 6
   attn_resolutions: [16, 32]

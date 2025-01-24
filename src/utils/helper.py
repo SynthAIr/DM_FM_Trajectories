@@ -76,6 +76,8 @@ def get_model(configs):
             return AirDiffTrajDDIM
         case "PER":
             return PerturbationModel
+        case "LatFM":
+            return LatentDiffusionTraj
         case "LatDiff":
             return LatentDiffusionTraj
         case "TimeGAN":
@@ -87,7 +89,7 @@ def get_model(configs):
         case "FM":
             return AirFMTraj
         case _:
-            return AirDiffTrajDDPM
+            raise NotImplemetedError("Invalid model name")
 
 #def get_model(configs):
 
