@@ -1,5 +1,9 @@
 dataset: opensky
 data_path: './data/resampled/combined_traffic_resampled_200.pkl'
+train_ratio: 0.8
+val_ratio: 0.2
+batch_size: 64
+test_batch_size: 32
 features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
 #features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
 data_shape: 'image'
@@ -40,8 +44,4 @@ weather_grid:
   variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
   resolution: 1
   function: True
-train_ratio: 0.8
-val_ratio: 0.2
-batch_size: 256
-test_batch_size: 32
 

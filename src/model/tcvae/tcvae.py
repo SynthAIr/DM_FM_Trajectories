@@ -270,6 +270,7 @@ class TCVAE(VAE):
                 out_dim=self.hparams.encoding_dim,
                 encoder=self.encoder,
                 n_components=self.hparams.n_components,
+                device = self.device
             )
         else:
             print("Initing with NormalLSR")
@@ -277,7 +278,8 @@ class TCVAE(VAE):
                 input_dim = h_dim,
                 out_dim=self.hparams.encoding_dim,
                 config=self.config)
-
+        
+        #self.lsr = self.lsr.to(self.device)
         self.weather_config = self.config["weather_config"] if self.config != None else None
         self.dataset_config = self.config["data"] if self.config != None else None
         self.continuous_len = self.config["continuous_len"] if self.config != None else 0

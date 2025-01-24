@@ -617,7 +617,11 @@ class UNET(nn.Module):
 
     def forward(self, x, t, extra_embed=None):
         #print(x.shape, self.resolution)
-        assert x.shape[2] == self.resolution
+        if x.shape[2] != self.resolution:
+            print(x.shape[2], self.resolution)
+            assert x.shape[2] == self.resolution
+            
+
 
         # timestep embedding
         temb = get_timestep_embedding(t, self.ch)
@@ -694,7 +698,8 @@ class AirDiffTraj(L.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.dataset_config = config["data"]
-        self.config = config['model']
+        #self.config = config['model']
+        self.config = config
         self.ch = config["ch"] * 4
         self.attr_dim = config["attr_dim"]
         self.guidance_scale = config["guidance_scale"]
@@ -818,7 +823,8 @@ class AirDiffTraj(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        #self.log("train_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        self.log("train_loss", loss, sync_dist=True)
         return loss
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
@@ -829,12 +835,14 @@ class AirDiffTraj(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
-        self.log("valid_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+#        self.log("valid_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        self.log("valid_loss", loss, sync_dist=True)
         return loss
 
     def test_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx)
-        self.log("test_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        #self.log("test_loss", loss, on_step=True, on_epoch=True, sync_dist=True)
+        self.log("test_loss", loss, sync_dist=True)
         return loss
 
     def configure_optimizers(self):

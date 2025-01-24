@@ -87,8 +87,10 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
         #model.phase = Phase.EVAL
     elif model_config["type"] == "FM":
-        fm = FlowMatching(model_config)
-        model = get_model(model_config)(model_config, fm)
+        fm = FlowMatching(model_config, args.cuda, lat=True)
+        model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, model = fm, cuda = args.cuda)
+        #fm = FlowMatching(model_config)
+        #model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     model = model.to(device)
@@ -417,6 +419,8 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
 
 def run(args, logger = None):
     np.random.seed(42)
+    global device 
+    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     model_name = args.model_name
     data_path = args.data_path
     artifact_location= "./artifacts"
@@ -703,9 +707,14 @@ if __name__ == "__main__":
         help="Path to the dataset config file"
     )
 
+    parser.add_argument(
+            "--cuda",
+            type=int,
+            default=0,
+            help="GPU to use",
+            )
+
     
     args = parser.parse_args()
-    global device 
-    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     run(args)
     #run_perturbation(args)

@@ -3,7 +3,7 @@ import os
 from typing import Any, Dict, Tuple
 import torch
 from lightning.pytorch import Trainer, seed_everything
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from lightning.pytorch.loggers import MLFlowLogger
 from sklearn.preprocessing import MinMaxScaler
 import yaml
@@ -29,11 +29,34 @@ def train(
 ) -> None:
     seed_everything(train_config["seed"], workers=True)
 
+    class FlexibleDeviceCheckCallback(Callback):
+        def __init__(self, expected_device_ids):
+            """
+            Args:
+                expected_device_ids (list[int]): The expected GPU device IDs, e.g., [0], [1].
+            """
+            self.expected_device_ids = expected_device_ids
+
+        def on_train_start(self, trainer, pl_module):
+            # Get the root device dynamically
+            active_device = trainer.strategy.root_device
+
+            # Check if the active device index is in the expected list
+            if active_device.type == "cuda":
+                print(f"Training is running on device: {active_device} ({torch.cuda.get_device_name(active_device.index)})")
+                assert active_device.index in self.expected_device_ids, (
+                    f"Trainer is running on GPU {active_device.index}, but expected one of: {self.expected_device_ids}."
+                )
+            else:
+                #raise RuntimeError("Training is not running on a GPU. Please check your setup.")
+                print("Running on CPU")
+
+
     # Configure the trainer with specifics from the train_config.
     trainer = Trainer(
         accelerator=train_config["accelerator"],
         #devices=find_usable_cuda_devices(train_config["devices"]),
-        devices=train_config["devices"],
+        devices=[train_config["devices"]],
         max_epochs=train_config["epochs"],
         gradient_clip_val=train_config["gradient_clip_val"],
         log_every_n_steps=train_config["log_every_n_steps"],
@@ -51,6 +74,7 @@ def train(
                 save_top_k=1,
                 mode="min",
             ),
+            FlexibleDeviceCheckCallback(expected_device_ids=[train_config["devices"]]),  # Add the flexible check
         ],
     )
 
@@ -137,8 +161,8 @@ def run(args: argparse.Namespace):
         model = get_model(model_config)(model_config, vae, diff)
     elif model_config["type"] == "FM":
         model_config["traj_length"] = dataset.parameters['seq_len']
-        fm = FlowMatching(model_config)
-        model = get_model(model_config)(model_config, fm)
+        fm = FlowMatching(model_config, args.cuda, lat=True)
+        model = get_model(model_config)(model_config, fm, args.cuda)
     else:
         model = get_model(model_config)(model_config)
 
@@ -216,6 +240,15 @@ if __name__ == "__main__":
         default="./artifacts",
         help="Path to save the artifacts",
     )
+
+    parser.add_argument(
+            "--cuda",
+            type=int,
+            default=0,
+            help="GPU to use",
+            )
+
+
     args = parser.parse_args()
     run(args)
     

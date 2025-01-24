@@ -31,16 +31,16 @@ def skewed_timestep_sample(num_samples: int, device: torch.device) -> torch.Tens
 
 class FlowMatching(Generative):
 
-    def __init__(self, config, cuda=0):
+    def __init__(self, config, cuda=0, lat = False):
         super().__init__()
         self.config = config
         self.dataset_config = config["data"]
         #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         self.ch = config["ch"] * 4
-        self.in_channels = 1
+        self.in_channels = 8 if lat else 1
         #self.resolution = config['traj_length']
-        self.resolution = self.ch
+        self.resolution = config['traj_length'] if lat else self.ch
 
         self.unet = UNET(config, resolution = self.resolution, in_channels = self.in_channels)
         #self.optimizer_cfg = optimizer_cfg
@@ -124,7 +124,7 @@ class Wrapper(ModelWrapper):
     def __init__(self, config, model, cuda=0):
         super().__init__(model)
         self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
-        self.model = model.to(self.device)
+        #self.model = model.to(self.device)
         self.solver = ODESolver(velocity_model=self.model)
         self.ch = self.model.ch
 
@@ -182,7 +182,7 @@ class Wrapper(ModelWrapper):
         #synthetic_samples = torch.floor(synthetic_samples * 255)
         #synthetic_samples = synthetic_samples.to(torch.float32) / 255.0
         print(synthetic_samples.shape)
-        return synthetic_samples
+        return synthetic_samples, []
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         """This is called after the optimizer step, at the end of the batch."""
@@ -228,9 +228,9 @@ class Wrapper(ModelWrapper):
 
 class AirFMTraj(L.LightningModule):
 
-    def __init__(self, config, model):
+    def __init__(self, config, model, cuda=0):
         super().__init__()
-        self.model = Wrapper(config, model)
+        self.model = Wrapper(config, model, cuda=cuda)
         self.lr = config["lr"]
 
     def step(self, batch, batch_idx):

@@ -101,9 +101,10 @@ class VampPriorLSR(LSR):
         cond_length: int,
         encoder: nn.Module,
         n_components: int,
+        device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     ):
         super().__init__(input_dim, out_dim)
-
+        self.device = device
         self.original_dim = original_dim
         self.seq_len = original_seq_len
         self.encoder = encoder
@@ -127,8 +128,8 @@ class VampPriorLSR(LSR):
 
         self.idle_input = torch.autograd.Variable(torch.eye(n_components, n_components), requires_grad=False)
 
-        if torch.cuda.is_available():
-            self.idle_input = self.idle_input.cuda()
+        print(f"VampPrior to {self.device}")
+        #self.idle_input = self.idle_input.to(self.device)
 
         pseudo_inputs_layers = []
         pseudo_inputs_layers.append(nn.Linear(n_components, n_components))
@@ -150,13 +151,14 @@ class VampPriorLSR(LSR):
         self.prior_weights = nn.Parameter(torch.ones((1, n_components)), requires_grad=True)
 
         self.register_parameter("prior_weights", self.prior_weights)
+        #self.register_parameter("idle_input", self.idle_input)
 
     def forward(self, hidden: torch.Tensor, con: torch.Tensor = None, cat: torch.Tensor = None, grid: torch.Tensor = None) -> Distribution:
 
         loc = self.z_loc(hidden)
         log_var = self.z_log_var(hidden)
         scales = (log_var / 2).exp()
-
+        self.idle_input = self.idle_input.to(hidden.device)
         X = self.pseudo_inputs_NN(self.idle_input)
 
         X = X.view((X.shape[0], self.original_dim,self.seq_len))
