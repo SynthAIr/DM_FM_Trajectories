@@ -280,9 +280,9 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         
         # Move grid to the device and adjust dimensions
         grid = grid.unsqueeze(dim=0).to(device)
-        print("Shapes:", con.shape, cat.shape, x.shape)
-        print("Length", length)
-        print("Features", x.shape)
+        #print("Shapes:", con.shape, cat.shape, x.shape)
+        #print("Length", length)
+        #print("Features", x.shape)
         
         # Generate samples and steps using the model
         samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[0])

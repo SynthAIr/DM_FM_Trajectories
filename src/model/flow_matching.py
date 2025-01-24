@@ -233,6 +233,7 @@ class AirFMTraj(L.LightningModule):
         self.model = Wrapper(config, model, cuda=cuda)
         self.lr = config["lr"]
 
+
     def step(self, batch, batch_idx):
         return self.model.step(batch, batch_idx)
 
@@ -261,8 +262,8 @@ class AirFMTraj(L.LightningModule):
         """This is called after the optimizer step, at the end of the batch."""
         self.model.on_train_batch_end(outputs, batch, batch_idx)
 
-    def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
-        return self.model.sample(n, con, cat, grid, features, length)
+    def sample(self, n, con, cat, grid, length,features ,  sampling="ddpm"):
+        return self.model.sample(n, con, cat, grid, features = features, length = length)
 
     def reconstruct(self, x, con, cat, grid):
         #return self.vae.reconstruct(x, con, cat, grid)
