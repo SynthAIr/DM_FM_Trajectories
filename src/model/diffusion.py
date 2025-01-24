@@ -9,7 +9,7 @@ from tqdm import tqdm
 from torch.nn import functional as F
 
 class Diffusion(Generative):
-    def __init__(self, config):
+    def __init__(self, config, cuda=0):
         super().__init__()
         self.dataset_config = config["data"]
         #config = config["model"]
@@ -26,7 +26,7 @@ class Diffusion(Generative):
         #jself.in_channels = config["in_channels"]
         self.in_channels = 1
         self.resolution = self.ch
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         #self.use_linear_attn = config["use_linear_attn"]
         #self.attn_type = config["attn_type"]
         self.unet = UNET(config, resolution = self.resolution, in_channels = self.in_channels)

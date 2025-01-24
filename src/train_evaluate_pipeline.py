@@ -67,6 +67,14 @@ if __name__ == "__main__":
         help="Path to the dataset config file"
     )
 
+    parser.add_argument(
+            "--cuda",
+            type=int,
+            default=0,
+            help="GPU to use",
+            )
+
+
     args = parser.parse_args()
     run(args)
     

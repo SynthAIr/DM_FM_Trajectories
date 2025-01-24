@@ -91,6 +91,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
+    model = model.to(device)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 
@@ -128,11 +129,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     X2, con, cat, grid = dataset[rnd]
     
     # Move data to GPU if available
-    grid = grid.to("cuda")
-    X_ = X2.reshape(n, len(dataset.features), -1).to("cuda")
-    con_ = con.reshape(n, -1).to("cuda")
-    cat_ = cat.reshape(n, -1).to("cuda")
-    model = model.to("cuda")
+    grid = grid.to(device)
+    X_ = X2.reshape(n, len(dataset.features), -1).to(device)
+    con_ = con.reshape(n, -1).to(device)
+    cat_ = cat.reshape(n, -1).to(device)
+    model = model.to(device)
     
     print("Shapes:", con.shape, cat.shape, X_.shape)
     
@@ -269,14 +270,14 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         x, con, cat, grid = dataset[i]
         
         # Reshape con and cat as required
-        con = con.reshape(1, -1).to("cuda")
-        cat = cat.reshape(1, -1).to("cuda")
+        con = con.reshape(1, -1).to(device)
+        cat = cat.reshape(1, -1).to(device)
         
         # Adjust the shape of x
         #x = x.view(-1, 1, 28, 28)
         
         # Move grid to the device and adjust dimensions
-        grid = grid.unsqueeze(dim=0).to("cuda")
+        grid = grid.unsqueeze(dim=0).to(device)
         print("Shapes:", con.shape, cat.shape, x.shape)
         print("Length", length)
         print("Features", x.shape)
@@ -701,7 +702,10 @@ if __name__ == "__main__":
         default="./configs/dataset_opensky.yaml",
         help="Path to the dataset config file"
     )
+
     
     args = parser.parse_args()
+    global device 
+    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     run(args)
     #run_perturbation(args)

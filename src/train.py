@@ -32,7 +32,8 @@ def train(
     # Configure the trainer with specifics from the train_config.
     trainer = Trainer(
         accelerator=train_config["accelerator"],
-        devices=find_usable_cuda_devices(train_config["devices"]),
+        #devices=find_usable_cuda_devices(train_config["devices"]),
+        devices=train_config["devices"],
         max_epochs=train_config["epochs"],
         gradient_clip_val=train_config["gradient_clip_val"],
         log_every_n_steps=train_config["log_every_n_steps"],
@@ -80,6 +81,7 @@ def setup_logger(args, configs):
 
 def run(args: argparse.Namespace):
     configs = load_config(args.config_file)
+
     dataset_config = load_config(args.dataset_config)
     configs["logger"]["artifact_location"] = args.artifact_location
     configs["logger"]["tags"]['dataset'] = dataset_config["dataset"]
@@ -126,11 +128,11 @@ def run(args: argparse.Namespace):
 
         if model_config["type"] == "LatDiff":
             print("Initing LatDiff")
-            diff = Diffusion(model_config)
+            diff = Diffusion(model_config, args.cuda)
         else:
             print("Initing LatFM")
-            m = FlowMatching(model_config)
-            diff = Wrapper(model_config, m)
+            m = FlowMatching(model_config, args.cuda)
+            diff = Wrapper(model_config, m, args.cuda)
         #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
         model = get_model(model_config)(model_config, vae, diff)
     elif model_config["type"] == "FM":
@@ -146,6 +148,7 @@ def run(args: argparse.Namespace):
 
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = configs["train"]
+    train_config["devices"] = args.cuda
     train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
     # Save configuration used for the training in the logger's artifact location.
     configs["data"] = dataset_config

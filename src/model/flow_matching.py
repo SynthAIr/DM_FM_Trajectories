@@ -31,11 +31,12 @@ def skewed_timestep_sample(num_samples: int, device: torch.device) -> torch.Tens
 
 class FlowMatching(Generative):
 
-    def __init__(self, config):
+    def __init__(self, config, cuda=0):
         super().__init__()
         self.config = config
         self.dataset_config = config["data"]
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         self.ch = config["ch"] * 4
         self.in_channels = 1
         #self.resolution = config['traj_length']
@@ -120,9 +121,9 @@ class FlowMatching(Generative):
             self.ema_helper.update(self)
 
 class Wrapper(ModelWrapper):
-    def __init__(self, config, model):
+    def __init__(self, config, model, cuda=0):
         super().__init__(model)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
         self.solver = ODESolver(velocity_model=self.model)
         self.ch = self.model.ch
