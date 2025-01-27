@@ -178,21 +178,26 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         )
         if simple:
             reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
+            #reconstructed_traf = reconstructed_traf.filter("agressive").eval()
 
         def convert_sin_cos_to_lat_lon(traffic):
             df = traffic.data
             # Calculate latitude from sine and cosine
-            df["latitude"] = np.degrees(np.arctan2(df["latitude_sin"], df["latitude_cos"]))
-            
+            return np.degrees(np.arctan2(df["track_sin"], df["track_cos"]))
             # Calculate longitude from sine and cosine
-            df["longitude"] = np.degrees(np.arctan2(df["longitude_sin"], df["longitude_cos"]))
-            return Traffic(df)
+            #return Traffic(df)
         
         #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
         reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
-        reconstructed_traf.plot(ax1, alpha=0.5, color=colors[c], linewidth=1)
+        #reconstructed_traf.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
+        for y, flight in enumerate(reconstructed_traf):
+            #if "track" in flight.data.columns and "groundspeed" in flight.data.columns:
+            track = convert_sin_cos_to_lat_lon(flight)
+            velocity = flight.data['groundspeed']
+            plt.scatter(track, velocity, alpha=0.5, s=5, color=colors[c]) #label=f"Flight {flight.callsign or flight.id}")
+
 
     print("plotting with simplify")
     plt.legend()
@@ -327,7 +332,7 @@ def plot_from_array(t: Traffic, model_name = "model"):
 
     ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
     ax1.coastlines()
-    t.plot(ax1, alpha=0.5, color="red", linewidth=1)
+    t.plot(ax1, alpha=0.3, color="red", linewidth=0.5)
     ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     plt.xlabel('X values')
     plt.ylabel('Y values')
@@ -509,6 +514,8 @@ def run(args, logger = None):
     forward=False,
     )
 
+    #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
+    ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
