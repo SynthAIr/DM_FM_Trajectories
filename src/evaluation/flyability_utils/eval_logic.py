@@ -312,6 +312,8 @@ def simulate(traffic: Traffic, config: dict, debug=False):
     # df['timestamp'] = pd.to_datetime(df['timestamp'])
     # traffic = Traffic(df)
     # traffic = Traffic.from_file(trajectories_file)
+    #print(type(traffic))
+    #print(traffic)
 
     for flight in traffic:
         flight.data = flight.data[

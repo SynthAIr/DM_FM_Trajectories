@@ -558,10 +558,8 @@ def run(training_data_path: str, synthetic_data_path: str, logger = None) -> Non
     #ADEP_code, ADES_code, geographic_extent = extract_geographic_info(training_data_path)
     most_common_ac_type = "A319"
     generated_trajectories = Traffic.from_file(synthetic_data_path)
-
-
     generated_trajectories.data["AC Type"] = most_common_ac_type
-    generated_trajectories = generated_trajectories[generated_trajectories['ADES'] != 'EHAM']
+    #generated_trajectories = generated_trajectories[generated_trajectories['ADES'] != 'EHAM']
 
     simulation_config = {
         "delta": 2000,

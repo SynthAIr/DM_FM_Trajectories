@@ -158,6 +158,7 @@ def run(training_data_path: str, synthetic_data_path: str) -> None:
 
     # SimuTrajs_list = simulate_traffic(GenTrajs_list, simulation_config)
     # SimTrajs_list.append(simulate(traffic, config))
+    print(generatied_trajectories)
     simulated_trajectories = simulate(generated_trajectories, simulation_config)
     clean()
 
@@ -174,7 +175,7 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate the synthetic trajectories.")
     parser.add_argument("--dataset_file", type=str, help="Path to the training data file.")
     #parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
-    parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
+    #parser.add_argument("--synthetic_data_file", type=str, help="Path to the generated data file.")
     parser.add_argument(
         "--model_name",
         type=str,
@@ -182,16 +183,13 @@ def main():
         help="Name of the model (e.g., 'AirDiffTraj_5')."
     )
 
-    parser.add_argument(
-        "--config_file",
-        type=str,
-        #required=True,
-        default="./configs/config.yaml",
-        help="Path to the config file"
-    )
 
     args = parser.parse_args()
-    configs = load_config(args.config_file)
+
+    #checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
+    synthetic_data_file = f"./artifacts/{args.model_name}/generated_samples.pkl"
+    config_file = f"./artifacts/{args.model_name}/config.yaml"
+    configs = load_config(config_file)
     logger_config = configs["logger"]
     l_logger = MLFlowLogger(
         experiment_name="Flyability Evaluation",
@@ -200,8 +198,9 @@ def main():
         tags=logger_config["tags"],
         #artifact_location=args.artifact_location,
     )
+
     #run(args.dataset_file, args.synthetic_data_file)
-    eval_run(args.dataset_file, args.synthetic_data_file, l_logger)
+    eval_run(args.dataset_file, synthetic_data_file, l_logger)
 
 if __name__ == "__main__":
     main()

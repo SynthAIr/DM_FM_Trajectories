@@ -457,6 +457,8 @@ def run(args, logger = None):
     config['model']["data"] = dataset_config
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
+    if config['model']['type'] == "TCVAE" or config['model']['type'] == "VAE":
+        logger.log_metrics({"type": config['model']['type']})
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
