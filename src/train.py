@@ -88,9 +88,9 @@ def train(
     # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
-def setup_logger(args, configs):
+def setup_logger(args, config):
     """Setup the logger with MLFlow configurations."""
-    logger_config = configs["logger"]
+    logger_config = config["logger"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
 
     logger = MLFlowLogger(
@@ -104,16 +104,16 @@ def setup_logger(args, configs):
 
 
 def run(args: argparse.Namespace):
-    configs = load_config(args.config_file)
+    config = load_config(args.config_file)
 
     dataset_config = load_config(args.dataset_config)
-    configs["logger"]["artifact_location"] = args.artifact_location
-    configs["logger"]["tags"]['dataset'] = dataset_config["dataset"]
-    configs["logger"]["tags"]['weather'] = configs["model"]["weather_config"]["weather_grid"]
+    config["logger"]["artifact_location"] = args.artifact_location
+    config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
+    config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
     #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.
-    l_logger, run_name, artifact_location = setup_logger(args, configs)
+    l_logger, run_name, artifact_location = setup_logger(args, config)
 
     #dataset_config = configs["data"]
     dataset_config["data_path"] = args.data_path
@@ -133,7 +133,7 @@ def run(args: argparse.Namespace):
 
 
     print("Dataset loaded!")
-    model_config = configs["model"]
+    model_config = config["model"]
     model_config["data"] = dataset_config
     # print(f"*******dataset parameters: {dataset.parameters}")
     model_config["traj_length"] = dataset.parameters['seq_len']
@@ -172,12 +172,12 @@ def run(args: argparse.Namespace):
     print("Model built!")
 
     # Initiate training with the setup configurations and prepared dataset and model.
-    train_config = configs["train"]
+    train_config = config["train"]
     train_config["devices"] = args.cuda
     train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
     # Save configuration used for the training in the logger's artifact location.
-    configs["data"] = dataset_config
-    save_config(configs, os.path.join(artifact_location, "config.yaml"))
+    config["data"] = dataset_config
+    save_config(config, os.path.join(artifact_location, "config.yaml"))
     #l_logger.
     checkpoint_path = artifact_location + "/best_model.ckpt"
     model_size = os.path.getsize(checkpoint_path) / (1024 * 1024)  #

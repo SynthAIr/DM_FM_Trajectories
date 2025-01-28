@@ -491,7 +491,7 @@ def run(args, logger = None):
     if logger is None:
         logger_config = config["logger"]
         logger_config["tags"]["dataset"] = dataset_config["dataset"]
-        configs["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
+        config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
