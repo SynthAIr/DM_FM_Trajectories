@@ -34,7 +34,6 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
 from model.flow_matching import FlowMatching, Wrapper
-from cvxopt import matrix, solvers
 
 
 
@@ -128,9 +127,9 @@ def get_config_data(configs, data_path: str, artifact_location: str):
 def plot_track_groundspeed(reconstructions):
     plt.style.use("ggplot")
     fig = plt.figure(figsize=(12, 12))
-    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
-    ax1.coastlines()
-    ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
+    ax1 = fig.add_subplot(1, 1, 1)
+    #ax1.coastlines()
+    #ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     plt.xlabel('X values')
     plt.ylabel('Y values')
     plt.title('Plot of Real (Red) and Reconstructed Data (Blue)')
@@ -166,12 +165,14 @@ def plot_track_groundspeed(reconstructions):
                 dy = distance * np.sin(df.loc[i, 'track_radians'])
                 
                 # Update position (simple model, assuming flat Earth projection)
-                df.loc[i, 'latitude'] = float(df.loc[i-1, 'latitude'] + dx)
-                df.loc[i, 'longitude'] = float(df.loc[i-1, 'longitude'] + dy)
+                df.loc[i, 'latitude'] = (df.loc[i-1, 'latitude'] + dx).astype('float32')
+                df.loc[i, 'longitude'] = (df.loc[i-1, 'longitude'] + dy).astype('float32')
             
             # Plot the trajectory
             # Using linestyle '-' for solid lines, lw=0.5 for thinner lines, and a light blue color
             plt.plot(df['longitude'], df['latitude'], linestyle='-', alpha=0.3, color=colors[c], lw=0.5)
+
+    return fig
 
 
 
@@ -491,7 +492,7 @@ def run(args, logger = None):
     if logger is None:
         logger_config = config["logger"]
         logger_config["tags"]["dataset"] = dataset_config["dataset"]
-        config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
+        #config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
@@ -525,7 +526,7 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     fig_track_speed = plot_track_groundspeed(reconstructions)
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
-    mmd = compute_partial_mmd_exponential(reconstructions[0], reconstructions[1])
+    mmd = compute_mmd_squared(reconstructions[0], reconstructions[1])
     logger.log_metrics({"mmd": mmd})
 
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -579,6 +580,8 @@ def run(args, logger = None):
     reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
     fig_track_speed = plot_track_groundspeed([reconstructed_traf])
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
+    mmd = compute_mmd_squared( reconstructed_traf, reconstructions[0])
+    logger.log_metrics({"mmd_gen": mmd})
 
     training_trajectories = reconstructions[0]
     #synthetic_trajectories = reconstructions[1]
@@ -636,73 +639,52 @@ def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
     )
     return reconstructed_traf
 
-def exponential_kernel(X, Y):
-    """ Compute the exponential kernel (with Euclidean distance) between two datasets. """
-    dist_matrix = np.linalg.norm(X[:, np.newaxis] - Y, axis=2)  # Compute pairwise Euclidean distances
-    return np.exp(-dist_matrix)  # Apply the exponential function
+def exponential_kernel(x, y, sigma=1.0):
+    """Exponential (RBF) kernel function."""
+    return np.exp(-np.linalg.norm(x - y) ** 2 / (2 * sigma ** 2))
 
-def kernel(X, Y, kernel="exponential"):
-    if kernel == "exponential":
-        return exponential_kernel(X,Y)
+def compute_mmd_squared(X, Y, sigma=1.0):
+    """
+    Computes MMD^2 between two sets of samples X and Y using an exponential kernel.
     
-    raise NotImplemented("Kernel not implemented", kernel)
+    X: Synthetic data (n_samples, n_features)
+    Y: Real data (m_samples, n_features)
+    sigma: Kernel width parameter
+    """
 
-def exponential_kernel_batch(X, Y):
-    """ Compute the exponential kernel (with Euclidean distance) for batch data. """
-    # X and Y are of shape (samples, 8, 200)
-    # We'll compute pairwise distances for each (8, 200) slice in X and Y
-    n_samples = X.shape[0]  # Number of sample batches
-    
-    K_XX = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch within X
-    K_XY = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch between X and Y
-    K_YY = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch within Y
-    
-    for i in range(n_samples):
-        # Compute pairwise Euclidean distances for the i-th batch
-        dist_XX = np.linalg.norm(X[i, :, np.newaxis] - X[i, np.newaxis, :], axis=2)
-        dist_XY = np.linalg.norm(X[i, :, np.newaxis] - Y[i, np.newaxis, :], axis=2)
-        dist_YY = np.linalg.norm(Y[i, :, np.newaxis] - Y[i, np.newaxis, :], axis=2)
         
-        # Apply exponential kernel (e^(-distance))
-        K_XX[i] = np.exp(-dist_XX)
-        K_XY[i] = np.exp(-dist_XY)
-        K_YY[i] = np.exp(-dist_YY)
+    X = X.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200)  # Convert Traffic object to numpy array
+    Y = Y.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200) 
+    n = X.shape[0]  # Number of samples in synthetic data X
+    m = Y.shape[0]  # Number of samples in real data Y
     
-    return K_XX, K_XY, K_YY
+    # Compute the kernel values within X, within Y, and between X and Y
+    K_XX = np.zeros((n, n))  # Kernel matrix for X
+    K_YY = np.zeros((m, m))  # Kernel matrix for Y
+    K_XY = np.zeros((n, m))  # Kernel matrix between X and Y
+    
+    # Compute pairwise kernel values
+    for i in range(n):
+        for j in range(i, n):  # Only compute upper triangle since kernel is symmetric
+            K_XX[i, j] = exponential_kernel(X[i], X[j], sigma)
+            K_XX[j, i] = K_XX[i, j]  # Symmetry
 
-def compute_partial_mmd_exponential(synthetic_traffic: Traffic, real_traffic: Traffic):
-    # Assuming synthetic_traffic and real_traffic are Traffic objects
-    # Convert Traffic objects to numpy arrays or similar matrix form
-    X = synthetic_traffic.data.to_numpy()  # Convert Traffic object to numpy array
-    Y = real_traffic.data.to_numpy()       # Convert Traffic object to numpy array
+    for i in range(m):
+        for j in range(i, m):  # Only compute upper triangle since kernel is symmetric
+            K_YY[i, j] = exponential_kernel(Y[i], Y[j], sigma)
+            K_YY[j, i] = K_YY[i, j]  # Symmetry
+
+    for i in range(n):
+        for j in range(m):  # Cross-term between X and Y
+            K_XY[i, j] = exponential_kernel(X[i], Y[j], sigma)
+
+    # Compute MMD^2 using the formula
+    term_XX = np.sum(K_XX) / (n**2)
+    term_YY = np.sum(K_YY) / (m**2)
+    term_XY = 2 * np.sum(K_XY) / (n * m)
     
-    K_XX, K_XY, K_YY = exponential_kernel_batch(X, Y)
-    
-    n_samples = X.shape[0]  # Number of sample batches (this is the first dimension)
-    
-    # Initialize an array to store the MMD results for each batch
-    mmd_values = np.zeros(n_samples)
-    
-    for i in range(n_samples):
-        # For each batch, form the quadratic programming problem
-        K_XX_i = K_XX[i]  # Shape: (8, 8)
-        K_XY_i = K_XY[i]  # Shape: (8, 8)
-        K_YY_i = K_YY[i]  # Shape: (8, 8)
-        
-        # Formulate the quadratic programming problem
-        P = matrix(np.block([
-            [K_XX_i, -K_XY_i],
-            [-K_XY_i.T, K_YY_i]
-        ]))
-        q = matrix(np.zeros(8 + 8))  # Zero vector for the linear term
-        
-        # Solve the quadratic program for this batch
-        sol = solvers.qp(P, q)
-        
-        # Extract the solution (dual variables) to compute the MMD
-        mmd_values[i] = sol['x']  # The MMD value for the i-th batch
-    
-    return mmd_values
+    mmd_squared = term_XX + term_YY - term_XY
+    return mmd_squared
 
 def run_perturbation(args, logger = None):
     np.random.seed(42)
