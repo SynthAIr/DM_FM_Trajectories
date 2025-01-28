@@ -181,7 +181,7 @@ class Wrapper(ModelWrapper):
         #)
         #synthetic_samples = torch.floor(synthetic_samples * 255)
         #synthetic_samples = synthetic_samples.to(torch.float32) / 255.0
-        print(synthetic_samples.shape)
+        #print(synthetic_samples.shape)
         return synthetic_samples, []
 
     def on_train_batch_end(self, outputs, batch, batch_idx):

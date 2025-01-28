@@ -34,6 +34,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
 from model.flow_matching import FlowMatching, Wrapper
+import cvxopt
 
 
 
@@ -517,8 +518,8 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
-    n = 200
-    n_samples = 5
+    n = 400
+    n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
@@ -526,7 +527,7 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
     fig_track_speed = plot_track_groundspeed(reconstructions)
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
-    mmd = compute_mmd_squared(reconstructions[0], reconstructions[1])
+    mmd = compute_partial_mmd(reconstructions[0], reconstructions[1])
     logger.log_metrics({"mmd": mmd})
 
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -580,7 +581,11 @@ def run(args, logger = None):
     reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
     fig_track_speed = plot_track_groundspeed([reconstructed_traf])
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
-    mmd = compute_mmd_squared( reconstructed_traf, reconstructions[0])
+
+    reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
+        lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
+    )
+    mmd = compute_partial_mmd( reconstructed_traf, reconstructions[0])
     logger.log_metrics({"mmd_gen": mmd})
 
     training_trajectories = reconstructions[0]
@@ -639,9 +644,80 @@ def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
     )
     return reconstructed_traf
 
-def exponential_kernel(x, y, sigma=1.0):
+def exponential_kernel_2(x, y, sigma=1.0):
     """Exponential (RBF) kernel function."""
     return np.exp(-np.linalg.norm(x - y) ** 2 / (2 * sigma ** 2))
+
+def exponential_kernel(x, y, gamma=1.0):
+    """
+    Exponential (RBF) kernel function.
+    gamma: Kernel width parameter. Higher values make the kernel more localized.
+    """
+    return np.exp(-gamma * np.linalg.norm(x - y) ** 2)
+
+def compute_partial_mmd(X, Y, alpha=1.0, gamma=1.0):
+    """
+    Computes the α-partial MMD^2 between synthetic data X and real data Y using an exponential kernel.
+    
+    X: Synthetic data (n_samples, n_features)
+    Y: Real data (m_samples, n_features)
+    alpha: Fraction of data to be matched (0 < alpha <= 1)
+    std_dev: Standard deviation for kernel scaling (None will compute based on data)
+    
+    Returns:
+    - α-partial MMD² value
+    """
+    X = X.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200)  # Convert Traffic object to numpy array
+    Y = Y.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200) 
+    print("Comparing", X.shape, Y.shape)
+    n = X.shape[0]  # Number of samples in synthetic data X
+    m = Y.shape[0]  # Number of samples in real data Y
+    
+    # Step 1: Compute kernel matrices
+    K_X = np.zeros((n, n))  # Kernel matrix for X
+    K_Y = np.zeros((m, m))  # Kernel matrix for Y
+    K_XY = np.zeros((m, n))  # Cross kernel matrix between X and Y
+
+    for i in range(n):
+        for j in range(i, n):
+            K_X[i, j] = exponential_kernel(X[i], X[j], gamma)
+            K_X[j, i] = K_X[i, j]  # Symmetry
+    
+    for i in range(m):
+        for j in range(i, m):
+            K_Y[i, j] = exponential_kernel(Y[i], Y[j], gamma)
+            K_Y[j, i] = K_Y[i, j]  # Symmetry
+
+    for i in range(n):
+        for j in range(m):
+            K_XY[j, i] = exponential_kernel(Y[j], X[i], gamma)
+
+    # Step 2: Define weight vector v (for real data Y)
+    v = np.ones(m) / m
+    
+    # Step 3: Formulate the quadratic programming problem
+    # The objective is to minimize w^T K_X w + v^T K_Y v - 2 v^T K_XY w
+    
+    # Objective quadratic term
+    P = cvxopt.matrix(K_X)  # K_X for the quadratic term
+    q = cvxopt.matrix(-2 * np.dot(K_XY, v))  # Linear term in the objective
+    
+    # Constraints
+    G = cvxopt.matrix(np.vstack([-np.eye(n), np.eye(n)]))  # Constraint on w: 0 <= w_i <= 1/(alpha * n)
+    h = cvxopt.matrix(np.hstack([np.zeros(n), np.ones(n) * (1 / (alpha * n))]))  # Constraints on w
+    
+    # Equality constraint: sum(w) = 1
+    A = cvxopt.matrix(np.ones((1, n)))  # Sum of w must be 1
+    b = cvxopt.matrix(1.0)
+    
+    # Step 4: Solve the quadratic programming problem
+    sol = cvxopt.solvers.qp(P, q, G, h, A, b)
+    w = np.array(sol['x']).flatten()
+    
+    # Step 5: Compute the α-partial MMD² value
+    mmd_squared = np.dot(w.T, np.dot(K_X, w)) + np.dot(v.T, np.dot(K_Y, v)) - 2 * np.dot(v.T, np.dot(K_XY, w))
+    
+    return mmd_squared
 
 def compute_mmd_squared(X, Y, sigma=1.0):
     """
@@ -655,6 +731,7 @@ def compute_mmd_squared(X, Y, sigma=1.0):
         
     X = X.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200)  # Convert Traffic object to numpy array
     Y = Y.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200) 
+    print("Comparing", X.shape, Y.shape)
     n = X.shape[0]  # Number of samples in synthetic data X
     m = Y.shape[0]  # Number of samples in real data Y
     
