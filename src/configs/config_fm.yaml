@@ -11,7 +11,7 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: AirFMTraj
   run_name: AirFMTraj
-  tags: {'model': 'Flow Matching', 'dataset': 'opensky'}
+  tags: {'model': 'Flow Matching', 'dataset': 'opensky', 'weather': False}
  
 model:
   type: "FM"

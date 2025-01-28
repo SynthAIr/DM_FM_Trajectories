@@ -109,6 +109,7 @@ def run(args: argparse.Namespace):
     dataset_config = load_config(args.dataset_config)
     configs["logger"]["artifact_location"] = args.artifact_location
     configs["logger"]["tags"]['dataset'] = dataset_config["dataset"]
+    configs["logger"]["tags"]['weather'] = configs["model"]["weather_config"]["weather_grid"]
     #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.

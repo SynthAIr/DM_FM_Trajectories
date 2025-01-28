@@ -11,7 +11,7 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: AirLatDiffTraj
   run_name: AirLatDiffTraj
-  tags: {'model': 'Latent diffusion', 'dataset': 'opensky'}
+  tags: {'model': 'Latent diffusion', 'dataset': 'opensky', 'weather': False}
   
 model:
   type: "LatDiff"

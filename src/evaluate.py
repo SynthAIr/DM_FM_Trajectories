@@ -34,6 +34,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
 from model.flow_matching import FlowMatching, Wrapper
+from cvxopt import matrix, solvers
 
 
 
@@ -124,6 +125,55 @@ def get_config_data(configs, data_path: str, artifact_location: str):
 
     return configs, dataset, traffic, conditions
 
+def plot_track_groundspeed(reconstructions):
+    plt.style.use("ggplot")
+    fig = plt.figure(figsize=(12, 12))
+    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
+    ax1.coastlines()
+    ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
+    plt.xlabel('X values')
+    plt.ylabel('Y values')
+    plt.title('Plot of Real (Red) and Reconstructed Data (Blue)')
+    
+    # Calculate and print MSE
+    # Colors for different sets
+    colors = ["red", "blue"]
+    labels = ["real", "synthetic"]
+    simple = False
+    for c, data in enumerate(reconstructions):
+        
+        for f in data:
+            df = f.data.reset_index()
+            #print(f)
+            #print(df.loc[0, 'latitude'])
+            # Initialize the start position at (0, 0) (latitude, longitude)
+            if 'latitude' in df.columns or 'longitude' in df.columns:
+                #print(df['latitude'])
+                df['latitude'] = df.loc[0, 'latitude']  # Start at latitude 0
+                df['longitude'] = df.loc[0, 'longitude']  # Start at longitude 0
+            else:
+                df['latitude'] = 0  # Start at latitude 0
+                df['longitude'] = 0  # Start at longitude 0
+            
+            # Convert track to radians for trigonometry
+            df['track_radians'] = np.radians(df['track'])
+            
+            # Loop through the DataFrame and calculate the trajectory
+            for i in range(1, len(df)):
+                # Calculate distance traveled during this timestep
+                distance = df.loc[i, 'groundspeed'] * df.loc[i, 'timedelta'] # Adjust units if necessary
+                dx = distance * np.cos(df.loc[i, 'track_radians'])
+                dy = distance * np.sin(df.loc[i, 'track_radians'])
+                
+                # Update position (simple model, assuming flat Earth projection)
+                df.loc[i, 'latitude'] = float(df.loc[i-1, 'latitude'] + dx)
+                df.loc[i, 'longitude'] = float(df.loc[i-1, 'longitude'] + dy)
+            
+            # Plot the trajectory
+            # Using linestyle '-' for solid lines, lw=0.5 for thinner lines, and a light blue color
+            plt.plot(df['longitude'], df['latitude'], linestyle='-', alpha=0.3, color=colors[c], lw=0.5)
+
+
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
     # Select random samples from the dataset
@@ -179,6 +229,9 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         if simple:
             reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
             #reconstructed_traf = reconstructed_traf.filter("agressive").eval()
+        reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
+            lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
+        )
 
         def convert_sin_cos_to_lat_lon(traffic):
             df = traffic.data
@@ -191,12 +244,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
-        #reconstructed_traf.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
-        for y, flight in enumerate(reconstructed_traf):
-            #if "track" in flight.data.columns and "groundspeed" in flight.data.columns:
-            track = convert_sin_cos_to_lat_lon(flight)
-            velocity = flight.data['groundspeed']
-            plt.scatter(track, velocity, alpha=0.5, s=5, color=colors[c]) #label=f"Flight {flight.callsign or flight.id}")
+        reconstructed_traf.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
 
 
     print("plotting with simplify")
@@ -443,6 +491,7 @@ def run(args, logger = None):
     if logger is None:
         logger_config = config["logger"]
         logger_config["tags"]["dataset"] = dataset_config["dataset"]
+        configs["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
@@ -474,6 +523,11 @@ def run(args, logger = None):
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
+    fig_track_speed = plot_track_groundspeed(reconstructions)
+    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
+    mmd = compute_partial_mmd_exponential(reconstructions[0], reconstructions[1])
+    logger.log_metrics({"mmd": mmd})
+
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
@@ -523,6 +577,8 @@ def run(args, logger = None):
     fig_2 = plot_from_array(reconstructed_traf, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
+    fig_track_speed = plot_track_groundspeed([reconstructed_traf])
+    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
 
     training_trajectories = reconstructions[0]
     #synthetic_trajectories = reconstructions[1]
@@ -579,10 +635,74 @@ def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
         forward=False
     )
     return reconstructed_traf
+
+def exponential_kernel(X, Y):
+    """ Compute the exponential kernel (with Euclidean distance) between two datasets. """
+    dist_matrix = np.linalg.norm(X[:, np.newaxis] - Y, axis=2)  # Compute pairwise Euclidean distances
+    return np.exp(-dist_matrix)  # Apply the exponential function
+
+def kernel(X, Y, kernel="exponential"):
+    if kernel == "exponential":
+        return exponential_kernel(X,Y)
     
+    raise NotImplemented("Kernel not implemented", kernel)
+
+def exponential_kernel_batch(X, Y):
+    """ Compute the exponential kernel (with Euclidean distance) for batch data. """
+    # X and Y are of shape (samples, 8, 200)
+    # We'll compute pairwise distances for each (8, 200) slice in X and Y
+    n_samples = X.shape[0]  # Number of sample batches
+    
+    K_XX = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch within X
+    K_XY = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch between X and Y
+    K_YY = np.zeros((n_samples, 8, 8))  # Kernel for each sample batch within Y
+    
+    for i in range(n_samples):
+        # Compute pairwise Euclidean distances for the i-th batch
+        dist_XX = np.linalg.norm(X[i, :, np.newaxis] - X[i, np.newaxis, :], axis=2)
+        dist_XY = np.linalg.norm(X[i, :, np.newaxis] - Y[i, np.newaxis, :], axis=2)
+        dist_YY = np.linalg.norm(Y[i, :, np.newaxis] - Y[i, np.newaxis, :], axis=2)
         
+        # Apply exponential kernel (e^(-distance))
+        K_XX[i] = np.exp(-dist_XX)
+        K_XY[i] = np.exp(-dist_XY)
+        K_YY[i] = np.exp(-dist_YY)
+    
+    return K_XX, K_XY, K_YY
 
-
+def compute_partial_mmd_exponential(synthetic_traffic: Traffic, real_traffic: Traffic):
+    # Assuming synthetic_traffic and real_traffic are Traffic objects
+    # Convert Traffic objects to numpy arrays or similar matrix form
+    X = synthetic_traffic.data.to_numpy()  # Convert Traffic object to numpy array
+    Y = real_traffic.data.to_numpy()       # Convert Traffic object to numpy array
+    
+    K_XX, K_XY, K_YY = exponential_kernel_batch(X, Y)
+    
+    n_samples = X.shape[0]  # Number of sample batches (this is the first dimension)
+    
+    # Initialize an array to store the MMD results for each batch
+    mmd_values = np.zeros(n_samples)
+    
+    for i in range(n_samples):
+        # For each batch, form the quadratic programming problem
+        K_XX_i = K_XX[i]  # Shape: (8, 8)
+        K_XY_i = K_XY[i]  # Shape: (8, 8)
+        K_YY_i = K_YY[i]  # Shape: (8, 8)
+        
+        # Formulate the quadratic programming problem
+        P = matrix(np.block([
+            [K_XX_i, -K_XY_i],
+            [-K_XY_i.T, K_YY_i]
+        ]))
+        q = matrix(np.zeros(8 + 8))  # Zero vector for the linear term
+        
+        # Solve the quadratic program for this batch
+        sol = solvers.qp(P, q)
+        
+        # Extract the solution (dual variables) to compute the MMD
+        mmd_values[i] = sol['x']  # The MMD value for the i-th batch
+    
+    return mmd_values
 
 def run_perturbation(args, logger = None):
     np.random.seed(42)

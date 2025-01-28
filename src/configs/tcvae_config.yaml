@@ -11,7 +11,7 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: VAE
   run_name: VAE
-  tags: {'model': 'vae', 'dataset': 'opensky'}
+  tags: {'model': 'vae', 'dataset': 'opensky', 'weather': False}
   #experiment_name: TCVAE
   #run_name: TCVAE
   #tags: {'model': 'tcvae', 'dataset': 'opensky'}
