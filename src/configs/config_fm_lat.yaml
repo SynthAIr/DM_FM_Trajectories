@@ -42,7 +42,7 @@ model:
     #ema_rate: 0.999999
     ema_rate: 0.99999
   weather_config:
-    weather_grid: False
+    weather_grid: True
     variables: 4
     levels: 4
     lon: 5

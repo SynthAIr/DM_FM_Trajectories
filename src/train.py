@@ -109,7 +109,7 @@ def run(args: argparse.Namespace):
     dataset_config = load_config(args.dataset_config)
     config["logger"]["artifact_location"] = args.artifact_location
     config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
-    config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
+    config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
     #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.
@@ -135,6 +135,8 @@ def run(args: argparse.Namespace):
     print("Dataset loaded!")
     model_config = config["model"]
     model_config["data"] = dataset_config
+    model_config["in_channels"] = len(dataset_config["features"])
+    model_config["out_ch"] = len(dataset_config["features"])
     # print(f"*******dataset parameters: {dataset.parameters}")
     model_config["traj_length"] = dataset.parameters['seq_len']
     model_config["continuous_len"] = dataset.con_conditions.shape[1]

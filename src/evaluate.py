@@ -88,8 +88,8 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
         #model.phase = Phase.EVAL
     elif model_config["type"] == "FM":
-        fm = FlowMatching(model_config, args.cuda, lat=True)
-        model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, model = fm, cuda = args.cuda)
+        fm = FlowMatching(model_config, "0", lat=True)
+        model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, model = fm, cuda = "0")
         #fm = FlowMatching(model_config)
         #model = get_model(model_config)(model_config, fm)
     else:
@@ -518,7 +518,7 @@ def run(args, logger = None):
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
     #model.eval()
     batch_size = dataset_config["batch_size"]
-    n = 400
+    n = 100
     n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
@@ -528,6 +528,7 @@ def run(args, logger = None):
     fig_track_speed = plot_track_groundspeed(reconstructions)
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     mmd = compute_partial_mmd(reconstructions[0], reconstructions[1])
+    print("MMD", mmd)
     logger.log_metrics({"mmd": mmd})
 
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
@@ -579,14 +580,15 @@ def run(args, logger = None):
     fig_2 = plot_from_array(reconstructed_traf, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
-    fig_track_speed = plot_track_groundspeed([reconstructed_traf])
-    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
 
     reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
         lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
     )
-    mmd = compute_partial_mmd( reconstructed_traf, reconstructions[0])
-    logger.log_metrics({"mmd_gen": mmd})
+    fig_track_speed = plot_track_groundspeed([reconstructed_traf])
+    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
+    mmd_gen = compute_partial_mmd(reconstructed_traf, reconstructions[0])
+    print("MMD GEN", mmd_gen)
+    logger.log_metrics({"mmd_gen": mmd_gen})
 
     training_trajectories = reconstructions[0]
     #synthetic_trajectories = reconstructions[1]
@@ -644,18 +646,14 @@ def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
     )
     return reconstructed_traf
 
-def exponential_kernel_2(x, y, sigma=1.0):
-    """Exponential (RBF) kernel function."""
-    return np.exp(-np.linalg.norm(x - y) ** 2 / (2 * sigma ** 2))
-
-def exponential_kernel(x, y, gamma=1.0):
+def exponential_kernel(x, y, gamma=1e-8):
     """
     Exponential (RBF) kernel function.
     gamma: Kernel width parameter. Higher values make the kernel more localized.
     """
     return np.exp(-gamma * np.linalg.norm(x - y) ** 2)
 
-def compute_partial_mmd(X, Y, alpha=1.0, gamma=1.0):
+def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
     """
     Computes the α-partial MMD^2 between synthetic data X and real data Y using an exponential kernel.
     
@@ -719,49 +717,7 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1.0):
     
     return mmd_squared
 
-def compute_mmd_squared(X, Y, sigma=1.0):
-    """
-    Computes MMD^2 between two sets of samples X and Y using an exponential kernel.
-    
-    X: Synthetic data (n_samples, n_features)
-    Y: Real data (m_samples, n_features)
-    sigma: Kernel width parameter
-    """
 
-        
-    X = X.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200)  # Convert Traffic object to numpy array
-    Y = Y.data[["longitude", "latitude", "altitude", "track_cos", "track_sin", "timedelta"]].to_numpy().reshape(-1,6, 200) 
-    print("Comparing", X.shape, Y.shape)
-    n = X.shape[0]  # Number of samples in synthetic data X
-    m = Y.shape[0]  # Number of samples in real data Y
-    
-    # Compute the kernel values within X, within Y, and between X and Y
-    K_XX = np.zeros((n, n))  # Kernel matrix for X
-    K_YY = np.zeros((m, m))  # Kernel matrix for Y
-    K_XY = np.zeros((n, m))  # Kernel matrix between X and Y
-    
-    # Compute pairwise kernel values
-    for i in range(n):
-        for j in range(i, n):  # Only compute upper triangle since kernel is symmetric
-            K_XX[i, j] = exponential_kernel(X[i], X[j], sigma)
-            K_XX[j, i] = K_XX[i, j]  # Symmetry
-
-    for i in range(m):
-        for j in range(i, m):  # Only compute upper triangle since kernel is symmetric
-            K_YY[i, j] = exponential_kernel(Y[i], Y[j], sigma)
-            K_YY[j, i] = K_YY[i, j]  # Symmetry
-
-    for i in range(n):
-        for j in range(m):  # Cross-term between X and Y
-            K_XY[i, j] = exponential_kernel(X[i], Y[j], sigma)
-
-    # Compute MMD^2 using the formula
-    term_XX = np.sum(K_XX) / (n**2)
-    term_YY = np.sum(K_YY) / (m**2)
-    term_XY = 2 * np.sum(K_XY) / (n * m)
-    
-    mmd_squared = term_XX + term_YY - term_XY
-    return mmd_squared
 
 def run_perturbation(args, logger = None):
     np.random.seed(42)
