@@ -166,7 +166,36 @@ def plot_track_groundspeed(reconstructions):
 
     return fig
 
+# SEBESTIAAN
+def exponentially_weighted_moving_average(data, alpha=0.3):
+    """
+    Apply an exponentially weighted moving average (EWMA) filter to the first three features 
+    of each sample in the input array.
 
+    Parameters:
+    - data (numpy.ndarray): Input array of shape (num_samples, sequence_length, features).
+    - alpha (float): Smoothing factor for EWMA. Must be between 0 and 1. Default is 0.3.
+    
+    Returns:
+    - numpy.ndarray: Output array with the EWMA applied to the first three features.
+    """
+    #if data.shape[2] != 4:
+       # raise ValueError("The input array must have exactly 4 features.")
+    
+    num_samples, sequence_length, num_features = data.shape
+    output = np.copy(data)
+    
+    for sample in range(num_samples):
+        for feature in range(3):  # Only apply to the first three features
+            ewma = np.zeros(sequence_length)
+            ewma[0] = data[sample, 0, feature]  # Initialize the first value with the first data point
+            
+            for t in range(1, sequence_length):
+                ewma[t] = alpha * data[sample, t, feature] + (1 - alpha) * ewma[t-1]
+            
+            output[sample, :, feature] = ewma
+
+    return output
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
     # Select random samples from the dataset
@@ -232,6 +261,14 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             return np.degrees(np.arctan2(df["track_sin"], df["track_cos"]))
             # Calculate longitude from sine and cosine
             #return Traffic(df)
+
+        if c == 1:
+            df = reconstructed_traf.data
+            numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+            
+            # Convert back to DataFrame
+            df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
+            reconstructed_traf = Traffic(df)
         
         #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
         reconstructions.append(reconstructed_traf)
