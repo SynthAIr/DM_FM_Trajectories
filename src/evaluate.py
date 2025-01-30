@@ -35,6 +35,7 @@ from model.diffusion import Diffusion
 from model.AirLatDiffTraj import Phase
 from model.flow_matching import FlowMatching, Wrapper
 import cvxopt
+from traffic.algorithms.generation import compute_latlon_from_trackgs
 
 
 
@@ -128,7 +129,9 @@ def get_config_data(configs, data_path: str, artifact_location: str):
 def plot_track_groundspeed(reconstructions):
     plt.style.use("ggplot")
     fig = plt.figure(figsize=(12, 12))
-    ax1 = fig.add_subplot(1, 1, 1)
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
+    ax.coastlines()
+    ax.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     #ax1.coastlines()
     #ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     plt.xlabel('X values')
@@ -140,38 +143,26 @@ def plot_track_groundspeed(reconstructions):
     colors = ["red", "blue"]
     labels = ["real", "synthetic"]
     simple = False
+
+
+    # Assuming df contains 'latitude', 'longitude', 'groundspeed', 'timedelta', and 'track'
+
+    # Now create a new Traffic object with the updated DataFrame
+    #t_updated = Traffic(reconstructions[1].data[['timedelta', 'groundspeed', 'track', 'timestamp', 'icao24']])
+
+    # Now plot the entire updated traffic data
+    #reconstructions[1].plot(ax, alpha=0.5, color='red')
+
+    # Show the plot
+    plt.title("Flight Trajectories", fontsize=16)
     for c, data in enumerate(reconstructions):
-        
-        for f in data:
-            df = f.data.reset_index()
-            #print(f)
-            #print(df.loc[0, 'latitude'])
-            # Initialize the start position at (0, 0) (latitude, longitude)
-            if 'latitude' in df.columns or 'longitude' in df.columns:
-                #print(df['latitude'])
-                df['latitude'] = df.loc[0, 'latitude']  # Start at latitude 0
-                df['longitude'] = df.loc[0, 'longitude']  # Start at longitude 0
-            else:
-                df['latitude'] = 0  # Start at latitude 0
-                df['longitude'] = 0  # Start at longitude 0
-            
-            # Convert track to radians for trigonometry
-            df['track_radians'] = np.radians(df['track'])
-            
-            # Loop through the DataFrame and calculate the trajectory
-            for i in range(1, len(df)):
-                # Calculate distance traveled during this timestep
-                distance = df.loc[i, 'groundspeed'] * df.loc[i, 'timedelta'] # Adjust units if necessary
-                dx = distance * np.cos(df.loc[i, 'track_radians'])
-                dy = distance * np.sin(df.loc[i, 'track_radians'])
-                
-                # Update position (simple model, assuming flat Earth projection)
-                df.loc[i, 'latitude'] = (df.loc[i-1, 'latitude'] + dx).astype('float32')
-                df.loc[i, 'longitude'] = (df.loc[i-1, 'longitude'] + dy).astype('float32')
-            
-            # Plot the trajectory
-            # Using linestyle '-' for solid lines, lw=0.5 for thinner lines, and a light blue color
-            plt.plot(df['longitude'], df['latitude'], linestyle='-', alpha=0.3, color=colors[c], lw=0.5)
+        df = data.data
+        obv = 200
+        n = df.shape[0] // obv
+        df["groundspeed"] = df["groundspeed"] * 18/5
+        df = compute_latlon_from_trackgs(df, n, obv,coordinates=dict(latitude=47.546585, longitude=8.447731), forward=False)
+        t = Traffic(df)
+        t.plot(ax, alpha=0.3, color=colors[c], linewidth=0.5)
 
     return fig
 
