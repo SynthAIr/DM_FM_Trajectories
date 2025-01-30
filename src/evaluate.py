@@ -599,6 +599,13 @@ def run(args, logger = None):
     forward=False,
     )
 
+    df = reconstructed_traf.data
+    numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+    
+    # Convert back to DataFrame
+    df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
+    reconstructed_traf = Traffic(df)
+
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
