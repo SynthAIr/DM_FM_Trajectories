@@ -36,7 +36,7 @@ from model.AirLatDiffTraj import Phase
 from model.flow_matching import FlowMatching, Wrapper
 import cvxopt
 from traffic.algorithms.generation import compute_latlon_from_trackgs
-
+import pandas as pd
 
 
 def get_checkpoint_path(logger_config: Dict[str, Any]):
@@ -197,6 +197,33 @@ def exponentially_weighted_moving_average(data, alpha=0.3):
 
     return output
 
+def mse_df(df1, df2, columns_to_compare = [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate'] ):
+    
+    # Compute MSE
+    ## Problem because this is after rescaling :))) 
+    mse = ((df1[columns_to_compare] - df2[columns_to_compare]) ** 2).mean().mean()
+    return mse
+
+def plot_traffics(traffic_list: list, 
+                  title:str = "Plot of Real (Red) and Reconstructed Data (Blue)",
+                  colors = ["red", "blue"],
+                  labels = ["real", "synthetic"]):
+
+
+    plt.style.use("ggplot")
+    fig = plt.figure(figsize=(12, 12))
+    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
+    ax1.coastlines()
+    ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    plt.title(title)
+    for c, t in enumerate(traffic_list):
+        t.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
+
+    plt.legend()
+    return fig
+
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
     # Select random samples from the dataset
     rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None else rnd
@@ -216,24 +243,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     x_rec, steps = model.reconstruct(X_, con_, cat_, grid)
     
     # Plotting setup
-    plt.style.use("ggplot")
-    fig = plt.figure(figsize=(12, 12))
-    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
-    ax1.coastlines()
-    ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
-    plt.xlabel('X values')
-    plt.ylabel('Y values')
-    plt.title('Plot of Real (Red) and Reconstructed Data (Blue)')
-    
-    # Calculate and print MSE
     mse = torch.nn.functional.mse_loss(X_, x_rec)
     print("MSE:", mse)
-    
+    title = 'Plot of Real (Red) and Reconstructed Data (Blue)'
     # Colors for different sets
-    colors = ["red", "blue"]
-    labels = ["real", "synthetic"]
     reconstructions = []
-    simple = False
     for c, data in enumerate([X_, x_rec]):
         print("Data shape:", data.cpu().numpy().shape)
         
@@ -248,8 +262,6 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             coordinates=dict(latitude=48.5, longitude=8.4),
             forward=False
         )
-        if simple:
-            reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
             #reconstructed_traf = reconstructed_traf.filter("agressive").eval()
         reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
             lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
@@ -262,26 +274,24 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             # Calculate longitude from sine and cosine
             #return Traffic(df)
 
+        reconstructions.append(reconstructed_traf)
+
         if c == 1:
-            df = reconstructed_traf.data
+            df = reconstructed_traf.data.copy()
             numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
             
             # Convert back to DataFrame
             df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
-            reconstructed_traf = Traffic(df)
+            reconstructions.append(Traffic(df))
         
         #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
-        reconstructions.append(reconstructed_traf)
         
         # Plot reconstructed data on the map
-        reconstructed_traf.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
 
 
-    print("plotting with simplify")
-    plt.legend()
-    
+    fig = plot_traffics(reconstructions[:2], title = title)
     # Show the plot
-    plt.savefig(f"./figures/{model_name}_reconstructed_data.png")
+    fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
     return reconstructions, mse, rnd, fig
 
@@ -552,21 +562,36 @@ def run(args, logger = None):
     
     reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
     logger.log_metrics({"Eval_MSE": mse})
+
+    mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
+    print("MSE Smooth", mse_smooth)
+    logger.log_metrics({"Eval_MSE_smooth": mse_smooth})
+    fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+    logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
-    fig_track_speed = plot_track_groundspeed(reconstructions)
-    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     mmd = compute_partial_mmd(reconstructions[0], reconstructions[1])
     print("MMD", mmd)
     logger.log_metrics({"mmd": mmd})
 
+    mmd = compute_partial_mmd(reconstructions[0], reconstructions[2])
+    print("MMD smooth", mmd)
+    logger.log_metrics({"mmd_smooth": mmd})
+
+    if mse_smooth < mse:
+        reconstructions[1] = reconstructions[2]
+        print("Switching to smoothed version")
+
+    fig_track_speed = plot_track_groundspeed(reconstructions[:2])
+    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
     #density(reconstructions, model_name = model_name)
-    fig_landing = plot_traffic_comparison(reconstructions, 2, f"./figures/{model_name}_", landing = True)
-    fig_takeoff = plot_traffic_comparison(reconstructions, 2, f"./figures/{model_name}_", landing = False)
+    fig_landing = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = True)
+    fig_takeoff = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = False)
     logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
     logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
     length = config['model']['traj_length']
