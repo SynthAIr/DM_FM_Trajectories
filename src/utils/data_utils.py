@@ -299,7 +299,7 @@ class TrafficDataset(Dataset):
 
         #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
         grid_size = 5
-        num_levels = 4
+        num_levels = 1
         #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
         print(data.shape)
         assert not np.isnan(data).any(), "Tensor contains NaN values"

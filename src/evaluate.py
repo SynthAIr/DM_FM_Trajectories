@@ -1,4 +1,6 @@
 import argparse
+import time
+from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -602,7 +604,11 @@ def run(args, logger = None):
 
     length = config['model']['traj_length']
     
+    start_time = datetime.now()
     samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    logger.log_metrics({"sampling_time_seconds": duration})
     
     #fig_99 = get_figure_from_sample_steps(steps, dataset, length)
     #fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
@@ -802,6 +808,8 @@ def run_perturbation(args, logger = None):
 
     if logger is None:
         logger_config = config["logger"]
+        
+        logger_config["tags"]['experiment'] = "cloud coverage weather"
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,

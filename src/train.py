@@ -1,4 +1,6 @@
 import argparse
+import time
+from datetime import datetime
 import os
 from typing import Any, Dict, Tuple
 import torch
@@ -110,6 +112,7 @@ def run(args: argparse.Namespace):
     config["logger"]["artifact_location"] = args.artifact_location
     config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
     config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
+    config["logger"]["tags"]['experiment'] = "cloud coverage weather"
     #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.
@@ -176,7 +179,10 @@ def run(args: argparse.Namespace):
     # Initiate training with the setup configurations and prepared dataset and model.
     train_config = config["train"]
     train_config["devices"] = args.cuda
+    start_time = datetime.now()
     train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
+    end_time = datetime.now()
+
     # Save configuration used for the training in the logger's artifact location.
     config["data"] = dataset_config
     save_config(config, os.path.join(artifact_location, "config.yaml"))
@@ -184,6 +190,7 @@ def run(args: argparse.Namespace):
     checkpoint_path = artifact_location + "/best_model.ckpt"
     model_size = os.path.getsize(checkpoint_path) / (1024 * 1024)  #
     l_logger.log_metrics({"Size (MB)": model_size})
+    l_logger.log_metrics({"training_time_seconds": (end_time - start_time).total_seconds()})
 
     return l_logger, run_name, artifact_location
 

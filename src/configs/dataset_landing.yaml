@@ -78,6 +78,7 @@ conditional_features:
     categories: ['LSZH']
 weather_grid:
   #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
-  variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+  #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+  variables : ['total_cloud_cover']
   resolution: 1
   function: True
