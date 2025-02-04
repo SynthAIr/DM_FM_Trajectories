@@ -278,10 +278,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
 
         if c == 1:
             df = reconstructed_traf.data.copy()
-            numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+            cols = ['longitude', 'latitude', 'altitude', 'timedelta']
+            numpy_array = exponentially_weighted_moving_average(df[cols].to_numpy().reshape(-1, 200, len(cols)))
             
             # Convert back to DataFrame
-            df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
+            df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
             reconstructions.append(Traffic(df))
         
         #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
@@ -578,9 +579,9 @@ def run(args, logger = None):
     print("MMD smooth", mmd)
     logger.log_metrics({"mmd_smooth": mmd})
 
-    if mse_smooth < mse:
-        reconstructions[1] = reconstructions[2]
-        print("Switching to smoothed version")
+    #if mse_smooth < mse:
+        #reconstructions[1] = reconstructions[2]
+        #print("Switching to smoothed version")
 
     fig_track_speed = plot_track_groundspeed(reconstructions[:2])
     logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
@@ -589,11 +590,16 @@ def run(args, logger = None):
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
+    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[2].data, model_name = model_name)
+    logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
     #density(reconstructions, model_name = model_name)
-    fig_landing = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = True)
-    fig_takeoff = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = False)
-    logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
-    logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
+
+    #if False
+    #fig_landing = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = True)
+    #fig_takeoff = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = False)
+    #logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
+    #logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
+
     length = config['model']['traj_length']
     
     samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
