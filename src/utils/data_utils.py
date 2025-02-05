@@ -263,7 +263,7 @@ class TrafficDataset(Dataset):
 
         print(data.shape)
 
-
+        weather_variable_names = "".join(sorted(word for word in self.variables if word))
         self.con_cond_scaler = None
         self.cat_cond_scaler = None
         self.grid_cond_scaler = None
@@ -273,16 +273,18 @@ class TrafficDataset(Dataset):
         self.grid_conditions = torch.empty(len(data))
 
         #pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
-        pressure_levels = np.array([ 925,  950,  975, 1000])[::-1]
+        #pressure_levels = np.array([ 925,  950,  975, 1000])[::-1]
+        pressure_levels = np.array([1000])[::-1]
 
         """
         pressure_levels = np.array([   1,    2,    3,    5,    7,   10,   20,   30,   50,   70,  100,  125,
         150,  175,  200,  225,  250,  300,  350,  400,  450,  500,  550,  600,
         650,  700,  750,  775,  800,  825,  850,  875,  900,  925,  950,  975,
        1000]])"""
-
+        """
         def preprocess(ds):
-            if 'level' in ds.coords:
+            if 'level' in ds[variables].coords and (len(variables) != 1 and variables[0] != "total_cloud_cover"):
+                print(variables)
                 # Ensure all pressure levels are present; missing levels will be filled with NaN
                 #ds = ds.reindex(level=pressure_levels, fill_value=np.nan)
                 return ds[variables].sel(level=pressure_levels)
@@ -291,6 +293,7 @@ class TrafficDataset(Dataset):
                 print("No level dimension found, processing single-level dataset.")
                 return ds[variables]
             #return ds[variables].sel(level=pressure_levels)
+        """
 
         save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
         # List all .nc files in the directory
@@ -304,7 +307,8 @@ class TrafficDataset(Dataset):
         print(data.shape)
         assert not np.isnan(data).any(), "Tensor contains NaN values"
         print("No NaN values in data")
-        self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
+        self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, 
+                                                                 num_levels=num_levels, pressure_levels = pressure_levels, variable_names = weather_variable_names)
 
         assert len(traffic) == len(self.grid_conditions)
 

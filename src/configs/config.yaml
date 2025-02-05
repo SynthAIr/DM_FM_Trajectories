@@ -36,6 +36,7 @@ model:
     ema_rate: 0.99999
   weather_config:
     weather_grid: True
+    variables: 1
     levels: 1
     lon: 5
     lat: 5

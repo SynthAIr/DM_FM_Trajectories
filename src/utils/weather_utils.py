@@ -140,7 +140,7 @@ def round_to_nearest_0_25(value):
     return round(value * 4) / 4
 
 def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path, grid_size=5, num_levels=3,
-        pressure_levels = np.array([ 850,  925, 1000])):
+        pressure_levels = np.array([ 850,  925, 1000]),variable_names = "unknown"):
 
     f = traffic[0].data.loc[len(traffic[0])-1]
     lon = f['longitude']
@@ -164,21 +164,29 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
         variables_without_level = [var for var in variables if 'level' not in ds[var].dims]
 
         # Select data for variables with 'level'
-        ds_with_level = ds[variables_with_level].sel(
-            level=pressure_levels, 
-            longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
-            latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
-        )
+        if not len(variables_with_level) == 0:
+            ds_with_level = ds[variables_with_level].sel(
+                level=pressure_levels, 
+                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+                latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
+            )
 
-        # Select data for variables without 'level' and add a dummy 'level' dimension
-        ds_without_level = ds[variables_without_level].sel(
-            longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
-            latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
-        )
+        if not len(variables_without_level) == 0:
+            # Select data for variables without 'level' and add a dummy 'level' dimension
+            ds_without_level = ds[variables_without_level].sel(
+                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+                latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
+            )
         # Add a dummy 'level' dimension filled with zeros
                 # Add a dummy 'level' dimension by copying data across all levels
-        ds_without_level = ds_without_level.expand_dims(dim={'level': pressure_levels}).assign_coords(level=pressure_levels)
-        ds_without_level = ds_without_level.map(lambda x: x.broadcast_like(ds_without_level))
+            ds_without_level = ds_without_level.expand_dims(dim={'level': pressure_levels}).assign_coords(level=pressure_levels)
+            ds_without_level = ds_without_level.map(lambda x: x.broadcast_like(ds_without_level))
+
+        if len(variables_without_level) == 0:
+            return ds_with_level
+
+        if len(variables_with_level) == 0:
+            return ds_without_level
 
         # Merge the two datasets
         return xr.merge([ds_with_level, ds_without_level])
@@ -186,7 +194,7 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
 
     grid_conditions = []
 
-    name = f"flight_processed_{len(traffic)}_vars_{len(variables)}_ADES.pkl"
+    name = f"flight_processed_{len(traffic)}_vars_{variable_names}_{num_levels}_{grid_size}_ADES.pkl"
     #name = f"flight_processed_{len(traffic)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
         print("ERA5 file not found - creating new")
@@ -220,9 +228,8 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
     return grid_conditions
 
 
-
 def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_size=5, num_levels=3, 
-                               pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])):
+                               pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000]), variable_names = "unknown"):
     """
     Load and process weather data with adjustable grid size and levels.
 
@@ -240,7 +247,7 @@ def load_weather_data_function(file_paths, traffic, preprocess, save_path, grid_
 
     grid_conditions = []
 
-    name = f"flight_processed_{len(traffic)}_{grid_size}x{grid_size}_levels_{num_levels}.pkl"
+    name = f"flight_processed_{variable_names}_{len(traffic)}_{grid_size}x{grid_size}_levels_{num_levels}.pkl"
     if not os.path.isfile(save_path + name):
         print("ERA5 file not found - creating new")
 

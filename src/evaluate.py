@@ -809,7 +809,7 @@ def run_perturbation(args, logger = None):
     if logger is None:
         logger_config = config["logger"]
         
-        logger_config["tags"]['experiment'] = "cloud coverage weather"
+        logger_config["tags"]['experiment'] = "winds weather"
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
