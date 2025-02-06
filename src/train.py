@@ -113,7 +113,8 @@ def run(args: argparse.Namespace):
     config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
     config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
     #config["logger"]["tags"]['experiment'] = "cloud coverage weather"
-    config["logger"]["tags"]['experiment'] = "winds weather"
+    #config["logger"]["tags"]['experiment'] = "winds weather"
+    config["logger"]["tags"]['experiment'] = "metar"
     #configs["logger"]["tags"]['weather_grid'] = configs["model"]["weather_config"]["weather_grid"]
 
     # Setup logger with MLFlow with configurations read from the file.
