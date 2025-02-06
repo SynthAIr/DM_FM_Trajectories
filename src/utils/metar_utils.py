@@ -16,6 +16,7 @@ import pandas as pd
 import metpy.io as metpy
 import torch
 import pickle
+from tqdm import tqdm
 
 def extract_metar_data(lines):
     df_all = None
@@ -94,7 +95,7 @@ def load_metar_data(file_path, traffic, save_path):
         
         print("Data loaded")
         closest_rows = []
-        for f in traffic:
+        for f in tqdm(traffic):
             time = f.max("timestamp").round("min")
             closest_index = df.index.get_indexer([time], method="nearest")[0]
             closest_rows.append(df.iloc[closest_index])
