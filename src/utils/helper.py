@@ -62,7 +62,8 @@ def load_and_prepare_data(dataset_config):
         shape=dataset_config["data_shape"],
         scaler=MinMaxScaler(feature_range=(-1, 1)),
         conditional_features = load_conditions(dataset_config) ,
-        variables = dataset_config["weather_grid"]["variables"]
+        variables = dataset_config["weather_grid"]["variables"],
+        metar=dataset_config["metar"],
     )
     traffic = Traffic.from_file(dataset_config["data_path"])
 

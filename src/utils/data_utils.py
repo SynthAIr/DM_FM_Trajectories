@@ -21,6 +21,7 @@ from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler
 from .condition_utils import Condition
 from .weather_utils import load_weather_data, load_weather_data_function, load_weather_data_arrival_airport
+from .metar_utils import load_metar_data
 
 
 logger = logging.getLogger(__name__)
@@ -197,6 +198,7 @@ class DatasetParams(TypedDict):
     shape: str
     conditional_features: List[Condition]
     variables: List[str]
+    metar: bool
 
 
 class TrafficDataset(Dataset):
@@ -231,7 +233,8 @@ class TrafficDataset(Dataset):
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
         conditional_features = [],
-        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
+        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity'],
+        metar = False,
     ) -> None:
 
         assert shape in self._available_shapes, (
@@ -249,6 +252,7 @@ class TrafficDataset(Dataset):
         self.categorical_conditions: torch.Tensor
         self.lengths: List[int]
         self.variables = variables
+        self.metar = metar
         # self.target_transform = target_transform
         # data = extract_features(traffic, features, info_params["features"])
 
@@ -295,19 +299,26 @@ class TrafficDataset(Dataset):
             #return ds[variables].sel(level=pressure_levels)
         """
 
-        save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
-        # List all .nc files in the directory
-        nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
-            
 
-        #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
-        grid_size = 5
-        num_levels = 1
-        #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
         print(data.shape)
         assert not np.isnan(data).any(), "Tensor contains NaN values"
-        print("No NaN values in data")
-        self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, 
+
+        if metar:
+            file_path = "/mnt/data/synthair/synthair_diffusion/data/metar/metar_landing.txt"  # Change this to the actual file path
+            save_path = "/mnt/data/synthair/synthair_diffusion/data/metar/"
+            self.grid_conditions = load_metar_data(file_path, traffic, save_path)
+        else:
+            save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
+            # List all .nc files in the directory
+            nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
+                
+
+            #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
+            grid_size = 5
+            num_levels = 1
+            #self.grid_conditions = load_weather_data_function(nc_files, traffic, preprocess, save_path, grid_size = grid_size, num_levels=num_levels, pressure_levels = pressure_levels)
+            print("No NaN values in data")
+            self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, 
                                                                  num_levels=num_levels, pressure_levels = pressure_levels, variable_names = weather_variable_names)
 
         assert len(traffic) == len(self.grid_conditions)
@@ -420,7 +431,8 @@ class TrafficDataset(Dataset):
         shape: str = "linear",
         scaler: Optional[TransformerProtocol] = None,
         conditional_features = [],
-        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity']
+        variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity'],
+        metar = False,
     ) -> "TrafficDataset":
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
         traffic = Traffic.from_file(file_path)
@@ -429,7 +441,7 @@ class TrafficDataset(Dataset):
         traffic = traffic.between("2018-01-01", "2021-12-31")
         #traffic = traffic.between("2018-01-01", "2018-01-31")
 
-        dataset = cls(traffic, features, shape, scaler, conditional_features, variables)
+        dataset = cls(traffic, features, shape, scaler, conditional_features, variables, metar)
         dataset.file_path = file_path
         return dataset
 
@@ -498,7 +510,8 @@ class TrafficDataset(Dataset):
             seq_len=self.seq_len,
             shape=self.shape,
             conditional_features = self.conditional_features,
-            variables = self.variables
+            variables = self.variables,
+            metar = self.metar
         )
 
     def __repr__(self) -> str:

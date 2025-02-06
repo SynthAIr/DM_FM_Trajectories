@@ -11,134 +11,120 @@ from typing import List, Optional
 import pandas as pd
 from metar import Metar
 import numpy as np
+import re
+import pandas as pd
+import metpy.io as metpy
+import torch
+import pickle
 
-@dataclass
-class METAR:
-    raw: str  # The raw METAR string for reference
-    airport_code: str  # ICAO airport code
-    observation_time: str  # Observation time in Zulu format
-    wind_direction: Optional[int] = None  # Wind direction in degrees
-    wind_speed: Optional[float] = None  # Wind speed in meters per second or knots
-    wind_gusts: Optional[float] = None  # Gust speed if present
-    variable_wind: Optional[List[int]] = field(default_factory=list)  # Wind variability [min, max]
-    visibility: Optional[int] = None  # Visibility in meters
-    runway_visual_range: List[str] = field(default_factory=list)  # RVR information
-    weather_phenomena: List[str] = field(default_factory=list)  # Significant weather phenomena
-    cloud_layers: List[str] = field(default_factory=list)  # Cloud layers and coverage
-    temperature: Optional[int] = None  # Temperature in Celsius
-    dew_point: Optional[int] = None  # Dew point in Celsius
-    pressure: Optional[float] = None  # Altimeter pressure in hPa
-    trend: Optional[str] = None  # TREND forecast (e.g., NOSIG)
-    runway_condition: Optional[str] = None  # Runway condition information
-    remarks: Optional[str] = None  # Any additional remarks
+def extract_metar_data(lines):
+    df_all = None
+    first = True
+    for line in lines:
+        match = re.match(r"(\d{4})(\d{2})\d{6}\s(METAR.*)", line)
+        if match:
+            year, month, metar = match.groups()
+            #print(f"Year: {year}, Month: {month}, METAR: {metar}")
+            df =  metpy.parse_metar_to_dataframe(metar, year=int(year), month=int(month))
 
-    @staticmethod
-    def from_string(metar_string: str) -> 'METAR':
-        # Initialize fields with default values
-        airport_code = None
-        observation_time = None
-        wind_direction = None
-        wind_speed = None
-        wind_gusts = None
-        variable_wind = []
-        visibility = None
-        runway_visual_range = []
-        weather_phenomena = []
-        cloud_layers = []
-        temperature = None
-        dew_point = None
-        pressure = None
-        trend = None
-        runway_condition = None
-        remarks = None
+        df_all = pd.concat([df_all, df], ignore_index=True) if not first else df
+        first = False
+    return df_all
 
-        # Use regex to parse METAR components
-        parts = metar_string.split()
-        if parts:
-            # Airport code
-            airport_code = parts[1] if len(parts) > 1 else None
+def read_metar_file(filename):
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    return extract_metar_data(lines)
 
-            # Observation time
-            observation_match = re.search(r"\b(\d{6}Z)\b", metar_string)
-            if observation_match:
-                observation_time = observation_match.group(1)
+def preprocess_metar(df):
+    """
+    Preprocess METAR data:
+    - Fill NaNs in categorical columns with "unknown".
+    - Fill NaNs in numerical columns with 0.
+    - Encode categorical columns as integers for embedding.
+    
+    Args:
+        df (pd.DataFrame): Raw METAR DataFrame
+    
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame
+    """
+    # Identify categorical columns (assume object type and known categorical columns)
+    categorical_cols = [
+        "current_wx1", "current_wx2", "current_wx3",
+        "low_cloud_type", "medium_cloud_type", "high_cloud_type",
+        "highest_cloud_type", "remarks"
+    ]
+    
+    # Identify numerical columns (everything else except categorical + date_time)
+    numerical_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    
+    # Ensure only existing columns are selected (in case some don't exist in df)
+    categorical_cols = [col for col in categorical_cols if col in df.columns]
+    numerical_cols = [col for col in numerical_cols if col in df.columns]
 
-            # Wind info
-            wind_match = re.search(r"(\d{3})(\d{2})(G\d{2})?(KT|MPS)", metar_string)
-            if wind_match:
-                wind_direction = int(wind_match.group(1))
-                wind_speed = int(wind_match.group(2))
-                if wind_match.group(3):
-                    wind_gusts = int(wind_match.group(3)[1:])  # Remove 'G'
+    # Fill NaNs
+    df[categorical_cols] = df[categorical_cols].fillna("unknown")
+    df[numerical_cols] = df[numerical_cols].fillna(0)
 
-            # Variable wind
-            variable_wind_match = re.search(r"(\d{3})V(\d{3})", metar_string)
-            if variable_wind_match:
-                variable_wind = [int(variable_wind_match.group(1)), int(variable_wind_match.group(2))]
+    # Encode categorical columns as numbers for embedding
+    for col in categorical_cols:
+        df[col] = df[col].astype("category").cat.codes
 
-            # Visibility
-            visibility_match = re.search(r"\b(\d{4})\b", metar_string)
-            if visibility_match:
-                visibility = int(visibility_match.group(1))
+    return df
 
-            # Runway visual range
-            runway_matches = re.findall(r"R\d{2}/[PNU]?\d{4}[UDN]?", metar_string)
-            runway_visual_range = runway_matches
+def load_metar_data(file_path, traffic, save_path):
 
-            # Weather phenomena
-            weather_phenomena_match = re.findall(r"[\+\-]?[A-Z]{2,}", metar_string)
-            weather_phenomena = weather_phenomena_match
+    grid_conditions = []
+    important_features = [
+        'wind_speed', 'wind_gust', 'wind_direction', 'eastward_wind', 'northward_wind',
+        'visibility', 'cloud_coverage', 'low_cloud_level',
+        'air_temperature', 'dew_point_temperature', 'air_pressure_at_sea_level',
+        'altimeter', 'elevation', "low_cloud_type",
+    ]
+    name = f"flight_processed_{len(traffic)}_METAR_ADES.pkl"
+    #name = f"flight_processed_{len(traffic)}_ADES.pkl"
+    if not os.path.isfile(save_path + name):
+        print("ERA5 file not found - creating new")
+        df = read_metar_file(file_path)
+        df = df.sort_values(by=["date_time"]).reset_index()
+        df = df.set_index('date_time')
+        df.index = df.index.tz_localize("UTC")
+        df = preprocess_metar(df)[important_features]
+        
+        print("Data loaded")
+        closest_rows = []
+        for f in traffic:
+            time = f.max("timestamp").round("min")
+            closest_index = df.index.get_indexer([time], method="nearest")[0]
+            closest_rows.append(df.iloc[closest_index])
 
-            # Cloud layers
-            cloud_layer_matches = re.findall(r"(FEW|SCT|BKN|OVC)\d{3}", metar_string)
-            cloud_layers = cloud_layer_matches
+        t_df = pd.DataFrame(closest_rows)
+        grid_conditions = torch.FloatTensor(t_df.values)
+        
+        # Save the processed grid_conditions as a pickle file
+        with open(save_path + name, "wb") as fp:
+            pickle.dump(grid_conditions, fp)
+    else:
+        # Load existing pickle file if available
+        print("File found - Loading from pickle")
+        with open(save_path + name, 'rb') as f:
+            grid_conditions = pickle.load(f)
 
-            # Temperature and dew point
-            temp_match = re.search(r"M?\d{2}/M?\d{2}", metar_string)
-            if temp_match:
-                temps = temp_match.group(0).split("/")
-                temperature = int(temps[0].replace("M", "-"))
-                dew_point = int(temps[1].replace("M", "-"))
+    return grid_conditions
 
-            # Pressure
-            pressure_match = re.search(r"Q(\d{4})", metar_string)
-            if pressure_match:
-                pressure = int(pressure_match.group(1)) / 10.0
 
-            # TREND forecast
-            trend_match = re.search(r"(NOSIG|BECMG|TEMPO|INTER)", metar_string)
-            if trend_match:
-                trend = trend_match.group(1)
 
-            # Runway condition
-            runway_condition_match = re.search(r"88\d{2}//\d{2}", metar_string)
-            if runway_condition_match:
-                runway_condition = runway_condition_match.group(0)
 
-            # Remarks
-            remarks_index = metar_string.find("RMK")
-            if remarks_index != -1:
-                remarks = metar_string[remarks_index + 4:]
 
-        return METAR(
-            raw=metar_string,
-            airport_code=airport_code,
-            observation_time=observation_time,
-            wind_direction=wind_direction,
-            wind_speed=wind_speed,
-            wind_gusts=wind_gusts,
-            variable_wind=variable_wind,
-            visibility=visibility,
-            runway_visual_range=runway_visual_range,
-            weather_phenomena=weather_phenomena,
-            cloud_layers=cloud_layers,
-            temperature=temperature,
-            dew_point=dew_point,
-            pressure=pressure,
-            trend=trend,
-            runway_condition=runway_condition,
-            remarks=remarks
-        )
+
+
+
+
+
+
+
+
 
 def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date: datetime, save_folder: str) -> None:
     """
@@ -207,59 +193,6 @@ def fetch_metar_data(base_url: str, icao24: str, start_date: datetime, end_date:
         current_start = next_month_start
 
 
-# Function to load METAR data from files and store it in a DataFrame
-# Function to load METAR data from files and store it in a DataFrame
-def load_metar_data_from_files(folder_path):
-    metar_data = []
-
-    # Loop over files in the folder
-    for filename in os.listdir(folder_path):
-        if filename.endswith('.txt'):
-            file_path = os.path.join(folder_path, filename)
-
-            with open(file_path, 'r') as file:
-                metar_lines = file.readlines()
-
-                # Process each line in the file
-                for line in metar_lines:
-                    # Skip the lines that contain headlines or other irrelevant information
-                    if line.startswith('#') or line.strip() == '':
-                        continue
-                    
-                    # Only process lines that start with 'METAR' (indicating METAR data)
-                    if "METAR" in line:
-                        # Parse the METAR string using the metar package
-                        try:
-                            time = line.strip()[:13]
-                            metar_entry = Metar.Metar(line.strip()[13:])  # Parse METAR line
-                            
-                            # Extract relevant METAR data and append to the list
-                            metar_data.append({
-                                'raw': line.strip(),
-                                'airport_code': metar_entry.station_id if metar_entry.station_id else np.nan,
-                                'observation_time': metar_entry.time if metar_entry.time else np.nan,
-                                'wind_direction': metar_entry.wind_dir_to if metar_entry.wind_dir_to else np.nan,
-                                'wind_speed': metar_entry.wind_speed if metar_entry.wind_speed else 0,  # Set to 0 if not available
-                                'visibility': metar_entry.visibility if metar_entry.visibility else np.nan,
-                                'temperature': metar_entry.temp if metar_entry.temp else np.nan,
-                                'dew_point': metar_entry.dewpt if metar_entry.dewpt else np.nan,
-                                'pressure': metar_entry.press if metar_entry.press else np.nan,
-                                'trend': metar_entry.trend if metar_entry.trend else False,
-                            })
-                        except Exception as e:
-                            print(f"Error parsing METAR line: {line.strip()} - {e}")
-
-    # Convert METAR data into a DataFrame
-    df = pd.DataFrame(metar_data)
-
-    # Ensure observation_time is in datetime format (useful for sorting or filtering)
-    df['observation_time'] = pd.to_datetime(df['observation_time'], errors='coerce')
-
-    # Set the observation_time as the index (for easier time-based operations)
-    df.set_index('observation_time', inplace=True)
-
-    return df
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Download METAR data for an airport over a specified date range.")
@@ -275,18 +208,12 @@ if __name__ == "__main__":
 
 
     # Call the METAR fetch function with provided arguments
-    if False:
-        fetch_metar_data(
-            base_url="https://www.ogimet.com/display_metars2.php",
-            icao24=args.icao24,
-            start_date=start_date,
-            end_date=end_date,
-            save_folder=args.output_dir
-        )
-    else:
-        metar_df = load_metar_data_from_files(args.output_dir)
-
-        # Display the DataFrame
-        print(metar_df.head())
+    fetch_metar_data(
+        base_url="https://www.ogimet.com/display_metars2.php",
+        icao24=args.icao24,
+        start_date=start_date,
+        end_date=end_date,
+        save_folder=args.output_dir
+    )
 
     #python metar_utils.py "2018-01-01 08:00" "2018-01-03 10:00" LIRF --output_dir ./my_metar_data

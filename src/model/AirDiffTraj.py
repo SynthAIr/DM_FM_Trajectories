@@ -100,17 +100,6 @@ def nonlinearity(x, function = "swish"):
 
     return x * torch.sigmoid(x)
 
-class Attention(nn.Module):
-    def __init__(self, embedding_dim):
-        super(Attention, self).__init__()
-        self.fc = nn.Linear(embedding_dim, 1)
-
-    def forward(self, x):
-        # x shape: (batch_size, num_attributes, embedding_dim)
-        weights = self.fc(x)  # shape: (batch_size, num_attributes, 1)
-        # apply softmax along the attributes dimension
-        weights = F.softmax(weights, dim=1)
-        return weights
 
 class WeatherGrid(nn.Module):
     def __init__(self, channels, lat_len, long_len, embedding_dim=128):
@@ -176,7 +165,7 @@ class WideAndDeep(nn.Module):
         #self.cluster_embedding = nn.Embedding(5, hidden_dim)
         #self.phase_embedding = nn.Embedding(5, hidden_dim)
 
-        self.deep_fc1 = nn.Linear(hidden_dim*3, embedding_dim)
+        self.deep_fc1 = nn.Linear(hidden_dim*len(wide_and_deep_config.deep_layers), embedding_dim)
         #self.deep_fc1 = nn.Linear(hidden_dim*4, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
@@ -226,6 +215,45 @@ class WeatherBlock(nn.Module):
         x = self.fc2(x)
         return x
 
+class MetarBlock(nn.Module):
+    def __init__(self, embedding_dim, hidden_dim) -> None:
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+
+        # Wide part (linear model for continuous attributes)
+        self.wide_fc = nn.Linear(13, embedding_dim)
+
+        self.deep_embeddings = nn.ModuleList([
+            nn.Embedding(emdim, hidden_dim) for emdim in [7]
+        ])
+
+        self.deep_fc1 = nn.Linear(hidden_dim*1, embedding_dim)
+        self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
+
+    def forward(self, x):
+        # Continuous attributes
+        #print(continuous_attrs.shape, categorical_attrs.shape)
+
+        wide_out = self.wide_fc(x[:,:-1])
+
+        deep_embeddings = [
+            embedding_layer(x[:, -1]) 
+            for i, embedding_layer in enumerate(self.deep_embeddings)
+        ]
+        
+        # Concatenate all deep embeddings
+        categorical_embed = torch.cat(deep_embeddings, dim=1)
+        deep_out = nonlinearity(self.deep_fc1(categorical_embed))
+        deep_out = self.deep_fc2(deep_out)
+        
+        
+        combined_embed = wide_out + deep_out 
+
+        #combined_embed = wide_out
+        return combined_embed
+
+
+
 def get_categorical_category_counts(config):
     """
     Retrieves the total number of categories for each categorical variable in the configuration.
@@ -257,6 +285,7 @@ class EmbeddingBlock(nn.Module):
         self.wide_and_deep = WideAndDeep(wide_and_deep_config)
         self.weather_config = weather_config
         self.weather = weather_config and weather_config['weather_grid']
+        self.metar = dataset_config['metar']
         
         if self.weather:
             variables = weather_config['variables']
@@ -266,6 +295,9 @@ class EmbeddingBlock(nn.Module):
             w_type = weather_config['type']
             self.weather_block = WeatherBlock(num_blocks=variables, levels=levels, latitude=lat, longitude=lon, embedding_dim = embedding_dim)
             #self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
+
+        if self.metar:
+            self.metar_block = MetarBlock(embedding_dim, hidden_dim)
 
         #self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
 
@@ -278,6 +310,9 @@ class EmbeddingBlock(nn.Module):
             x = x + self.weather_block(grid)
             #x = x + self.weather_block(grid).repeat(2, 1)
             #x = self.fc1(nn.functional.relu(x))
+
+        if self.metar:
+            x = x + self.metar_block(grid)
 
         return x
 
