@@ -647,9 +647,11 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
 
 def main_landing(base_path: str, data_source: str) -> None:
     from traffic.data.datasets import landing_zurich_2019
+    from traffic.data.datasets import landing_amsterdam_2019
 
     flight_points = (
-    landing_zurich_2019
+    #landing_zurich_2019
+    landing_amsterdam_2019
     #.query("runway == '14' and initial_flow == '162-216'")
     .assign_id()
     .unwrap()
@@ -660,7 +662,9 @@ def main_landing(base_path: str, data_source: str) -> None:
 
     flight_points.data = add_time_based_features(flight_points.data, "timestamp")
     flight_points.data['ADEP'] = flight_points.data['origin']
-    flight_points.data['ADES'] = 'LSZH'
+    #flight_points.data['ADES'] = 'LSZH'
+    flight_points.data['ADES'] = 'EHAM'
+    flight_points.data['runway'] = 'EHAM'
 
 
     print("Adding weather data")
@@ -689,7 +693,7 @@ def main_landing(base_path: str, data_source: str) -> None:
     # Save the prepared trajectories to a pickle file in the parent directory of the base_path
     save_path = (
         Path(base_path).parent
-        / f"landing/{data_source}_trajectories_{avg_sequence_length}.pkl"
+        / f"landing/{data_source}_trajectories_EHAM_{avg_sequence_length}.pkl"
     )
 
     trajectories.to_pickle(Path(save_path))

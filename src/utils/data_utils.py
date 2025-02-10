@@ -304,10 +304,12 @@ class TrafficDataset(Dataset):
         assert not np.isnan(data).any(), "Tensor contains NaN values"
 
         if metar:
+            print("Initing with metar")
             file_path = "/mnt/data/synthair/synthair_diffusion/data/metar/metar_landing.txt"  # Change this to the actual file path
             save_path = "/mnt/data/synthair/synthair_diffusion/data/metar/"
             self.grid_conditions = load_metar_data(file_path, traffic, save_path)
         else:
+            print("Initing with era5")
             save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
             # List all .nc files in the directory
             nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
@@ -320,7 +322,7 @@ class TrafficDataset(Dataset):
             print("No NaN values in data")
             self.grid_conditions = load_weather_data_arrival_airport(nc_files, traffic, variables, save_path, grid_size = grid_size, 
                                                                  num_levels=num_levels, pressure_levels = pressure_levels, variable_names = weather_variable_names)
-
+        
         assert len(traffic) == len(self.grid_conditions)
 
         print(len(self.grid_conditions))
@@ -333,7 +335,10 @@ class TrafficDataset(Dataset):
                 if len(conditions_fs) == 0:
                     return torch.empty(len(data)), None
                 
-                conditions = np.concatenate(conditions_fs, axis=axis)
+                if len(conditions_fs) == 0:
+                    conditions = conditions_fs[0]
+                else:
+                    conditions = np.concatenate(conditions_fs, axis=axis)
 
                 original_shape = conditions.shape
                 print(original_shape)
@@ -353,10 +358,14 @@ class TrafficDataset(Dataset):
 
                 return conditions, s
             
-            self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 0)
+            if self.metar:
+                preprocessed , self.gid_cond_scaler = scale_conditions([self.grid_conditions[:,:-1]], 0)
+                self.grid_conditions = torch.cat((preprocessed, self.grid_conditions[:,-1].unsqueeze(1)), dim=1)
+            else:
+                self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 1)
                 #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
                 #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
-            self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
+                self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 

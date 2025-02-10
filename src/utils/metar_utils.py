@@ -86,7 +86,7 @@ def load_metar_data(file_path, traffic, save_path):
     name = f"flight_processed_{len(traffic)}_METAR_ADES.pkl"
     #name = f"flight_processed_{len(traffic)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
-        print("ERA5 file not found - creating new")
+        print("METAR file not found - creating new")
         df = read_metar_file(file_path)
         df = df.sort_values(by=["date_time"]).reset_index()
         df = df.set_index('date_time')

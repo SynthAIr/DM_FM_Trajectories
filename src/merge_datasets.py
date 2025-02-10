@@ -100,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir", dest="base_path", type=str, default="./data"
     )
-    output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"./data/resampled/combined_traffic_resampled_landing_{target_length}.pkl" 
+    output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"./data/resampled/combined_traffic_resampled_landing_EHAM_{target_length}.pkl" 
     # source of data: Either Eurocontrol or OpenSky
     parser.add_argument(
         "--data_source", dest="data_source", type=str, default=output_filepath

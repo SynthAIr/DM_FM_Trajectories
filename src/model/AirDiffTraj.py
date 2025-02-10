@@ -217,36 +217,31 @@ class WeatherBlock(nn.Module):
 
 class MetarBlock(nn.Module):
     def __init__(self, embedding_dim, hidden_dim) -> None:
+        super().__init__()
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
 
         # Wide part (linear model for continuous attributes)
         self.wide_fc = nn.Linear(13, embedding_dim)
 
-        self.deep_embeddings = nn.ModuleList([
-            nn.Embedding(emdim, hidden_dim) for emdim in [7]
-        ])
+        self.deep_emb = nn.Embedding(7, hidden_dim)
 
         self.deep_fc1 = nn.Linear(hidden_dim*1, embedding_dim)
         self.deep_fc2 = nn.Linear(embedding_dim, embedding_dim)
 
     def forward(self, x):
-        # Continuous attributes
-        #print(continuous_attrs.shape, categorical_attrs.shape)
-
         wide_out = self.wide_fc(x[:,:-1])
-
-        deep_embeddings = [
-            embedding_layer(x[:, -1]) 
-            for i, embedding_layer in enumerate(self.deep_embeddings)
-        ]
-        
+        cat = x[:,-1].int()
+        #print(cat.shape)
+        #print(x[:,-1].int().shape)
+        #print(cat)
         # Concatenate all deep embeddings
-        categorical_embed = torch.cat(deep_embeddings, dim=1)
+        categorical_embed = self.deep_emb(cat)
         deep_out = nonlinearity(self.deep_fc1(categorical_embed))
         deep_out = self.deep_fc2(deep_out)
+        #print("cat shape", cat.shape, "x_shape",x[:,-1].int() )
         
-        
+        #print("wide", wide_out.shape, "deep", deep_out.shape)
         combined_embed = wide_out + deep_out 
 
         #combined_embed = wide_out
@@ -297,7 +292,7 @@ class EmbeddingBlock(nn.Module):
             #self.weather_block = WeatherBlock(num_blocks=4, levels=12, latitude=105, longitude=81, embedding_dim = embedding_dim)
 
         if self.metar:
-            self.metar_block = MetarBlock(embedding_dim, hidden_dim)
+            self.metar_block = MetarBlock(embedding_dim = embedding_dim, hidden_dim=hidden_dim)
 
         #self.fc1 = nn.Linear(2*embedding_dim, embedding_dim)
 
@@ -312,7 +307,10 @@ class EmbeddingBlock(nn.Module):
             #x = self.fc1(nn.functional.relu(x))
 
         if self.metar:
+            #print(x.shape)
+            #print(self.metar_block(grid).shape)
             x = x + self.metar_block(grid)
+            #print(x.shape)
 
         return x
 

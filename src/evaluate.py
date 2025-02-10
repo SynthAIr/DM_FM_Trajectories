@@ -585,8 +585,8 @@ def run(args, logger = None):
         #reconstructions[1] = reconstructions[2]
         #print("Switching to smoothed version")
 
-    fig_track_speed = plot_track_groundspeed(reconstructions[:2])
-    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
+    #fig_track_speed = plot_track_groundspeed(reconstructions[:2])
+    #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
     JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
@@ -656,8 +656,8 @@ def run(args, logger = None):
     reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
         lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
     )
-    fig_track_speed = plot_track_groundspeed([reconstructed_traf])
-    logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
+    #fig_track_speed = plot_track_groundspeed([reconstructed_traf])
+    #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
     mmd_gen = compute_partial_mmd(reconstructed_traf, reconstructions[0])
     print("MMD GEN", mmd_gen)
     logger.log_metrics({"mmd_gen": mmd_gen})
@@ -810,7 +810,7 @@ def run_perturbation(args, logger = None):
         logger_config = config["logger"]
         
         #logger_config["tags"]['experiment'] = "winds weather"
-        logger_config["tags"]['experiment'] = "metar"
+        logger_config["tags"]['experiment'] = "cloud coverage real"
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
