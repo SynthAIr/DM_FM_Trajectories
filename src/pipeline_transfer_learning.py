@@ -6,7 +6,8 @@ from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config
 from evaluate import get_models
 from train import setup_logger, get_dataloaders, train
-
+from model.flow_matching import FlowMatching, Wrapper
+from model.diffusion import Diffusion
 
 from evaluation.similarity import jensenshannon_distance
 
@@ -51,7 +52,7 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
     
     return DataLoader(dataset, batch_size=dataloader.batch_size, sampler=sampler, num_workers=dataloader.num_workers)
 
-def get_model_2(config, dataset, model_config, args):
+def get_model_2(config, dataset, model_config, dataset_config, args):
     if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -81,55 +82,12 @@ def get_model_2(config, dataset, model_config, args):
     return model
 
 
-def a():
-    config = load_config(args.config_file)
-    dataset_config = load_config(args.dataset_config)
-    config = init_config(config, dataset_config, args)
-    l_logger, run_name, artifact_location = setup_logger(args, config)
-
-    dataset_config["data_path"] = args.data_path
-    dataset, traffic = load_and_prepare_data(dataset_config)
-    model_config = init_model_config(config, dataset_config, dataset)
-
-    print(dataset.data.shape)
-    print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
-
-    train_loader, val_loader, test_loader = get_dataloaders(
-        dataset,
-        dataset_config["train_ratio"],
-        dataset_config["val_ratio"],
-        dataset_config["batch_size"],
-        dataset_config["test_batch_size"],
-    )
-    print("Dataset loaded!")
-    print(f"*******model parameters: {model_config}")
-
-
-    print("Model built!")
-
-    # Initiate training with the setup configurations and prepared dataset and model.
-    train_config = config["train"]
-    train_config["devices"] = args.cuda
-    start_time = datetime.now()
-    train(train_config, model, train_loader, val_loader, test_loader, l_logger, artifact_location)
-    end_time = datetime.now()
-
-    # Save configuration used for the training in the logger's artifact location.
-    config["data"] = dataset_config
-    save_config(config, os.path.join(artifact_location, "config.yaml"))
-    #l_logger.
-    checkpoint_path = artifact_location + "/best_model.ckpt"
-    model_size = os.path.getsize(checkpoint_path) / (1024 * 1024)  #
-    l_logger.log_metrics({"Size (MB)": model_size})
-    l_logger.log_metrics({"training_time_seconds": (end_time - start_time).total_seconds()})
-
-
 
 def run(args):
     checkpoint = f"./artifacts/{args.model_name}/best_model.ckpt"
     config_file = f"./artifacts/{args.model_name}/config.yaml"
     config = load_config(config_file)
-    dataset_config = load_config(args.data_path)
+    dataset_config = load_config(args.dataset_path)
     config = init_config(config, dataset_config, args)
 
     dataset_config["data_path"] = args.data_path
@@ -151,8 +109,8 @@ def run(args):
     print(f"*******model parameters: {model_config}")
     train_config = config["train"]
     train_config["devices"] = args.cuda
-    train_config["epochs"] = 20
-    
+    train_config["epochs"] = 50
+    config["logger"]["experiment_name"] = "transfer learning"
     for split in args.split:
         print(f"Training with {split} of the dataset...")
         train_loader_reduced = reduce_dataloader(train_loader, keep_fraction=split)
@@ -161,8 +119,10 @@ def run(args):
         config["logger"]["tags"]['pretrained'] = "False"
         l_logger, run_name, artifact_location = setup_logger(args, config)
         # Train non-pretrained model
-        model_non_pretrained = get_model_2(config, dataset, model_config, args)
+        model_non_pretrained = get_model_2(config, dataset, model_config,dataset_config, args)
         train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+        save_config(config, os.path.join(artifact_location, "config.yaml"))
+        model_non_pretrained = model_non_pretrained.to("cpu")
         # Train pretrained model
         config["logger"]["tags"]['pretrained'] = "True"
         l_logger, run_name, artifact_location = setup_logger(args, config)
@@ -171,12 +131,14 @@ def run(args):
 
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))
+        
 
 if __name__ == "__main__":
     seed_everything(42)
     parser = argparse.ArgumentParser(description="Run the traffic model.")
     parser.add_argument("--model_name", type=str, default="AirDiffTraj_5", help="Name of the model.")
     parser.add_argument("--data_path", type=str, default="./data/resampled/combined_traffic_resampled_landing_EHAM_200.pkl", help="Path to training data.")
+    parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
     parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning/artifacts", help="Path to training data.")
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")
     args = parser.parse_args()

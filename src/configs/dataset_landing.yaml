@@ -28,6 +28,7 @@ conditional_features:
     first: False
   runway:
     type: 'categorical'
+    #categories: ['14','16', '28', '34', 'N/A']
     categories: ['14','16', '28', '34', 'N/A']
   ADEP:
     type: 'categorical'

@@ -1,0 +1,104 @@
+dataset: landing
+data_path: ./data/traffic.pkl
+train_ratio: 0.8
+val_ratio: 0.2
+batch_size: 64
+test_batch_size: 32
+features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+#features: [ 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
+#features: [ 'latitude', 'longitude', 'altitude', 'timedelta']
+data_shape: 'image'
+conditional_features:
+  hour:
+    type: 'cyclic'
+    max_value: 24
+  month:
+    type: 'cyclic'
+    max_value: 12
+  day_of_week:
+    type: 'cyclic'
+    max_value: 6
+  cumdist:
+    type: 'continuous'
+    last: True
+    first: False
+  timedelta:
+    type: 'continuous'
+    last: True
+    first: False
+  runway:
+    type: 'categorical'
+    #categories: ['14','16', '28', '34', 'N/A']
+    categories: ['14','16', '28', '34', 'N/A', 'EHAM']
+  ADEP:
+    type: 'categorical'
+    categories: ['01FA', '19GA', '25GA', '38OI', '4GE2', '4OH4', '51GA', '63OH',
+       '71KY', '89GE', '98VA', 'BIKF', 'BIRK', 'CFX8', 'CYHU', 'CYUL',
+       'CYVR', 'CYYC', 'CYYT', 'CYYZ', 'DAAG', 'EBAW', 'EBBR', 'EBCI',
+       'EBFS', 'EBKT', 'EBLG', 'EBMB', 'EBOS', 'EDAM', 'EDAQ', 'EDAZ',
+       'EDDB', 'EDDC', 'EDDF', 'EDDG', 'EDDH', 'EDDK', 'EDDL', 'EDDM',
+       'EDDN', 'EDDP', 'EDDR', 'EDDS', 'EDDT', 'EDDV', 'EDDW', 'EDFE',
+       'EDFH', 'EDFM', 'EDFQ', 'EDFZ', 'EDGS', 'EDHK', 'EDJA', 'EDKZ',
+       'EDLA', 'EDLN', 'EDLP', 'EDLV', 'EDLW', 'EDMA', 'EDMF', 'EDMO',
+       'EDMS', 'EDNY', 'EDQA', 'EDQG', 'EDRY', 'EDRZ', 'EDSB', 'EDSW',
+       'EDTB', 'EDTG', 'EDTM', 'EDTX', 'EDTY', 'EDVE', 'EDVK', 'EDWE',
+       'EDWI', 'EDXW', 'EETN', 'EFHK', 'EFTP', 'EGAA', 'EGAC', 'EGAD',
+       'EGBB', 'EGBJ', 'EGCC', 'EGCN', 'EGFF', 'EGGD', 'EGGP', 'EGGW',
+       'EGHH', 'EGHI', 'EGHQ', 'EGHR', 'EGJB', 'EGJJ', 'EGKA', 'EGKB',
+       'EGKC', 'EGKK', 'EGKR', 'EGLC', 'EGLD', 'EGLF', 'EGLL', 'EGMC',
+       'EGNJ', 'EGNM', 'EGNP', 'EGNR', 'EGNS', 'EGNT', 'EGNV', 'EGNX',
+       'EGPD', 'EGPF', 'EGPH', 'EGPJ', 'EGSC', 'EGSH', 'EGSS', 'EGTB',
+       'EGTC', 'EGTE', 'EGTK', 'EGTU', 'EGWU', 'EGXE', 'EHAM', 'EHBD',
+       'EHBK', 'EHDL', 'EHEH', 'EHGG', 'EHGR', 'EHKD', 'EHLE', 'EHMZ',
+       'EHRD', 'EHTE', 'EHTW', 'EHTX', 'EHVK', 'EHWO', 'EICK', 'EIDW',
+       'EIKY', 'EINN', 'EIWT', 'EKAH', 'EKBI', 'EKCH', 'EKRK', 'EKYT',
+       'ELLX', 'ENAL', 'ENBR', 'ENGM', 'ENHD', 'ENUL', 'ENVA', 'ENZV',
+       'EPBY', 'EPGD', 'EPKK', 'EPKT', 'EPLL', 'EPMR', 'EPPO', 'EPWA',
+       'EPWR', 'ESGG', 'ESMS', 'ESMT', 'ESMX', 'ESOW', 'ESSA', 'ESSB',
+       'ESTA', 'ETAR', 'ETMN', 'ETSI', 'EVRA', 'EYVI', 'EYVP', 'FABB',
+       'FACT', 'FAGM', 'FAOR', 'FASI', 'GA92', 'GA95', 'GBYD', 'GCFV',
+       'GCLA', 'GCLP', 'GCRR', 'GMMN', 'GMMT', 'GMTT', 'GOBD', 'GVAC',
+       'GVBA', 'GVNP', 'KADW', 'KATL', 'KAUS', 'KBED', 'KBFI', 'KBMG',
+       'KBOS', 'KCMH', 'KDAL', 'KDFW', 'KEWR', 'KFTY', 'KGYR', 'KHIO',
+       'KHPN', 'KIAD', 'KIAH', 'KJFK', 'KLAS', 'KLAX', 'KLCK', 'KLDJ',
+       'KMCO', 'KMDW', 'KMIA', 'KMSP', 'KOPF', 'KORD', 'KORL', 'KPAE',
+       'KPDK', 'KPDX', 'KPHL', 'KRDU', 'KROG', 'KSEA', 'KSFO', 'KSJC',
+       'KSLC', 'KSTP', 'KTEB', 'KTPA', 'KUGN', 'KVNY', 'LBBG', 'LBWN',
+       'LCPH', 'LDPL', 'LDSP', 'LDSR', 'LDZA', 'LEAL', 'LEBL', 'LECU',
+       'LEGE', 'LEIB', 'LEJR', 'LEMD', 'LEMG', 'LEMU', 'LEPA', 'LETO',
+       'LEZL', 'LFAT', 'LFAV', 'LFBD', 'LFBF', 'LFBO', 'LFCR', 'LFHC',
+       'LFJR', 'LFKF', 'LFLB', 'LFLC', 'LFLI', 'LFLL', 'LFLP', 'LFLY',
+       'LFME', 'LFML', 'LFMN', 'LFMV', 'LFNR', 'LFOT', 'LFPB', 'LFPG',
+       'LFPM', 'LFPN', 'LFPO', 'LFQQ', 'LFRG', 'LFRQ', 'LFRS', 'LFSG',
+       'LFST', 'LFTW', 'LGAV', 'LGIR', 'LGKN', 'LGKO', 'LGMK', 'LGRP',
+       'LGSA', 'LGSM', 'LGSR', 'LHBP', 'LHSM', 'LIAR', 'LIBD', 'LIBG',
+       'LIBR', 'LICC', 'LICJ', 'LICZ', 'LIEA', 'LIED', 'LIEE', 'LIEO',
+       'LILG', 'LIMB', 'LIMC', 'LIME', 'LIMF', 'LIMJ', 'LIML', 'LIMZ',
+       'LIPB', 'LIPE', 'LIPH', 'LIPO', 'LIPQ', 'LIPR', 'LIPX', 'LIPZ',
+       'LIQL', 'LIRA', 'LIRF', 'LIRP', 'LIRQ', 'LIRZ', 'LJLJ', 'LJMB',
+       'LKCS', 'LKHK', 'LKKL', 'LKMT', 'LKPD', 'LKPM', 'LKPR', 'LKSN',
+       'LKTB', 'LKVO', 'LL59', 'LLBG', 'LLSD', 'LMML', 'LOWG', 'LOWI',
+       'LOWK', 'LOWL', 'LOWS', 'LOWW', 'LPAR', 'LPCS', 'LPEV', 'LPFR',
+       'LPPD', 'LPPR', 'LPPT', 'LRBS', 'LROP', 'LSGC', 'LSGG', 'LSGK',
+       'LSGL', 'LSME', 'LSMP', 'LSZA', 'LSZB', 'LSZC', 'LSZH', 'LSZL',
+       'LSZM', 'LSZR', 'LTAC', 'LTBA', 'LTBW', 'LTFE', 'LTFJ', 'LYBE',
+       'LYBT', 'LZIB', 'LZKZ', 'MMUN', 'MROC', 'MRPV', 'OBBI', 'OEDF',
+       'OERK', 'OKBK', 'OLBA', 'OMAA', 'OMAD', 'OMAF', 'OMDB', 'OMDW',
+       'OMRK', 'OMSJ', 'OTBD', 'OTBH', 'OTHH', 'PANC', 'RCTP', 'RJAA',
+       'RJAK', 'RJBB', 'RJTK', 'RJTT', 'RKSI', 'RKSS', 'RPLL', 'SAEZ',
+       'SBGL', 'SBGR', 'SBKP', 'SBMT', 'SBSJ', 'SEAS', 'SEQM', 'SKBO',
+       'SKGY', 'SPJC', 'TBPB', 'TXKF', 'UAAA', 'UBBB', 'UKBB', 'UKKK',
+       'ULLI', 'ULLP', 'UUBW', 'UUDD', 'UUEE', 'UUMO', 'UUWW', 'UWKD',
+       'VABB', 'VAJJ', 'VAPO', 'VGTJ', 'VHHH', 'VIDP', 'VOBL', 'VTBD',
+       'VTBS', 'WMKK', 'WSAC', 'WSSS', 'YBBN', 'YMML', 'YSSY', 'ZGGG',
+       'ZGSZ', 'ZUCK', 'ZZZZ', 'unknown']
+  ADES:
+    type: 'categorical'
+    categories: ['LSZH', 'EHAM']
+metar: False
+weather_grid:
+  #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
+  #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
+  variables : ['total_cloud_cover']
+  resolution: 1
+  function: True
