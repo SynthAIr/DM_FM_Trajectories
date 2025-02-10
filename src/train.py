@@ -1,5 +1,4 @@
 import argparse
-import time
 from datetime import datetime
 import os
 from typing import Any, Dict, Tuple
@@ -7,16 +6,9 @@ import torch
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from lightning.pytorch.loggers import MLFlowLogger
-from sklearn.preprocessing import MinMaxScaler
-import yaml
-from utils import TrafficDataset
 from utils.helper import load_config, save_config, load_and_prepare_data, get_model
 from utils.train_utils import get_dataloaders
-from utils.condition_utils import load_conditions
-from model.AirLatDiffTraj import Phase
 from model.diffusion import Diffusion
-from model.tcvae import TCVAE
-from lightning.pytorch.accelerators import find_usable_cuda_devices
 from model.flow_matching import FlowMatching, Wrapper
 
 
