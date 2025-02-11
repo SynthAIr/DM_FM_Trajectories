@@ -597,10 +597,10 @@ def run(args, logger = None):
     #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
-    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
-    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[2].data, model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[2].data, model_name = model_name)
     logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
     #density(reconstructions, model_name = model_name)
 
@@ -653,7 +653,7 @@ def run(args, logger = None):
 
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
-    JSD, KL, e_distance, fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
@@ -795,7 +795,7 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
     # Step 5: Compute the α-partial MMD² value
     mmd_squared = np.dot(w.T, np.dot(K_X, w)) + np.dot(v.T, np.dot(K_Y, v)) - 2 * np.dot(v.T, np.dot(K_XY, w))
     mmd_values = np.dot(K_X, w) + np.dot(K_Y, v) - 2 * np.dot(K_XY, w)
-    std_dev = np.std(np.sqrt(mmd_values), ddof=1)  # Sample standard deviation
+    std_dev = np.std(np.sqrt(np.abs(mmd_values)), ddof=1)  # Sample standard deviation
     
     return np.sqrt(mmd_squared), std_dev
 
@@ -864,7 +864,7 @@ def run_perturbation(args, logger = None):
     decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model)
     X_traffic = get_traffic_from_tensor(dataset[rnd][0].cpu().numpy().reshape(-1, len(dataset.features), length), dataset, trajectory_generation_model)
 
-    JSD, KL, e_distance, fig_1 = jensenshannon_distance(X_traffic.data,decoded.data , model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_traffic.data,decoded.data , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 

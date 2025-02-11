@@ -42,7 +42,10 @@ def compute_energy_distance(X, Y):
     term3 = np.mean(YY)
     
     energy_dist = np.sqrt(2 * term1 - term2 - term3)
-    return energy_dist
+    energy_values = np.sqrt(2 * XY - np.mean(XX) - np.mean(YY))  # Compute per-pair distances
+    std_dev = np.std(np.abs(energy_values), ddof=1)  # Sample standard deviation
+
+    return energy_dist, std_dev
 
 def jensenshannon_distance(df_subset1 : pd.DataFrame, df_subset2: pd.DataFrame, model_name="model"):
     # Assuming df_2 is a traffic.core.Traffic object containing trajectories
