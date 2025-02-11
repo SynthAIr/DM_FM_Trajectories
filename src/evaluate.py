@@ -97,7 +97,8 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         #model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
-    model = model.to(device)
+    if device:
+        model = model.to(device)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 

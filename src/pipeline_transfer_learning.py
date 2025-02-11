@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import lightning.pytorch as pl
+import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config
@@ -8,6 +9,7 @@ from evaluate import get_models
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
+import os
 
 from evaluation.similarity import jensenshannon_distance
 
@@ -109,7 +111,7 @@ def run(args):
     print(f"*******model parameters: {model_config}")
     train_config = config["train"]
     train_config["devices"] = args.cuda
-    train_config["epochs"] = 50
+    train_config["epochs"] = 5
     config["logger"]["experiment_name"] = "transfer learning"
     for split in args.split:
         print(f"Training with {split} of the dataset...")
@@ -118,6 +120,7 @@ def run(args):
         config["logger"]["tags"]['split'] = "{split}"
         config["logger"]["tags"]['pretrained'] = "False"
         l_logger, run_name, artifact_location = setup_logger(args, config)
+        l_logger.log_metrics({"split": split})
         # Train non-pretrained model
         model_non_pretrained = get_model_2(config, dataset, model_config,dataset_config, args)
         train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
@@ -126,7 +129,8 @@ def run(args):
         # Train pretrained model
         config["logger"]["tags"]['pretrained'] = "True"
         l_logger, run_name, artifact_location = setup_logger(args, config)
-        model_pretrained = get_models(config, dataset.parameters, checkpoint, dataset.scaler)        
+        l_logger.log_metrics({"split": split})
+        model_pretrained = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler)        
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
 
         config["data"] = dataset_config
