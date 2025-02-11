@@ -64,7 +64,7 @@ def get_checkpoint_path(logger_config: Dict[str, Any]):
 
     return checkpoint
 
-def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
+def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=None):
     """
     Load the trained model and create the trajectory generation model.
     """
@@ -97,8 +97,10 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler):
         #model = get_model(model_config)(model_config, fm)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
-    if device:
+    if not d:
         model = model.to(device)
+    else:
+        model = model.to(d)
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 
@@ -227,12 +229,14 @@ def plot_traffics(traffic_list: list,
     plt.legend()
     return fig
 
-def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None):
+def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None, d=None):
     # Select random samples from the dataset
     rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None else rnd
     X2, con, cat, grid = dataset[rnd]
     
     # Move data to GPU if available
+    if d:
+        device = d
     grid = grid.to(device)
     X_ = X2.reshape(n, len(dataset.features), -1).to(device)
     con_ = con.reshape(n, -1).to(device)
@@ -567,7 +571,7 @@ def run(args, logger = None):
     n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
-    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
+    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device)
     logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
 
     mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
@@ -791,7 +795,7 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
     # Step 5: Compute the α-partial MMD² value
     mmd_squared = np.dot(w.T, np.dot(K_X, w)) + np.dot(v.T, np.dot(K_Y, v)) - 2 * np.dot(v.T, np.dot(K_XY, w))
     mmd_values = np.dot(K_X, w) + np.dot(K_Y, v) - 2 * np.dot(K_XY, w)
-    std_dev = np.std(mmd_values, ddof=1)  # Sample standard deviation
+    std_dev = np.std(np.sqrt(mmd_values), ddof=1)  # Sample standard deviation
     
     return np.sqrt(mmd_squared), std_dev
 

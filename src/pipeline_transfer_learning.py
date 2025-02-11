@@ -5,7 +5,7 @@ import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config
-from evaluate import get_models
+from evaluate import get_models,reconstruct_and_plot, plot_traffics
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
@@ -111,8 +111,10 @@ def run(args):
     print(f"*******model parameters: {model_config}")
     train_config = config["train"]
     train_config["devices"] = args.cuda
-    train_config["epochs"] = 5
+    train_config["epochs"] = 50
     config["logger"]["experiment_name"] = "transfer learning"
+    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
+    n = 50
     for split in args.split:
         print(f"Training with {split} of the dataset...")
         train_loader_reduced = reduce_dataloader(train_loader, keep_fraction=split)
@@ -124,14 +126,32 @@ def run(args):
         # Train non-pretrained model
         model_non_pretrained = get_model_2(config, dataset, model_config,dataset_config, args)
         train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+        from traffic.algorithms.generation import Generation
+
+        trajectory_generation_model = Generation(
+            generation=model_non_pretrained,
+            features=dataset.parameters['features'],
+            scaler=dataset.scaler,
+        )
+
+        reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model_non_pretrained, trajectory_generation_model, n=n, d=device)
+        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+        l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+        l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
+
         save_config(config, os.path.join(artifact_location, "config.yaml"))
         model_non_pretrained = model_non_pretrained.to("cpu")
         # Train pretrained model
         config["logger"]["tags"]['pretrained'] = "True"
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
-        model_pretrained = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler)        
+        model_pretrained, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+
+        reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model_pretrained, trajectory_generation_model, n=n, d=device)
+        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+        l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+        l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
 
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))

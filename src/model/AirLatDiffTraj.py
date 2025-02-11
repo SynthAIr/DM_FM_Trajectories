@@ -39,7 +39,7 @@ class LatentDiffusionTraj(L.LightningModule):
             z = self.vae.get_latent_n(x, con, cat, grid, 1)
             #z = z.unsqueeze(1)
             z_hat, _ = self.generative_model.reconstruct(z, con, cat, grid)
-            self.log("reconstruction_loss", F.mse_loss(z_hat.float(), z))
+            #self.log("reconstruction_loss", F.mse_loss(z_hat.float(), z))
             print("Reconstruction loss", F.mse_loss(z_hat.float(), z))
             #print(z[0])
             #print(z_hat[0])
