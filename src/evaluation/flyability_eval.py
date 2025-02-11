@@ -240,9 +240,9 @@ def plot_simulation_results(
         sns.scatterplot(
             x=x,
             y=y,
-            hue=df["altitude"],
+            #hue=df["altitude"],
             palette="viridis",
-            size=df["altitude"],
+            #size=df["altitude"],
             sizes=(20, 200),
             legend="brief",
             ax=ax,
@@ -251,7 +251,7 @@ def plot_simulation_results(
                 0.1 if is_simulated else 1
             ),  # Adjust alpha based on whether it's simulated
         )
-        norm = Normalize(vmin=df["altitude"].min(), vmax=df["altitude"].max())
+        norm = Normalize(vmin=df["longitude"].min(), vmax=df["latitude"].max())
         sm = ScalarMappable(cmap="viridis", norm=norm)
         sm.set_array([])
         cbar = plt.colorbar(sm, ax=ax, aspect=40)

@@ -246,7 +246,10 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     # Plotting setup
     mse = torch.nn.functional.mse_loss(X_, x_rec)
+    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True)
+
     print("MSE:", mse)
+    print("MSE STD:", mse_std)
     title = 'Plot of Real (Red) and Reconstructed Data (Blue)'
     # Colors for different sets
     reconstructions = []
@@ -296,7 +299,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     # Show the plot
     fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
     
-    return reconstructions, mse, rnd, fig
+    return reconstructions, (mse, mse_std), rnd, fig
 
 
 def density(reconstructions, model_name="model"):
@@ -563,8 +566,8 @@ def run(args, logger = None):
     n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
-    reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
-    logger.log_metrics({"Eval_MSE": mse})
+    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name)
+    logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
 
     mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
     print("MSE Smooth", mse_smooth)
@@ -573,13 +576,13 @@ def run(args, logger = None):
     logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
 
     logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
-    mmd = compute_partial_mmd(reconstructions[0], reconstructions[1])
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[1])
     print("MMD", mmd)
-    logger.log_metrics({"mmd": mmd})
+    logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
-    mmd = compute_partial_mmd(reconstructions[0], reconstructions[2])
+    mmd,mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
     print("MMD smooth", mmd)
-    logger.log_metrics({"mmd_smooth": mmd})
+    logger.log_metrics({"mmd_smooth": mmd, "mmd_std_smooth": mmd_std})
 
     #if mse_smooth < mse:
         #reconstructions[1] = reconstructions[2]
@@ -658,9 +661,9 @@ def run(args, logger = None):
     )
     #fig_track_speed = plot_track_groundspeed([reconstructed_traf])
     #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
-    mmd_gen = compute_partial_mmd(reconstructed_traf, reconstructions[0])
+    mmd_gen, mmd_gen_std = compute_partial_mmd(reconstructed_traf, reconstructions[0])
     print("MMD GEN", mmd_gen)
-    logger.log_metrics({"mmd_gen": mmd_gen})
+    logger.log_metrics({"mmd_gen": mmd_gen, "mmd_gen_std": mmd_gen_std})
 
     training_trajectories = reconstructions[0]
     #synthetic_trajectories = reconstructions[1]
@@ -786,8 +789,10 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
     
     # Step 5: Compute the α-partial MMD² value
     mmd_squared = np.dot(w.T, np.dot(K_X, w)) + np.dot(v.T, np.dot(K_Y, v)) - 2 * np.dot(v.T, np.dot(K_XY, w))
+    mmd_values = np.dot(K_X, w) + np.dot(K_Y, v) - 2 * np.dot(K_XY, w)
+    std_dev = np.std(mmd_values, ddof=1)  # Sample standard deviation
     
-    return mmd_squared
+    return np.sqrt(mmd_squared), std_dev
 
 
 
