@@ -132,7 +132,7 @@ def run(args):
     print(f"*******model parameters: {model_config}")
     train_config = config["train"]
     train_config["devices"] = args.cuda
-    train_config["epochs"] = 2
+    train_config["epochs"] = 100
     config["logger"]["experiment_name"] = "transfer learning"
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     n = 100

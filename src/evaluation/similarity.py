@@ -32,9 +32,10 @@ def compute_energy_distance(X, Y):
     ny = len(Y)
     
     # Compute all pairwise distances
-    XX = cdist(X)
-    YY = cdist(Y)
-    XY = cdist(np.vstack([X, Y]))[:nx*ny]
+    XX = cdist(X, X)
+    YY = cdist(Y, Y)
+    #XY = cdist(np.vstack([X, Y]))[:nx*ny]
+    XY = cdist(X, Y)[:nx*ny]
     
     # Calculate energy distance
     term1 = 2 * np.mean(XY)
