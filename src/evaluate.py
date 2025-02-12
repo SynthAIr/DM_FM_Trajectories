@@ -224,7 +224,7 @@ def plot_traffics(traffic_list: list,
     plt.ylabel('Latitude')
     plt.title(title)
     for c, t in enumerate(traffic_list):
-        t.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
+        t.plot(ax1, alpha=0.1, color=colors[c], linewidth=0.3)
 
     plt.legend()
     return fig

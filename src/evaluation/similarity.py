@@ -14,7 +14,7 @@ from scipy.stats import gaussian_kde
 from scipy.spatial.distance import jensenshannon
 from scipy.special import rel_entr
 import matplotlib.pyplot as plt
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, squareform, cdist
 from traffic.core import Traffic
 
 
@@ -32,9 +32,9 @@ def compute_energy_distance(X, Y):
     ny = len(Y)
     
     # Compute all pairwise distances
-    XX = pdist(X)
-    YY = pdist(Y)
-    XY = pdist(np.vstack([X, Y]))[:nx*ny]
+    XX = cdist(X)
+    YY = cdist(Y)
+    XY = cdist(np.vstack([X, Y]))[:nx*ny]
     
     # Calculate energy distance
     term1 = 2 * np.mean(XY)
@@ -42,8 +42,8 @@ def compute_energy_distance(X, Y):
     term3 = np.mean(YY)
     
     energy_dist = np.sqrt(2 * term1 - term2 - term3)
-    energy_values = np.sqrt(2 * XY - np.mean(XX) - np.mean(YY))  # Compute per-pair distances
-    std_dev = np.std(np.abs(energy_values), ddof=1)  # Sample standard deviation
+    energy_values = np.sqrt(np.abs(2 * XY - np.mean(XX) - np.mean(YY)))  # Compute per-pair distances
+    std_dev = np.std(energy_values, ddof=1)  # Sample standard deviation
 
     return energy_dist, std_dev
 
@@ -54,8 +54,10 @@ def jensenshannon_distance(df_subset1 : pd.DataFrame, df_subset2: pd.DataFrame, 
     #df_subset2 = reconstructions[1]
     
     # Convert the first subset to a DataFrame and extract lat/lon
-    subset1_data = df_subset1[['latitude', 'longitude']].dropna().values
-    subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
+    #subset1_data = df_subset1[['latitude', 'longitude']].dropna().values
+    subset1_data = df_subset1.dropna().values
+    #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
+    subset2_data = df_subset2.dropna().values
     
     # Compute energy distance between the raw trajectories
     energy_dist = compute_energy_distance(subset1_data, subset2_data)

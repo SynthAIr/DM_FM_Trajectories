@@ -5,10 +5,11 @@ import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config
-from evaluate import get_models,reconstruct_and_plot, plot_traffics
+from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
+from evaluation.similarity import compute_energy_distance
 import os
 
 from evaluation.similarity import jensenshannon_distance
@@ -83,6 +84,26 @@ def get_model_2(config, dataset, model_config, dataset_config, args):
         model = get_model(model_config)(model_config)
     return model
 
+def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
+    l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
+    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
+    fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+    l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+    l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
+
+    #subset1_data = reconstructions[0].data.dropna().values
+    subset1_data = reconstructions[0].data[['latitude', 'longitude', 'altitude', 'groundspeed']].dropna().values
+    #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
+    subset2_data = reconstructions[2].data[['latitude', 'longitude', 'altitude', 'groundspeed']].dropna().values
+    #subset2_data = .data.dropna().values
+
+    # Compute energy distance between the raw trajectories
+    energy_dist, edist_std = compute_energy_distance(subset1_data, subset2_data)
+    l_logger.log_metrics({"edist": energy_dist, "edist_std": edist_std})
+
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
+    l_logger.log_metrics({"mmd": mmd, "mdd_std": mmd_std})
+
 
 
 def run(args):
@@ -111,15 +132,15 @@ def run(args):
     print(f"*******model parameters: {model_config}")
     train_config = config["train"]
     train_config["devices"] = args.cuda
-    train_config["epochs"] = 50
+    train_config["epochs"] = 2
     config["logger"]["experiment_name"] = "transfer learning"
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
-    n = 50
+    n = 100
     for split in args.split:
         print(f"Training with {split} of the dataset...")
         train_loader_reduced = reduce_dataloader(train_loader, keep_fraction=split)
         
-        config["logger"]["tags"]['split'] = "{split}"
+        config["logger"]["tags"]['split'] = f"{split}"
         config["logger"]["tags"]['pretrained'] = "False"
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
@@ -133,11 +154,8 @@ def run(args):
             features=dataset.parameters['features'],
             scaler=dataset.scaler,
         )
-
-        reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model_non_pretrained, trajectory_generation_model, n=n, d=device)
-        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
-        l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
-        l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
+        
+        local_eval(model_non_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
 
         save_config(config, os.path.join(artifact_location, "config.yaml"))
         model_non_pretrained = model_non_pretrained.to("cpu")
@@ -148,11 +166,7 @@ def run(args):
         model_pretrained, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
 
-        reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model_pretrained, trajectory_generation_model, n=n, d=device)
-        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
-        l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
-        l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
-
+        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))
         
