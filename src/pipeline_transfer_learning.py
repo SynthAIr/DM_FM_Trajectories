@@ -52,6 +52,11 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
     l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
+def train_encoder(vae, train_config, train_loader_reduced, val_loader, test_loader, config):
+    vae_logger, run_name, artifact_location = setup_logger(args, config) 
+    vae.train()
+    train(train_config, vae, train_loader_reduced, val_loader, test_loader, vae_logger, artifact_location)
+    vae.eval()
 
 
 def run(args):
@@ -93,9 +98,25 @@ def run(args):
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
         # Train non-pretrained model
-        model_non_pretrained = get_model_train(dataset, model_config,dataset_config, args)
-        train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+        model_non_pretrained = get_model_train(dataset, model_config,dataset_config, args, pretrained_VAE = False)
+        
+        def autoencoder_config():
+            config_file = f"{model_config['vae']}/config.yaml"
+            c = load_config(config_file)
+            c['model'] = init_model_config(c, dataset_config, dataset)
+            c["logger"]["tags"]['split'] = f"{split}"
+            c["logger"]["tags"]['pretrained'] = "False"
+            c["logger"]["experiment_name"] = "transfer learning"
+            c['model']["traj_length"] = dataset.parameters['seq_len']
+            c['model']['data'] = dataset_config
+            return c
 
+        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+            print("Training autoencoder")
+            c = autoencoder_config()
+            train_encoder(model_non_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
+
+        train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
         trajectory_generation_model = Generation(
             generation=model_non_pretrained,
             features=dataset.parameters['features'],
@@ -103,7 +124,6 @@ def run(args):
         )
         
         local_eval(model_non_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
-
         save_config(config, os.path.join(artifact_location, "config.yaml"))
         model_non_pretrained = model_non_pretrained.to("cpu")
         # Train pretrained model
@@ -111,6 +131,10 @@ def run(args):
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
         model_pretrained, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
+        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+            print("Training autoencoder")
+            c = autoencoder_config()
+            train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
 
         local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)

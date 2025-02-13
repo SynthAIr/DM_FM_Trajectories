@@ -112,7 +112,7 @@ def init_model_config(config, dataset_config, dataset):
     model_config["continuous_len"] = dataset.con_conditions.shape[1]
     return model_config
 
-def get_model_train(dataset, model_config, dataset_config, args):
+def get_model_train(dataset, model_config, dataset_config, args, pretrained_VAE = True):
     if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -121,7 +121,12 @@ def get_model_train(dataset, model_config, dataset_config, args):
         c = c['model']
         c["traj_length"] = dataset.parameters['seq_len']
         c['data'] = dataset_config
-        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
+        if pretrained_VAE:
+            print("Initing with pretrained VAE")
+            vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
+        else:
+            print("Initing not pretrained VAE")
+            vae = get_model(temp_conf)(c)
         vae.eval()
 
         if model_config["type"] == "LatDiff":
