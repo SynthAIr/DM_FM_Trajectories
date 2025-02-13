@@ -4,19 +4,16 @@ import lightning.pytorch as pl
 import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
-from utils.helper import load_and_prepare_data, get_model, save_config, load_config
+from utils.helper import load_and_prepare_data, get_model, save_config, load_config, init_config, init_model_config, get_model_train
 from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
 from evaluation.similarity import compute_energy_distance
 import os
-
-from evaluation.similarity import jensenshannon_distance
-
-def load_model(pretrained=False):
-    """Placeholder for model loading function."""
-    return get_model(pretrained=pretrained)  # Replace with actual model loading function
+from torch.utils.data import DataLoader, SubsetRandomSampler
+from traffic.algorithms.generation import Generation
+import numpy as np
 
 def train_and_evaluate(model, train_loader, val_loader, logger, split):
     """Train the model and evaluate its performance."""
@@ -26,27 +23,6 @@ def train_and_evaluate(model, train_loader, val_loader, logger, split):
     print(f"Split {split}: {results}")
     return results
 
-def init_config(config, dataset_config, args):
-    config["logger"]["artifact_location"] = args.artifact_location
-    config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
-    config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
-    config["logger"]["tags"]['experiment'] = "transfer learning"
-    return config
-
-def init_model_config(config, dataset_config, dataset):
-    model_config = config["model"]
-    model_config["data"] = dataset_config
-    model_config["in_channels"] = len(dataset_config["features"])
-    model_config["out_ch"] = len(dataset_config["features"])
-    model_config["weather_config"]["variables"] = len(dataset_config["weather_grid"]["variables"])
-    # print(f"*******dataset parameters: {dataset.parameters}")
-    model_config["traj_length"] = dataset.parameters['seq_len']
-    model_config["continuous_len"] = dataset.con_conditions.shape[1]
-    return model_config
-
-from torch.utils.data import DataLoader, SubsetRandomSampler
-import numpy as np
-
 def reduce_dataloader(dataloader, keep_fraction=0.2):
     dataset = dataloader.dataset  # Get the dataset from the original dataloader
     num_samples = int(len(dataset) * keep_fraction)  # Calculate the number of samples to keep
@@ -55,34 +31,6 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
     
     return DataLoader(dataset, batch_size=dataloader.batch_size, sampler=sampler, num_workers=dataloader.num_workers)
 
-def get_model_2(config, dataset, model_config, dataset_config, args):
-    if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
-        temp_conf = {"type": "TCVAE"}
-        config_file = f"{model_config['vae']}/config.yaml"
-        checkpoint = f"{model_config['vae']}/best_model.ckpt"
-        c = load_config(config_file)
-        c = c['model']
-        c["traj_length"] = dataset.parameters['seq_len']
-        c['data'] = dataset_config
-        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
-        vae.eval()
-
-        if model_config["type"] == "LatDiff":
-            print("Initing LatDiff")
-            diff = Diffusion(model_config, args.cuda)
-        else:
-            print("Initing LatFM")
-            m = FlowMatching(model_config, args.cuda)
-            diff = Wrapper(model_config, m, args.cuda)
-        #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
-        model = get_model(model_config)(model_config, vae, diff)
-    elif model_config["type"] == "FM":
-        model_config["traj_length"] = dataset.parameters['seq_len']
-        fm = FlowMatching(model_config, args.cuda, lat=True)
-        model = get_model(model_config)(model_config, fm, args.cuda)
-    else:
-        model = get_model(model_config)(model_config)
-    return model
 
 def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
@@ -111,7 +59,7 @@ def run(args):
     config_file = f"./artifacts/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_path)
-    config = init_config(config, dataset_config, args)
+    config = init_config(config, dataset_config, args, experiment = "transfer learning")
 
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
@@ -145,9 +93,8 @@ def run(args):
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
         # Train non-pretrained model
-        model_non_pretrained = get_model_2(config, dataset, model_config,dataset_config, args)
+        model_non_pretrained = get_model_train(dataset, model_config,dataset_config, args)
         train(train_config, model_non_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
-        from traffic.algorithms.generation import Generation
 
         trajectory_generation_model = Generation(
             generation=model_non_pretrained,

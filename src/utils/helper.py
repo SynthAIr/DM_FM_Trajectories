@@ -10,7 +10,8 @@ from typing import Tuple
 from model.baselines import PerturbationModel, TimeGAN
 from model.AirLatDiffTraj import LatentDiffusionTraj
 from model.tcvae import TCVAE
-from model.flow_matching import AirFMTraj
+from model.flow_matching import AirFMTraj, FlowMatching, Wrapper
+from model.diffusion import Diffusion
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -62,7 +63,7 @@ def load_and_prepare_data(dataset_config):
         shape=dataset_config["data_shape"],
         scaler=MinMaxScaler(feature_range=(-1, 1)),
         conditional_features = load_conditions(dataset_config) ,
-        variables = dataset_config["weather_grid"]["variables"],
+        variables = dataset_config["weather_grid"]["variables"] if dataset_config["weather_grid"]["enabled"] else [],
         metar=dataset_config["metar"],
     )
     traffic = Traffic.from_file(dataset_config["data_path"])
@@ -92,7 +93,53 @@ def get_model(configs):
         case _:
             raise NotImplemetedError("Invalid model name")
 
-#def get_model(configs):
+def init_config(config, dataset_config, args, experiment = "None"):
+    config["logger"]["artifact_location"] = args.artifact_location
+    config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
+    config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
+    config["logger"]["tags"]['experiment'] = experiment
+    return config
+
+def init_model_config(config, dataset_config, dataset):
+    model_config = config["model"]
+    model_config["data"] = dataset_config
+    model_config["in_channels"] = len(dataset_config["features"])
+    model_config["out_ch"] = len(dataset_config["features"])
+    model_config["weather_config"]["variables"] = len(dataset_config["weather_grid"]["variables"])
+    model_config["weather_config"]["weather_grid"] = dataset_config["weather_grid"]["enabled"]
+    # print(f"*******dataset parameters: {dataset.parameters}")
+    model_config["traj_length"] = dataset.parameters['seq_len']
+    model_config["continuous_len"] = dataset.con_conditions.shape[1]
+    return model_config
+
+def get_model_train(dataset, model_config, dataset_config, args):
+    if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+        temp_conf = {"type": "TCVAE"}
+        config_file = f"{model_config['vae']}/config.yaml"
+        checkpoint = f"{model_config['vae']}/best_model.ckpt"
+        c = load_config(config_file)
+        c = c['model']
+        c["traj_length"] = dataset.parameters['seq_len']
+        c['data'] = dataset_config
+        vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
+        vae.eval()
+
+        if model_config["type"] == "LatDiff":
+            print("Initing LatDiff")
+            diff = Diffusion(model_config, args.cuda)
+        else:
+            print("Initing LatFM")
+            m = FlowMatching(model_config, args.cuda)
+            diff = Wrapper(model_config, m, args.cuda)
+        #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
+        model = get_model(model_config)(model_config, vae, diff)
+    elif model_config["type"] == "FM":
+        model_config["traj_length"] = dataset.parameters['seq_len']
+        fm = FlowMatching(model_config, args.cuda, lat=True)
+        model = get_model(model_config)(model_config, fm, args.cuda)
+    else:
+        model = get_model(model_config)(model_config)
+    return model
 
 def extract_geographic_info(
     trajectories: Traffic,

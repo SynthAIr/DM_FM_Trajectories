@@ -250,21 +250,13 @@ class TrafficDataset(Dataset):
         self.data: torch.Tensor
         self.continuous_conditions: torch.Tensor
         self.categorical_conditions: torch.Tensor
-        self.lengths: List[int]
         self.variables = variables
         self.metar = metar
-        # self.target_transform = target_transform
-        # data = extract_features(traffic, features, info_params["features"])
 
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
 
-        #if data.shape[1] % 2 != 0:
-            # Remove the first time step to ensure `x` is even
-        #    data = data[:, 1:, :]
-
         data = data.reshape(data.shape[0], -1)
-
         print(data.shape)
 
         weather_variable_names = "".join(sorted(word for word in self.variables if word))
@@ -279,27 +271,6 @@ class TrafficDataset(Dataset):
         #pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
         #pressure_levels = np.array([ 925,  950,  975, 1000])[::-1]
         pressure_levels = np.array([1000])[::-1]
-
-        """
-        pressure_levels = np.array([   1,    2,    3,    5,    7,   10,   20,   30,   50,   70,  100,  125,
-        150,  175,  200,  225,  250,  300,  350,  400,  450,  500,  550,  600,
-        650,  700,  750,  775,  800,  825,  850,  875,  900,  925,  950,  975,
-       1000]])"""
-        """
-        def preprocess(ds):
-            if 'level' in ds[variables].coords and (len(variables) != 1 and variables[0] != "total_cloud_cover"):
-                print(variables)
-                # Ensure all pressure levels are present; missing levels will be filled with NaN
-                #ds = ds.reindex(level=pressure_levels, fill_value=np.nan)
-                return ds[variables].sel(level=pressure_levels)
-            else:
-                # Return the dataset unchanged if no 'level' coordinate is present
-                print("No level dimension found, processing single-level dataset.")
-                return ds[variables]
-            #return ds[variables].sel(level=pressure_levels)
-        """
-
-
         print(data.shape)
         assert not np.isnan(data).any(), "Tensor contains NaN values"
 
@@ -308,13 +279,12 @@ class TrafficDataset(Dataset):
             file_path = "/mnt/data/synthair/synthair_diffusion/data/metar/metar_landing.txt"  # Change this to the actual file path
             save_path = "/mnt/data/synthair/synthair_diffusion/data/metar/"
             self.grid_conditions = load_metar_data(file_path, traffic, save_path)
-        else:
+
+        elif self.variables is not None and len(self.variables) > 0:
             print("Initing with era5")
             save_path = "/mnt/data/synthair/synthair_diffusion/data/era5/"
             # List all .nc files in the directory
             nc_files = [save_path + f for f in os.listdir(save_path) if f.endswith('.nc')]
-                
-
             #self.grid_conditions = load_weather_data(nc_files, traffic, preprocess, save_path)
             grid_size = 5
             num_levels = 1
@@ -324,7 +294,6 @@ class TrafficDataset(Dataset):
                                                                  num_levels=num_levels, pressure_levels = pressure_levels, variable_names = weather_variable_names)
         
         assert len(traffic) == len(self.grid_conditions)
-
         print(len(self.grid_conditions))
         print(self.grid_conditions[0].shape)
 
@@ -366,10 +335,9 @@ class TrafficDataset(Dataset):
             if self.metar:
                 preprocessed , self.gid_cond_scaler = scale_conditions([self.grid_conditions[:,:-1]], 0)
                 self.grid_conditions = torch.cat((preprocessed, self.grid_conditions[:,-1].unsqueeze(1)), dim=1)
-            else:
+
+            elif self.variables is not None and len(self.variables) > 0:
                 self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 1)
-                #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
-                #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
                 print(self.grid_conditions.shape)
                 print(self.grid_conditions.ndim)
                 if self.grid_conditions.ndim != 1:
