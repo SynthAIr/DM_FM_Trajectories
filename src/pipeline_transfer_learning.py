@@ -175,7 +175,7 @@ if __name__ == "__main__":
     seed_everything(42)
     parser = argparse.ArgumentParser(description="Run the traffic model.")
     parser.add_argument("--model_name", type=str, default="AirDiffTraj_5", help="Name of the model.")
-    parser.add_argument("--data_path", type=str, default="./data/resampled/combined_traffic_resampled_landing_EHAM_200.pkl", help="Path to training data.")
+    parser.add_argument("--data_path", type=str, default="./data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
     parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
     parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning/artifacts", help="Path to training data.")
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")

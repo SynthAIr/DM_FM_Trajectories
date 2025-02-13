@@ -334,11 +334,16 @@ class TrafficDataset(Dataset):
 
                 if len(conditions_fs) == 0:
                     return torch.empty(len(data)), None
+
                 
                 if len(conditions_fs) == 0:
                     conditions = conditions_fs[0]
                 else:
                     conditions = np.concatenate(conditions_fs, axis=axis)
+
+                if conditions.shape[-1] == 0:
+                    print("No values in dataset")
+                    return torch.empty(len(data)), None
 
                 original_shape = conditions.shape
                 print(original_shape)
@@ -365,7 +370,10 @@ class TrafficDataset(Dataset):
                 self.grid_conditions, self.gid_cond_scaler = scale_conditions(self.grid_conditions, 1)
                 #self.grid_conditions = torch.FloatTensor(np.concatenate(self.grid_conditions, axis=0))
                 #self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), 12, 105, 81)
-                self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
+                print(self.grid_conditions.shape)
+                print(self.grid_conditions.ndim)
+                if self.grid_conditions.ndim != 1:
+                    self.grid_conditions = self.grid_conditions.reshape(-1, len(variables), num_levels, grid_size, grid_size)
 
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 

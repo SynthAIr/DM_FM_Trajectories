@@ -43,7 +43,7 @@ def compute_energy_distance(X, Y):
     term3 = np.mean(YY)
     
     energy_dist = np.sqrt(2 * term1 - term2 - term3)
-    energy_values = np.sqrt(np.abs(2 * XY - np.mean(XX) - np.mean(YY)))  # Compute per-pair distances
+    energy_values = 2 * XY - np.mean(XX) - np.mean(YY)  # Compute per-pair distances
     std_dev = np.std(energy_values, ddof=1)  # Sample standard deviation
 
     return energy_dist, std_dev
