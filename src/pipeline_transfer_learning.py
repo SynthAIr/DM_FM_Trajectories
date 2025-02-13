@@ -50,7 +50,7 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.log_metrics({"edist": energy_dist, "edist_std": edist_std})
 
     mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
-    l_logger.log_metrics({"mmd": mmd, "mdd_std": mmd_std})
+    l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
 
 
