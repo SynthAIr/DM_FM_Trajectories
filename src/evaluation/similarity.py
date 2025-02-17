@@ -30,6 +30,10 @@ def compute_energy_distance(X, Y):
     """
     nx = len(X)
     ny = len(Y)
+    print(X.shape)
+    print(Y.shape)
+    print(type(X))
+    print(type(Y))
     
     # Compute all pairwise distances
     XX = cdist(X, X)
@@ -63,6 +67,9 @@ def jensenshannon_distance(df_subset1 : pd.DataFrame, df_subset2: pd.DataFrame, 
     # Compute energy distance between the raw trajectories
     energy_dist = compute_energy_distance(subset1_data, subset2_data)
     print(f"Energy Distance between the two subsets: {energy_dist}")
+
+    subset1_data = df_subset1[['latitude', 'longitude']].dropna().values
+    subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
     
     # Kernel Density Estimation (KDE) for both subsets
     kde_subset1 = gaussian_kde(subset1_data.T)

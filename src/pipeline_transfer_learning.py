@@ -40,9 +40,12 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
 
     #subset1_data = reconstructions[0].data.dropna().values
-    subset1_data = reconstructions[0].data[['latitude', 'longitude', 'altitude', 'groundspeed']].dropna().values
+
+
+    cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
+    subset1_data = reconstructions[0].data[cols].dropna().values
     #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
-    subset2_data = reconstructions[2].data[['latitude', 'longitude', 'altitude', 'groundspeed']].dropna().values
+    subset2_data = reconstructions[2].data[cols].dropna().values
     #subset2_data = .data.dropna().values
 
     # Compute energy distance between the raw trajectories
@@ -134,7 +137,7 @@ def run(args):
         if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
             print("Training autoencoder")
             c = autoencoder_config()
-            train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+            train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
 
         local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)

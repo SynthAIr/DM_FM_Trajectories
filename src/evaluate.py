@@ -251,10 +251,12 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     # Plotting setup
     mse = torch.nn.functional.mse_loss(X_, x_rec)
-    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True)
+    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True, dim=1)
 
     print("MSE:", mse)
-    print("MSE STD:", mse_std)
+    print("MSE STD dim 0:", mse_std)
+    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True, dim=0)
+    print("MSE STD dim 1:", mse_std)
     title = 'Plot of Real (Red) and Reconstructed Data (Blue)'
     # Colors for different sets
     reconstructions = []
@@ -597,10 +599,11 @@ def run(args, logger = None):
     #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[1].data, model_name = model_name)
+    cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data, reconstructions[2].data, model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[2].data[cols], model_name = model_name)
     logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
     #density(reconstructions, model_name = model_name)
 
@@ -653,7 +656,7 @@ def run(args, logger = None):
 
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data,reconstructed_traf.data , model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols],reconstructed_traf.data[cols] , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
@@ -864,7 +867,7 @@ def run_perturbation(args, logger = None):
     decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model)
     X_traffic = get_traffic_from_tensor(dataset[rnd][0].cpu().numpy().reshape(-1, len(dataset.features), length), dataset, trajectory_generation_model)
 
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_traffic.data,decoded.data , model_name = model_name)
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_traffic.data[cols],decoded.data[cols] , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
