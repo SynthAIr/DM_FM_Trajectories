@@ -30,10 +30,6 @@ def compute_energy_distance(X, Y):
     """
     nx = len(X)
     ny = len(Y)
-    print(X.shape)
-    print(Y.shape)
-    print(type(X))
-    print(type(Y))
     
     # Compute all pairwise distances
     XX = cdist(X, X)

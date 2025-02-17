@@ -251,12 +251,8 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     # Plotting setup
     mse = torch.nn.functional.mse_loss(X_, x_rec)
-    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True, dim=1)
-
+    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True)
     print("MSE:", mse)
-    print("MSE STD dim 0:", mse_std)
-    mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True, dim=0)
-    print("MSE STD dim 1:", mse_std)
     title = 'Plot of Real (Red) and Reconstructed Data (Blue)'
     # Colors for different sets
     reconstructions = []
