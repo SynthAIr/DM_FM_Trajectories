@@ -251,8 +251,8 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     x_rec, steps = model.reconstruct(X_, con_, cat_, grid)
     
     # Plotting setup
-    local_X = X_[:,:4,:]
-    local_x_rec = x_rec[:,:4,:]
+    local_X = X_[:,:3,:]
+    local_x_rec = x_rec[:,:3,:]
     mse = torch.nn.functional.mse_loss(local_X, local_x_rec)
     mse_std = torch.std(((local_X - local_x_rec) ** 2), unbiased=True)
     mse_dist = torch.mean(((local_X  - local_x_rec) ** 2), dim=2).cpu().numpy()
@@ -618,11 +618,12 @@ def run(args, logger = None):
 
     # Create figure for filtered distributions
     fig_mse_dict, axes_mse_dict = plt.subplots(2,len(mse_mean)//2 , figsize=(16, 8))  # 8 subplots for 8 features
-
+    
+    names = ["longitude", "latitude", "altitude"]
     for i in range(len(mse_mean)):
         row, col = divmod(i, len(mse_mean)//2)
         sns.histplot(mse_filtered[:, i], bins=50, kde=True, ax=axes_mse_dict[row, col])
-        axes_mse_dict[row, col].set_title(f"MSE Distribution (Feature {i})")
+        axes_mse_dict[row, col].set_title(f"MSE Distribution (Feature {names[i]})")
         axes_mse_dict[row, col].set_xlabel("MSE")
         axes_mse_dict[row, col].set_ylabel("Frequency")
 
@@ -635,7 +636,7 @@ def run(args, logger = None):
     for i in range(len(mse_mean)):
         row, col = divmod(i, len(mse_mean)//2)
         sns.histplot(mse_outliers[:, i], bins=20, kde=True, ax=axes_mse_outliers_dict[row, col], color="orange")
-        axes_mse_outliers_dict[row, col].set_title(f"MSE Outliers (Feature {i})")
+        axes_mse_outliers_dict[row, col].set_title(f"MSE Outliers (Feature {names[i]})")
         axes_mse_outliers_dict[row, col].set_xlabel("MSE")
         axes_mse_outliers_dict[row, col].set_ylabel("Frequency")
 
