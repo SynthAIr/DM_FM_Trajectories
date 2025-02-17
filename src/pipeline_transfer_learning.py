@@ -34,10 +34,10 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
 
 def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
-    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
+    reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
     fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
     l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
-    l_logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
+    l_logger.log_metrics({"Eval_MSE": mse_dict["mse"], "Eval_MSE_std": mse_dict["mse_std"]})
 
     #subset1_data = reconstructions[0].data.dropna().values
 

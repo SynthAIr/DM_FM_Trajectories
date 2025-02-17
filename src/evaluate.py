@@ -39,6 +39,7 @@ from model.flow_matching import FlowMatching, Wrapper
 import cvxopt
 from traffic.algorithms.generation import compute_latlon_from_trackgs
 import pandas as pd
+import seaborn as sns
 
 
 def get_checkpoint_path(logger_config: Dict[str, Any]):
@@ -252,6 +253,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     # Plotting setup
     mse = torch.nn.functional.mse_loss(X_, x_rec)
     mse_std = torch.std(((X_ - x_rec) ** 2), unbiased=True)
+    mse_dist = torch.mean(((X_ - x_rec) ** 2), dim=1).cpu().numpy()
+    mse_dist_std = torch.std(((X_ - x_rec) ** 2), unbiased=True, dim=1).cpu().numpy()
+    mse_median = torch.median(((X_ - x_rec) ** 2))
+    print("Median", mse_median)
+
     print("MSE:", mse)
     title = 'Plot of Real (Red) and Reconstructed Data (Blue)'
     # Colors for different sets
@@ -300,9 +306,17 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
 
     fig = plot_traffics(reconstructions[:2], title = title)
     # Show the plot
-    fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
+    #fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
+
+    mse_dict = {
+            "mse": mse,
+            "mse_std": mse_std,
+            "mse_dist" : mse_dist,
+            "mse_dist_std" : mse_dist_std,
+            "mse_median" : mse_median,
+            }
     
-    return reconstructions, (mse, mse_std), rnd, fig
+    return reconstructions, mse_dict, rnd, fig
 
 
 def density(reconstructions, model_name="model"):
@@ -569,8 +583,26 @@ def run(args, logger = None):
     n_samples = 1
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
-    reconstructions, (mse, mse_std), rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device)
-    logger.log_metrics({"Eval_MSE": mse, "Eval_MSE_std": mse_std})
+    reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device)
+    logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
+    logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
+
+    fig_mse_dict, axes_mse_dict = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Plot MSE distribution
+    sns.histplot(mse_dict["mse_dist"], bins=50, kde=True, ax=axes_mse_dict[0])
+    axes_mse_dict[0].set_title("MSE Distribution")
+    axes_mse_dict[0].set_xlabel("MSE")
+    axes_mse_dict[0].set_ylabel("Frequency")
+
+    # Plot MSE Standard Deviation distribution
+    sns.histplot(mse_dict["mse_dist_std"], bins=50, kde=True, ax=axes_mse_dict[1])
+    axes_mse_dict[1].set_title("MSE Std Dev Distribution")
+    axes_mse_dict[1].set_xlabel("MSE Std Dev")
+    axes_mse_dict[1].set_ylabel("Frequency")
+    plt.tight_layout()
+
+    logger.experiment.log_figure(logger.run_id,fig_mse_dict, f"figures/Eval_mse_dist.png")
 
     mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
     print("MSE Smooth", mse_smooth)
