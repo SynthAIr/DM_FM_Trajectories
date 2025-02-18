@@ -669,6 +669,7 @@ def get_airport_data(icao_code: str):
     return airport_mapping.get(icao_code.upper(), None)  # Return None if not found
 
 def main_landing(base_path: str, data_source: str, ADES: str) -> None:
+    print("Preprocessing Landing")
 
     flight_points = (
     #landing_zurich_2019
@@ -680,9 +681,14 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
     #.drop_duplicates()
     .eval()
     )
+    print("Finished Preprocessing Landing")
 
     flight_points.data = add_time_based_features(flight_points.data, "timestamp")
-    flight_points.data['ADEP'] = flight_points.data['origin']
+    
+    if "origin" in flight_points.data.columns:
+        flight_points.data['ADEP'] = flight_points.data['origin']
+    else:
+        flight_points.data['ADEP'] = "ZZZZ"
     #flight_points.data['ADES'] = 'LSZH'
     flight_points.data['ADES'] = ADES
     flight_points.data['runway'] = ADES
@@ -709,13 +715,14 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
         )
         for flight in flight_points
     )
+    trajectories.data["ADEP"] = trajectories.data["ADEP"].fillna("ZZZZ")
 
     avg_sequence_length = 200
     # Save the prepared trajectories to a pickle file in the parent directory of the base_path
     os.makedirs(Path(base_path) / f"landing_{ADES}", exist_ok=True)
     save_path = (
         Path(base_path) / f"landing_{ADES}"
-        / f"/{data_source}_trajectories_{ADES}_{avg_sequence_length}.pkl"
+        / f"{data_source}_trajectories_{ADES}_{avg_sequence_length}.pkl"
     )
 
     trajectories.to_pickle(Path(save_path))
@@ -741,6 +748,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.landing:
+        args.data_source = "landing"
         main_landing(args.base_path, args.data_source, args.ADES)
     else:
         main(args.base_path, args.ADEP, args.ADES, args.data_source)

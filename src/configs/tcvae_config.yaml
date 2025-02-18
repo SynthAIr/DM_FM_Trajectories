@@ -11,14 +11,14 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: VAE
   run_name: VAE
-  tags: {'model': 'vae', 'dataset': 'opensky', 'weather': False}
+  tags: {'model': 'vae', 'dataset': 'dublin', 'weather': False}
   #experiment_name: TCVAE
   #run_name: TCVAE
   #tags: {'model': 'tcvae', 'dataset': 'opensky'}
   #
 model:
-  type: "TCVAE"
-  #type: "VAE"
+  #type: "TCVAE"
+  type: "VAE"
   h_dims: [256, 256, 256, 256]
   encoding_dim: 256
   #encoding_dim: 64
