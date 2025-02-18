@@ -253,6 +253,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     # Plotting setup
     local_X = X_[:,:3,:]
     local_x_rec = x_rec[:,:3,:]
+    print(local_X.shape, local_x_rec.shape)
     mse = torch.nn.functional.mse_loss(local_X, local_x_rec)
     mse_std = torch.std(((local_X - local_x_rec) ** 2), unbiased=True)
     mse_dist = torch.mean(((local_X  - local_x_rec) ** 2), dim=2).cpu().numpy()
@@ -590,59 +591,40 @@ def run(args, logger = None):
     logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
 
             # Convert PyTorch tensors to NumPy arrays
-        # Convert PyTorch tensors to NumPy arrays
+            # Convert PyTorch tensors to NumPy arrays
+    # Convert PyTorch tensors to NumPy arrays if necessary
+    # Convert PyTorch tensors to NumPy arrays if necessary
     mse_values_np = mse_dict["mse_dist"].cpu().numpy() if isinstance(mse_dict["mse_dist"], torch.Tensor) else np.array(mse_dict["mse_dist"])
     std_values_np = mse_dict["mse_dist_std"].cpu().numpy() if isinstance(mse_dict["mse_dist_std"], torch.Tensor) else np.array(mse_dict["mse_dist_std"])
 
-    # Compute statistics per feature (shape: (8,))
-    mse_mean = np.mean(mse_values_np, axis=0)
-    mse_std = np.std(mse_values_np, axis=0)
-    mse_median = np.median(mse_values_np, axis=0)
+    # Compute global statistics per feature across all 100 trajectories
+    mse_mean = np.mean(mse_values_np, axis=0)  # Shape: (n_features,)
+    mse_std = np.std(mse_values_np, axis=0)    # Shape: (n_features,)
 
-    std_mean = np.mean(std_values_np, axis=0)
-    std_std = np.std(std_values_np, axis=0)
-    std_median = np.median(std_values_np, axis=0)
-
-    # Define outlier thresholds (mean ± 2*std) for each feature
+    # Define outlier thresholds per feature (mean ± 2*std)
     mse_lower = mse_mean - 2 * mse_std
     mse_upper = mse_mean + 2 * mse_std
-    std_lower = std_mean - 2 * std_std
-    std_upper = std_mean + 2 * std_std
 
-    # Identify non-outliers and outliers
+    # Remove outliers: Replace them with NaN (they won't appear in plots)
     mse_filtered = np.where((mse_values_np >= mse_lower) & (mse_values_np <= mse_upper), mse_values_np, np.nan)
-    std_filtered = np.where((std_values_np >= std_lower) & (std_values_np <= std_upper), std_values_np, np.nan)
 
-    mse_outliers = np.where((mse_values_np < mse_lower) | (mse_values_np > mse_upper), mse_values_np, np.nan)
-    std_outliers = np.where((std_values_np < std_lower) | (std_values_np > std_upper), std_values_np, np.nan)
+    # Dynamically adjust subplots based on n_features
+    n_features = mse_values_np.shape[1]
+    n_cols = min(4, n_features)  # Max 4 columns per row
+    n_rows = int(np.ceil(n_features / n_cols))
 
-    # Create figure for filtered distributions
-    fig_mse_dict, axes_mse_dict = plt.subplots(2,len(mse_mean)//2 , figsize=(16, 8))  # 8 subplots for 8 features
+    fig_mse_dict, axes_mse_dict = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+    axes_mse_dict = np.array(axes_mse_dict).reshape(-1)  # Flatten axes for easy indexing
     
-    names = ["longitude", "latitude", "altitude"]
-    for i in range(len(mse_mean)):
-        row, col = divmod(i, len(mse_mean)//2)
-        sns.histplot(mse_filtered[:, i], bins=50, kde=True, ax=axes_mse_dict[row, col])
-        axes_mse_dict[row, col].set_title(f"MSE Distribution (Feature {names[i]})")
-        axes_mse_dict[row, col].set_xlabel("MSE")
-        axes_mse_dict[row, col].set_ylabel("Frequency")
+    names = ["latitude", "longitude", "altitude"]
+    for i in range(n_features):
+        sns.histplot(mse_filtered[:, i], bins=50, kde=True, ax=axes_mse_dict[i])
+        axes_mse_dict[i].set_title(f"MSE Dist (Feature {names[i]})")
+        axes_mse_dict[i].set_xlabel("MSE")
+        axes_mse_dict[i].set_ylabel("Frequency")
 
     plt.tight_layout()
     logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
-
-    # Create separate figure for outliers
-    fig_mse_outliers_dict, axes_mse_outliers_dict = plt.subplots(2, len(mse_mean)//2, figsize=(16, 8))
-
-    for i in range(len(mse_mean)):
-        row, col = divmod(i, len(mse_mean)//2)
-        sns.histplot(mse_outliers[:, i], bins=20, kde=True, ax=axes_mse_outliers_dict[row, col], color="orange")
-        axes_mse_outliers_dict[row, col].set_title(f"MSE Outliers (Feature {names[i]})")
-        axes_mse_outliers_dict[row, col].set_xlabel("MSE")
-        axes_mse_outliers_dict[row, col].set_ylabel("Frequency")
-
-    plt.tight_layout()
-    logger.experiment.log_figure(logger.run_id, fig_mse_outliers_dict, "figures/Eval_mse_outliers_per_feature.png")    
-
 
 
     mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
