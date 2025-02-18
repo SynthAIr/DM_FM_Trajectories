@@ -3,6 +3,7 @@ import pickle
 from traffic.core import Traffic
 from argparse import ArgumentParser
 from preprocess import clean_trajectory_data, clean_and_smooth_flight_with_tight_threshold
+import pandas as pd
 
 
 def load_traffic_object(filepath):
@@ -45,6 +46,40 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             traffic_obj.data['groundspeed'] = traffic_obj.data['groundspeed'] * 0.514444
             # f/min to m/s 
             traffic_obj.data['vertical_rate'] = traffic_obj.data['vertical_rate'] * 0.00508
+            c2 = 0
+            for f in traffic_obj:
+                if len(f) == 201:
+                    c2 += 1
+
+            if c2 != 0:
+                print("Found invalid flights", c2)
+                df = traffic_obj.data
+                # Count the number of samples per flight
+                flight_counts = df.groupby("flight_id").size()
+
+                # Identify flights with 201 samples
+                flights_to_trim = flight_counts[flight_counts == 201].index
+
+                # Remove one sample from each of these flights
+                trimmed_dfs = []
+                for flight_id in flights_to_trim:
+                    flight_df = df[df["flight_id"] == flight_id]
+                    trimmed_dfs.append(flight_df.iloc[1:])  # Drop the first sample (or change logic as needed)
+
+                # Combine modified and unmodified flights
+                new_df = pd.concat([df[~df["flight_id"].isin(flights_to_trim)]] + trimmed_dfs)
+                #new_df['runway'] = "toulouse"
+                # Create a new Traffic object
+                df = new_df
+
+                # Identify flight_ids that contain any NaN values
+                flights_with_nan = df[df.isna().any(axis=1)]["flight_id"].unique()
+
+                # Remove all rows associated with these flight_ids
+                df_clean = df[~df["flight_id"].isin(flights_with_nan)]
+
+                # Create a new Traffic object with the cleaned DataFrame
+                traffic_obj = Traffic(df_clean)
 
             
             if filter_alt:
@@ -78,10 +113,12 @@ def main(directory, target_length, output_filepath, filter_alt = False):
     big_traffic = big_traffic.cumulative_distance().eval()
     big_traffic = big_traffic = big_traffic.query('flight_id != "SWR983_17905"')
 
+    
+
     # Save the combined Traffic object
     if not filter_alt:
         ades_names = "_".join(sorted(big_traffic.data['ADES'].unique()))
-        output_filepath = f"./data/resampled/combined_traffic_resampled_landing_{ades_names}_{target_length}.pkl"
+        output_filepath = f"/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_{ades_names}_{target_length}.pkl"
     if big_traffic is not None:
         big_traffic.to_pickle(output_filepath)
         print(f"Saved combined Traffic object to {output_filepath}")
@@ -110,7 +147,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"./data/resampled/combined_traffic_resampled_landing_{target_length}.pkl" 
+    output_filepath = f"/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_{target_length}.pkl" 
     args.data_source = output_filepath
     
     # Process, interpolate, and combine all Traffic objects

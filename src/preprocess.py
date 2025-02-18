@@ -715,7 +715,43 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
         )
         for flight in flight_points
     )
+    
     trajectories.data["ADEP"] = trajectories.data["ADEP"].fillna("ZZZZ")
+
+    c2 = 0
+    for f in trajectories:
+        if len(f) == 201:
+            c2 += 1
+
+    if c2 != 0:
+        print("Found invalid flights", c2)
+        df = trajectories.data
+        # Count the number of samples per flight
+        flight_counts = df.groupby("flight_id").size()
+
+        # Identify flights with 201 samples
+        flights_to_trim = flight_counts[flight_counts == 201].index
+
+        # Remove one sample from each of these flights
+        trimmed_dfs = []
+        for flight_id in flights_to_trim:
+            flight_df = df[df["flight_id"] == flight_id]
+            trimmed_dfs.append(flight_df.iloc[1:])  # Drop the first sample (or change logic as needed)
+
+        # Combine modified and unmodified flights
+        new_df = pd.concat([df[~df["flight_id"].isin(flights_to_trim)]] + trimmed_dfs)
+        #new_df['runway'] = "toulouse"
+        # Create a new Traffic object
+        df = new_df
+
+        # Identify flight_ids that contain any NaN values
+        flights_with_nan = df[df.isna().any(axis=1)]["flight_id"].unique()
+
+        # Remove all rows associated with these flight_ids
+        df_clean = df[~df["flight_id"].isin(flights_with_nan)]
+
+        # Create a new Traffic object with the cleaned DataFrame
+        trajectories = Traffic(df_clean)
 
     avg_sequence_length = 200
     # Save the prepared trajectories to a pickle file in the parent directory of the base_path
