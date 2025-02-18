@@ -536,6 +536,39 @@ def get_figure_from_sample_steps(steps, dataset, length = 200):
     
     return fig
 
+def get_mse_distribution(mse_dict):
+    mse_values_np = mse_dict["mse_dist"].cpu().numpy() if isinstance(mse_dict["mse_dist"], torch.Tensor) else np.array(mse_dict["mse_dist"])
+    std_values_np = mse_dict["mse_dist_std"].cpu().numpy() if isinstance(mse_dict["mse_dist_std"], torch.Tensor) else np.array(mse_dict["mse_dist_std"])
+
+    # Compute global statistics per feature across all 100 trajectories
+    mse_mean = np.mean(mse_values_np, axis=0)  # Shape: (n_features,)
+    mse_std = np.std(mse_values_np, axis=0)    # Shape: (n_features,)
+
+    # Define outlier thresholds per feature (mean ± 2*std)
+    mse_lower = mse_mean - 2 * mse_std
+    mse_upper = mse_mean + 2 * mse_std
+
+    # Remove outliers: Replace them with NaN (they won't appear in plots)
+    mse_filtered = np.where((mse_values_np >= mse_lower) & (mse_values_np <= mse_upper), mse_values_np, np.nan)
+
+    # Dynamically adjust subplots based on n_features
+    n_features = mse_values_np.shape[1]
+    n_cols = min(4, n_features)  # Max 4 columns per row
+    n_rows = int(np.ceil(n_features / n_cols))
+
+    fig_mse_dict, axes_mse_dict = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+    axes_mse_dict = np.array(axes_mse_dict).reshape(-1)  # Flatten axes for easy indexing
+    
+    names = ["latitude", "longitude", "altitude"]
+    for i in range(n_features):
+        sns.histplot(mse_filtered[:, i], bins=50, kde=True, ax=axes_mse_dict[i])
+        axes_mse_dict[i].set_title(f"MSE Dist (Feature {names[i]})")
+        axes_mse_dict[i].set_xlabel("MSE")
+        axes_mse_dict[i].set_ylabel("Frequency")
+
+    plt.tight_layout()
+    return fig_mse_dict
+
 def run(args, logger = None):
     np.random.seed(42)
     global device 
@@ -594,36 +627,9 @@ def run(args, logger = None):
             # Convert PyTorch tensors to NumPy arrays
     # Convert PyTorch tensors to NumPy arrays if necessary
     # Convert PyTorch tensors to NumPy arrays if necessary
-    mse_values_np = mse_dict["mse_dist"].cpu().numpy() if isinstance(mse_dict["mse_dist"], torch.Tensor) else np.array(mse_dict["mse_dist"])
-    std_values_np = mse_dict["mse_dist_std"].cpu().numpy() if isinstance(mse_dict["mse_dist_std"], torch.Tensor) else np.array(mse_dict["mse_dist_std"])
-
-    # Compute global statistics per feature across all 100 trajectories
-    mse_mean = np.mean(mse_values_np, axis=0)  # Shape: (n_features,)
-    mse_std = np.std(mse_values_np, axis=0)    # Shape: (n_features,)
-
-    # Define outlier thresholds per feature (mean ± 2*std)
-    mse_lower = mse_mean - 2 * mse_std
-    mse_upper = mse_mean + 2 * mse_std
-
-    # Remove outliers: Replace them with NaN (they won't appear in plots)
-    mse_filtered = np.where((mse_values_np >= mse_lower) & (mse_values_np <= mse_upper), mse_values_np, np.nan)
-
-    # Dynamically adjust subplots based on n_features
-    n_features = mse_values_np.shape[1]
-    n_cols = min(4, n_features)  # Max 4 columns per row
-    n_rows = int(np.ceil(n_features / n_cols))
-
-    fig_mse_dict, axes_mse_dict = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
-    axes_mse_dict = np.array(axes_mse_dict).reshape(-1)  # Flatten axes for easy indexing
     
-    names = ["latitude", "longitude", "altitude"]
-    for i in range(n_features):
-        sns.histplot(mse_filtered[:, i], bins=50, kde=True, ax=axes_mse_dict[i])
-        axes_mse_dict[i].set_title(f"MSE Dist (Feature {names[i]})")
-        axes_mse_dict[i].set_xlabel("MSE")
-        axes_mse_dict[i].set_ylabel("Frequency")
 
-    plt.tight_layout()
+    fig_mse_dict = get_mse_distribution(mse_dict)
     logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
 
 

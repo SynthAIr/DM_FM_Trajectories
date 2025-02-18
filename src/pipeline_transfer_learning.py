@@ -5,7 +5,7 @@ import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config, init_config, init_model_config, get_model_train
-from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd
+from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd, get_mse_distribution
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
@@ -40,7 +40,10 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.log_metrics({"Eval_MSE": mse_dict["mse"], "Eval_MSE_std": mse_dict["mse_std"]})
 
     #subset1_data = reconstructions[0].data.dropna().values
+    
 
+    fig_mse_dict = get_mse_distribution(mse_dict)
+    l_logger.experiment.log_figure(l_logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
 
     cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
     subset1_data = reconstructions[0].data[cols].dropna().values
@@ -60,6 +63,7 @@ def train_encoder(vae, train_config, train_loader_reduced, val_loader, test_load
     vae.train()
     train(train_config, vae, train_loader_reduced, val_loader, test_loader, vae_logger, artifact_location)
     vae.eval()
+    return run_name
 
 
 def run(args):
@@ -68,11 +72,9 @@ def run(args):
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_path)
     config = init_config(config, dataset_config, args, experiment = "transfer learning")
-
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
     model_config = init_model_config(config, dataset_config, dataset)
-
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
 
@@ -143,7 +145,149 @@ def run(args):
         local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))
+
+def run_experiment(args):
+    experiment_name = "transfer learning EIDW"
+    checkpoint = f"./artifacts/{args.model_name}/best_model.ckpt"
+    config_file = f"./artifacts/{args.model_name}/config.yaml"
+    config = load_config(config_file)
+    dataset_config = load_config(args.dataset_path)
+    config = init_config(config, dataset_config, args, experiment = experiment_name)
+    dataset_config["data_path"] = args.data_path
+    dataset, traffic = load_and_prepare_data(dataset_config)
+    model_config = init_model_config(config, dataset_config, dataset)
+    print(dataset.data.shape)
+    print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
+
+    train_loader, val_loader, test_loader = get_dataloaders(
+        dataset,
+        dataset_config["train_ratio"],
+        dataset_config["val_ratio"],
+        dataset_config["batch_size"],
+        dataset_config["test_batch_size"],
+    )
+    print("Dataset loaded!")
+    print(f"*******model parameters: {model_config}")
+    train_config = config["train"]
+    train_config["devices"] = args.cuda
+    train_config["epochs"] = 100
+    config["logger"]["experiment_name"] = experiment_name
+    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
+    n = 100
+    for split in args.split:
+        print(f"Training with {split} of the dataset...")
+        train_loader_reduced = reduce_dataloader(train_loader, keep_fraction=split)
         
+        def autoencoder_config():
+            config_file = f"{model_config['vae']}/config.yaml"
+            c = load_config(config_file)
+            c['model'] = init_model_config(c, dataset_config, dataset)
+            c["logger"]["tags"]['split'] = f"{split}"
+            c["logger"]["tags"]['pretrained'] = "False"
+            c["logger"]["experiment_name"] = experiment_name
+            c['model']["traj_length"] = dataset.parameters['seq_len']
+            c['model']['data'] = dataset_config
+            return c
+
+        # Train pretrained model
+        config["logger"]["tags"]['pretrained'] = "True"
+        l_logger, run_name, artifact_location = setup_logger(args, config)
+        l_logger.log_metrics({"split": split})
+        model_pretrained, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
+
+        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+            print("Training autoencoder")
+            c = autoencoder_config()
+            run_name = train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
+            l_logger.log_metrics({"vae": run_name})
+
+        train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
+        config["data"] = dataset_config
+        save_config(config, os.path.join(artifact_location, "config.yaml"))
+
+
+def get_lowest_model_folder(base_path, model_name):
+    existing_folders = []
+    default_folder = None
+    
+    if os.path.exists(base_path):
+        for folder in os.listdir(base_path):
+            if folder == model_name:
+                default_folder = folder
+            elif folder.startswith(f"{model_name}_"):
+                try:
+                    num = int(folder.split("_")[-1])
+                    existing_folders.append(num)
+                except ValueError:
+                    continue
+    
+    if default_folder:
+        return default_folder
+    
+    existing_folders.sort()
+    return f"{model_name}_{existing_folders[0]}" if existing_folders else model_name
+
+def increment_model_name(model_name):
+    if "_" in model_name:
+        name, num = model_name.rsplit("_", 1)
+        return f"{name}_{int(num) + 1}"
+    return f"{model_name}_1"
+
+def run_eval(args):
+    artifact_location = f"{args.artifact_location}/experiment_{args.model_name}"
+    start_model = get_lowest_model_folder(artifact_location, args.model_name)
+
+    checkpoint = f"{artifact_location}/{start_model}/best_model.ckpt"
+    config_file = f"{artifact_location}/{start_model}/config.yaml"
+    config = load_config(config_file)
+    dataset_config = load_config(args.dataset_path)
+    config = init_config(config, dataset_config, args, experiment = "transfer learning eval")
+
+    dataset_config["data_path"] = args.data_path
+    dataset, traffic = load_and_prepare_data(dataset_config)
+    model_config = init_model_config(config, dataset_config, dataset)
+
+    print(dataset.data.shape)
+    print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
+    print("Dataset loaded!")
+    print(f"*******model parameters: {model_config}")
+    train_config = config["train"]
+    train_config["devices"] = args.cuda
+    train_config["epochs"] = 100
+    config["logger"]["experiment_name"] = "transfer learning eval"
+    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
+    n = 100
+    model_name = start_model
+    for split in args.split:
+        print(f"Training with {split} of the dataset...")
+        config["logger"]["tags"]['split'] = f"{split}"
+        config["logger"]["tags"]['pretrained'] = "False"
+
+        l_logger, run_name, artifact_location = setup_logger(args, config)
+        l_logger.log_metrics({"split": split})
+
+        checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
+        model, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
+        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+            print("Training autoencoder")
+            model.vae = get_model_train(dataset, model_config,dataset_config, args, pretrained_VAE = False)
+
+        local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split)
+        model = model.to("cpu")
+        model_name = increment_model_name(model_name)
+        # Train pretrained model
+
+        checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
+        config["logger"]["tags"]['pretrained'] = "True"
+        l_logger, run_name, artifact_location = setup_logger(args, config)
+        l_logger.log_metrics({"split": split})
+
+        model, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
+        local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split)
+        config["data"] = dataset_config
+        model_name = increment_model_name(model_name)
+
 
 if __name__ == "__main__":
     seed_everything(42)
@@ -151,9 +295,14 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default="AirDiffTraj_5", help="Name of the model.")
     parser.add_argument("--data_path", type=str, default="./data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
     parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
-    parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning/artifacts", help="Path to training data.")
+    parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/artifacts", help="Path to training data.")
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")
+    parser.add_argument("--train", dest="run_train", action='store_true')
     args = parser.parse_args()
     args.split = [0.05, 0.2, 0.5, 1.0]
-    run(args)
+    if args.run_train:
+        #run(args)
+        run_experiment(args)
+    else:
+        run_eval(args)
 

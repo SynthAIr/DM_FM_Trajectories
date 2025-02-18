@@ -28,8 +28,7 @@ conditional_features:
     first: False
   runway:
     type: 'categorical'
-    #categories: ['14','16', '28', '34', 'N/A']
-    categories: ['14','16', '28', '34', 'N/A', 'EIDW']
+    categories: ['14','16', '28', '34', 'N/A', "EHAM", "LFPG", "EIDW", "EGLL", "EGLC", "LFBO"]
   ADEP:
     type: 'categorical'
     categories: ['01FA', '25GA', '60CO', 'BIKF', 'BIRK', 'CT09', 'CT15', 'CT29',
@@ -86,7 +85,7 @@ conditional_features:
        'VIDP', 'VTBD', 'VTBS', 'WMKK', 'WSSS', 'YMML', 'ZGSZ', 'ZZZZ']
   ADES:
     type: 'categorical'
-    categories: ['LSZH', 'EIDW']
+    categories: ["EHAM", "LFPG", "EIDW", "EGLL", "EGLC", "LFBO", "LSZH"]
 metar: False
 weather_grid:
   #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
