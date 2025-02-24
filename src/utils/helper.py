@@ -125,8 +125,8 @@ def get_model_train(dataset, model_config, dataset_config, args, pretrained_VAE 
             print("Initing with pretrained VAE")
             vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset.parameters, config = c)
         else:
-            print("Initing not pretrained VAE")
-            vae = get_model(temp_conf)(c)
+            print("Initing with pretrained VAE")
+            vae = get_model(temp_conf)(temp_conf)
         vae.eval()
 
         if model_config["type"] == "LatDiff":

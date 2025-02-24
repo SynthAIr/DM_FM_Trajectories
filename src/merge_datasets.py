@@ -100,6 +100,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 print("Columns:", traffic_obj.data.columns)
                     
                     
+            traffic_obj.data["ADEP"] = traffic_obj.data["ADEP"].fillna("ZZZZ")
             # Combine into a single Traffic object
             if big_traffic is None:
                 big_traffic = traffic_obj

@@ -46,6 +46,7 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.experiment.log_figure(l_logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
 
     cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
+    #cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
     subset1_data = reconstructions[0].data[cols].dropna().values
     #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
     subset2_data = reconstructions[2].data[cols].dropna().values
@@ -148,8 +149,8 @@ def run(args):
 
 def run_experiment(args):
     experiment_name = "transfer learning EIDW"
-    checkpoint = f"./artifacts/{args.model_name}/best_model.ckpt"
-    config_file = f"./artifacts/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_path)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
@@ -235,14 +236,16 @@ def increment_model_name(model_name):
     return f"{model_name}_1"
 
 def run_eval(args):
-    artifact_location = f"{args.artifact_location}/experiment_{args.model_name}"
-    start_model = get_lowest_model_folder(artifact_location, args.model_name)
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/config.yaml"
+    artifact_location = args.artifact_location
+    #start_model = get_lowest_model_folder(artifact_location, args.model_name)
 
-    checkpoint = f"{artifact_location}/{start_model}/best_model.ckpt"
-    config_file = f"{artifact_location}/{start_model}/config.yaml"
+    #checkpoint = f"{artifact_location}/{start_model}/best_model.ckpt"
+    #config_file = f"{artifact_location}/{start_model}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_path)
-    config = init_config(config, dataset_config, args, experiment = "transfer learning eval")
+    config = init_config(config, dataset_config, args, experiment = "transfer learning EIDW")
 
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
@@ -255,54 +258,40 @@ def run_eval(args):
     train_config = config["train"]
     train_config["devices"] = args.cuda
     train_config["epochs"] = 100
-    config["logger"]["experiment_name"] = "transfer learning eval"
+    config["logger"]["experiment_name"] = "transfer learning EIDW"
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     n = 100
-    model_name = start_model
-    for split in args.split:
-        print(f"Training with {split} of the dataset...")
-        config["logger"]["tags"]['split'] = f"{split}"
-        config["logger"]["tags"]['pretrained'] = "False"
+    #model_name = start_model
+    split = 1.0
+    #print(f"Training with {split} of the dataset...")
+    config["logger"]["tags"]['model_id'] = f"baseline"
+    #config["logger"]["tags"]['pretrained'] = "False"
 
-        l_logger, run_name, artifact_location = setup_logger(args, config)
-        l_logger.log_metrics({"split": split})
+    l_logger, run_name, artifact_location = setup_logger(args, config)
+    #l_logger.log_metrics({"split": split})
 
-        checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
-        model, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
-        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
-            print("Training autoencoder")
-            model.vae = get_model_train(dataset, model_config,dataset_config, args, pretrained_VAE = False)
+    #checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
+    model, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
 
-        local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split)
-        model = model.to("cpu")
-        model_name = increment_model_name(model_name)
-        # Train pretrained model
-
-        checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
-        config["logger"]["tags"]['pretrained'] = "True"
-        l_logger, run_name, artifact_location = setup_logger(args, config)
-        l_logger.log_metrics({"split": split})
-
-        model, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
-        local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split)
-        config["data"] = dataset_config
-        model_name = increment_model_name(model_name)
+    local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split)
 
 
 if __name__ == "__main__":
     seed_everything(42)
     parser = argparse.ArgumentParser(description="Run the traffic model.")
     parser.add_argument("--model_name", type=str, default="AirDiffTraj_5", help="Name of the model.")
-    parser.add_argument("--data_path", type=str, default="./data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
+    parser.add_argument("--data_path", type=str, default="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
     parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
     parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/artifacts", help="Path to training data.")
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")
-    parser.add_argument("--train", dest="run_train", action='store_true')
+    parser.add_argument("--eval", dest="run_train", action='store_true')
     args = parser.parse_args()
     args.split = [0.05, 0.2, 0.5, 1.0]
     if args.run_train:
-        #run(args)
-        run_experiment(args)
-    else:
+        print("Running EVAL")
         run_eval(args)
+        #run(args)
+    else:
+        print("Running Experiments")
+        run_experiment(args)
 
