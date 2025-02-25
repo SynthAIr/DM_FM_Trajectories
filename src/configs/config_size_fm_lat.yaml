@@ -1,0 +1,51 @@
+train:
+  epochs: 100
+  accelerator: 'gpu'
+  devices: 1
+  seed: 37
+  gradient_clip_val: 0.5
+  log_every_n_steps: 2
+  early_stop_patience: 60
+  precision: 'high'
+logger:
+  mlflow_uri: http://100.64.0.15:7979
+  experiment_name: AirLatFMTraj
+  run_name: AirLatFMTraj
+  tags: {'model': 'Latent Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "landing_4"}
+  
+model:
+  type: "LatFM"
+  vae: "./artifacts/VAE_landing_4"
+  #h_dims: [128, 256, 256, 128]
+  #encoding_dim: 256
+  #encoding_dim: 128
+  lr: 4.9e-5
+  lr_step_size: 200
+  lr_gamma: 0.5
+  attr_dim: 32
+  guidance_scale: 1.0
+  resolution: 64
+  in_channels: 8
+  out_ch: 8
+  ch: 32
+  ch_mult: [ 1, 2, 4, 4, 8 ]
+  num_res_blocks: 8
+  attn_resolutions: [32, 16]
+  dropout: 0.0
+  resamp_with_conv: True
+  cnn: True
+  diffusion:
+    ema: True
+    #ema_rate: 0.999999
+    ema_rate: 0.99999
+  weather_config:
+    weather_grid: False
+    variables: 1
+    levels: 1
+    lon: 5
+    lat: 5
+    type: "ADES"
+      #type: "Function"
+      #type: "Grid"
+      #lon: 81
+      #lat: 106
