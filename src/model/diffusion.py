@@ -25,7 +25,8 @@ class Diffusion(Generative):
         self.resamp_with_conv = config["resamp_with_conv"]
         #jself.in_channels = config["in_channels"]
         self.in_channels = 1
-        self.resolution = self.ch
+        
+        self.resolution = config["resolution"] if "resolution" in config.keys() else self.ch
         self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         #self.use_linear_attn = config["use_linear_attn"]
         #self.attn_type = config["attn_type"]

@@ -550,10 +550,10 @@ class UNET(nn.Module):
         out_ch = in_channels
         resolution = config["traj_length"] if resolution is None else resolution
         resamp_with_conv = ["resamp_with_conv"]
-        num_timesteps = config["diffusion"]["num_diffusion_timesteps"]
+        #num_timesteps = config["diffusion"]["num_diffusion_timesteps"]
 
-        if config["type"] == 'bayesian':
-            self.logvar = nn.Parameter(torch.zeros(num_timesteps))
+        #if config["type"] == 'bayesian':
+            #self.logvar = nn.Parameter(torch.zeros(num_timesteps))
 
         self.ch = ch
         self.temb_ch = self.ch * 4
@@ -651,8 +651,9 @@ class UNET(nn.Module):
     def forward(self, x, t, extra_embed=None):
         #print(x.shape, self.resolution)
         if x.shape[2] != self.resolution:
-            print(x.shape[2], self.resolution)
-            assert x.shape[2] == self.resolution
+            #print(x.shape[2], self.resolution)
+            #assert x.shape[2] == self.resolution
+            pass
             
 
 

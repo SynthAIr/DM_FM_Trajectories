@@ -102,6 +102,10 @@ def run(args: argparse.Namespace):
 
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = "cloud coverage real")
+
+    if hasattr(args, 'model_name'):
+        config['logger']['run_name'] = args.model_name
+
     l_logger, run_name, artifact_location = setup_logger(args, config)
 
     #dataset_config = configs["data"]

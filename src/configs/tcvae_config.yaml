@@ -15,7 +15,6 @@ logger:
   #experiment_name: TCVAE
   #run_name: TCVAE
   #tags: {'model': 'tcvae', 'dataset': 'opensky'}
-  #
 model:
   #type: "TCVAE"
   type: "VAE"

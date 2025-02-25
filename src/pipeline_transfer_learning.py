@@ -56,7 +56,7 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     energy_dist, edist_std = compute_energy_distance(subset1_data, subset2_data)
     l_logger.log_metrics({"edist": energy_dist, "edist_std": edist_std})
 
-    mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
+    mmd, mmd_std = compute_partial_mmd(subset1_data, subset2_data)
     l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
 def train_encoder(vae, train_config, train_loader_reduced, val_loader, test_loader, config):

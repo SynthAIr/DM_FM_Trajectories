@@ -10,17 +10,8 @@ from utils.helper import load_config
 def run(args):
     configs = load_config(args.config_file)
     logger_config = configs["logger"]
-    if args.model_name is None:
-        l_logger, run_name, artifact_location = train_run(args)
-        args.model_name = run_name
-    else:
-        l_logger = MLFlowLogger(
-            experiment_name=logger_config["experiment_name"],
-            run_name=args.model_name,
-            tracking_uri=logger_config["mlflow_uri"],
-            tags=logger_config["tags"],
-            artifact_location=args.artifact_location,
-        )
+    l_logger, run_name, artifact_location = train_run(args)
+    args.model_name = run_name
     evaluate_run(args, l_logger)
 
 
