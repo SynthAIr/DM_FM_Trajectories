@@ -18,14 +18,14 @@ conditional_features:
   day_of_week:
     type: 'cyclic'
     max_value: 6
-  cumdist:
-    type: 'continuous'
-    last: True
-    first: False
-  timedelta:
-    type: 'continuous'
-    last: True
-    first: False
+    #cumdist:
+    #type: 'continuous'
+    #last: True
+    #first: False
+    #timedelta:
+    #type: 'continuous'
+    #last: True
+    #first: False
   runway:
     type: 'categorical'
     #categories: ['14','16', '28', '34', 'N/A']
@@ -81,5 +81,5 @@ metar: False
 weather_grid:
   #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature']
   #variables : ['v_component_of_wind', 'u_component_of_wind', 'vertical_velocity', 'temperature', 'total_precipitation', 'total_cloud_cover']
-  enabled: True
+  enabled: False
   variables : ['total_cloud_cover']

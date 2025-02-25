@@ -576,8 +576,8 @@ def run(args, logger = None):
     model_name = args.model_name
     data_path = args.data_path
     artifact_location= "./artifacts"
-    checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
-    config_file = f"./artifacts/{model_name}/config.yaml"
+    checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
+    config_file = f"{artifact_location}/{model_name}/config.yaml"
     #dataset_config_file = f"./artifacts/{model_name}/dataset_config.yaml"
 
     config = load_config(config_file)
@@ -603,7 +603,7 @@ def run(args, logger = None):
             logger.run_id = runid
 
     dataset_config["data_path"] = args.data_path
-    logger.experiment.log_dict(logger.run_id,config, config_file)
+    logger.experiment.log_dict(logger.run_id, config, config_file)
     #_, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     dataset, traffic = load_and_prepare_data(dataset_config)
     #config["data"] = dataset_config
@@ -658,7 +658,7 @@ def run(args, logger = None):
     #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
-    cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
+    cols = [ 'latitude', 'longitude', 'altitude']
     JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
     logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
@@ -986,7 +986,7 @@ if __name__ == "__main__":
         "--data_path",
         type=str,
         #required=True,
-        default="./data/resampled/combined_traffic_resampled_600.pkl",
+        default="./data/resampled/combined_traffic_resampled_200.pkl",
         help="Path to the training data file"
     )
 
@@ -1004,8 +1004,8 @@ if __name__ == "__main__":
             default=0,
             help="GPU to use",
             )
+    parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models", help="Path to training data.")
 
-    
     args = parser.parse_args()
     run(args)
     #run_perturbation(args)
