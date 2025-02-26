@@ -23,7 +23,7 @@ model:
   lr_step_size: 200
   lr_gamma: 0.5
   attr_dim: 32
-  guidance_scale: 0
+  guidance_scale: 1
   in_channels: 8
   out_ch: 8
   ch: 64

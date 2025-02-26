@@ -149,8 +149,8 @@ def run(args):
 
 def run_experiment(args):
     experiment_name = "transfer learning EIDW"
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_path)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
@@ -288,10 +288,11 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, default="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
     parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
     parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/artifacts", help="Path to training data.")
+    parser.add_argument("--experiment", type=str, required=True)
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")
     parser.add_argument("--eval", dest="run_train", action='store_true')
     args = parser.parse_args()
-    args.split = [0.05, 0.2, 0.5, 1.0]
+    args.split = [0.0, 0.05, 0.2, 0.5, 1.0]
     #args.split = [0.0]
     if args.run_train:
         print("Running EVAL")

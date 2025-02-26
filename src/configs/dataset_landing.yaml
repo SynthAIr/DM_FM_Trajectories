@@ -18,14 +18,14 @@ conditional_features:
   day_of_week:
     type: 'cyclic'
     max_value: 6
-    cumdist:
-    #type: 'continuous'
-    #last: True
-    #first: False
-  timedelta:
+  cumdist:
     type: 'continuous'
     last: True
     first: False
+    #timedelta:
+    #type: 'continuous'
+    #last: True
+    #first: False
   runway:
     type: 'categorical'
     #categories: ['14','16', '28', '34', 'N/A']

@@ -17,7 +17,7 @@ model:
   type: "DDIM"
   cnn: True
   attr_dim: 32
-  guidance_scale: 0
+  guidance_scale: 1
   in_channels: 8
   out_ch: 8
   ch: 128
