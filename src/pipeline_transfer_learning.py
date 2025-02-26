@@ -14,6 +14,8 @@ import os
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from traffic.algorithms.generation import Generation
 import numpy as np
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
 
 def train_and_evaluate(model, train_loader, val_loader, logger, split):
     """Train the model and evaluate its performance."""
@@ -31,6 +33,47 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
     
     return DataLoader(dataset, batch_size=dataloader.batch_size, sampler=sampler, num_workers=dataloader.num_workers)
 
+def compute_dtw_3d_batch(traj1, traj2):
+    """
+    Computes the DTW distance and standard deviation for batches of 3D trajectories.
+
+    Args:
+        trajs1 (np.ndarray): First batch of trajectories, shape (N, T1, 3).
+        trajs2 (np.ndarray): Second batch of trajectories, shape (N, T2, 3).
+
+    Returns:
+        np.ndarray: DTW distances for each trajectory pair (N,).
+        np.ndarray: Standard deviation of DTW alignment distances for each pair (N,).
+        list: List of DTW paths for each trajectory pair.
+    """
+    trajs1 = traj1.reshape(-1, 200, 3)
+    trajs2 = traj2.reshape(-1, 200, 3)
+    
+    assert trajs1.shape[0] == trajs2.shape[0], "Both trajectory batches must have the same number of samples (N)."
+
+    N = trajs1.shape[0]
+    dtw_distances = np.zeros(N)
+    dtw_stds = np.zeros(N)
+    dtw_paths = []
+
+    for i in range(N):
+        traj1, traj2 = trajs1[i], trajs2[i]
+
+        # Compute DTW distance and warping path
+        distance, path = fastdtw(traj1, traj2, dist=euclidean)
+
+        # Compute distances for each aligned point pair in the warping path
+        alignment_distances = np.array([euclidean(traj1[i], traj2[j]) for i, j in path])
+
+        # Compute standard deviation of alignment distances
+        std_dev = np.std(alignment_distances)
+
+        # Store results
+        dtw_distances[i] = distance
+        dtw_stds[i] = std_dev
+        dtw_paths.append(path)
+
+    return dtw_distances, dtw_stds, dtw_paths
 
 def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
@@ -55,9 +98,15 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     # Compute energy distance between the raw trajectories
     energy_dist, edist_std = compute_energy_distance(subset1_data, subset2_data)
     l_logger.log_metrics({"edist": energy_dist, "edist_std": edist_std})
+    
+    dtw, dtw_std = compute_dtw_3d_batch(subset1_data, subset2_data)
+    l_logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
-    mmd, mmd_std = compute_partial_mmd(subset1_data, subset2_data)
+
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[2] )
     l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
+    
+
 
 def train_encoder(vae, train_config, train_loader_reduced, val_loader, test_loader, config):
     vae_logger, run_name, artifact_location = setup_logger(args, config) 
@@ -71,7 +120,7 @@ def run(args):
     checkpoint = f"./artifacts/{args.model_name}/best_model.ckpt"
     config_file = f"./artifacts/{args.model_name}/config.yaml"
     config = load_config(config_file)
-    dataset_config = load_config(args.dataset_path)
+    dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = "transfer learning")
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
@@ -147,12 +196,13 @@ def run(args):
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))
 
+
 def run_experiment(args):
     experiment_name = "transfer learning EIDW"
     checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
     config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
     config = load_config(config_file)
-    dataset_config = load_config(args.dataset_path)
+    dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
@@ -196,20 +246,23 @@ def run_experiment(args):
         l_logger, run_name, artifact_location = setup_logger(args, config)
         l_logger.log_metrics({"split": split})
         l_logger.log_metrics({"channel_size": config["model"]["ch"]})
-        l_logger.log_metrics({"ch_mult": config["model"]["ch_mult"]})
+        #l_logger.log_metrics({"ch_mult": config["model"]["ch_mult"]})
         l_logger.log_metrics({"num_res_blocks": config["model"]["num_res_blocks"]})
         model_pretrained, trajectory_generation_model = get_models(config['model'], dataset.parameters, checkpoint, dataset.scaler, device)        
 
-        if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
-            print("Training autoencoder")
-            c = autoencoder_config()
-            run_name = train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
-            l_logger.log_metrics({"vae": run_name})
+        if split != 0.0:
+            if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
+                print("Training autoencoder")
+                c = autoencoder_config()
+                run_name = train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
+                l_logger.log_metrics({"vae": run_name})
 
-        train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+            train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
+    
         local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
         config["data"] = dataset_config
-        save_config(config, os.path.join(artifact_location, "config.yaml"))
+        if split != 0.0:
+            save_config(config, os.path.join(artifact_location, "config.yaml"))
         model_size = os.path.getsize(checkpoint) / (1024 * 1024)  #
         l_logger.log_metrics({"Size (MB)": model_size})
 
@@ -242,15 +295,15 @@ def increment_model_name(model_name):
     return f"{model_name}_1"
 
 def run_eval(args):
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
     artifact_location = args.artifact_location
     #start_model = get_lowest_model_folder(artifact_location, args.model_name)
 
     #checkpoint = f"{artifact_location}/{start_model}/best_model.ckpt"
     #config_file = f"{artifact_location}/{start_model}/config.yaml"
     config = load_config(config_file)
-    dataset_config = load_config(args.dataset_path)
+    dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = "transfer learning EIDW")
 
     dataset_config["data_path"] = args.data_path
@@ -266,7 +319,7 @@ def run_eval(args):
     train_config["epochs"] = 100
     config["logger"]["experiment_name"] = "transfer learning EIDW"
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
-    n = 100
+    n = 1000
     #model_name = start_model
     split = 0.0
     #print(f"Training with {split} of the dataset...")
@@ -286,11 +339,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the traffic model.")
     parser.add_argument("--model_name", type=str, default="AirDiffTraj_5", help="Name of the model.")
     parser.add_argument("--data_path", type=str, default="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_EIDW_200.pkl", help="Path to training data.")
-    parser.add_argument("--dataset_path", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
+    parser.add_argument("--dataset_config", type=str, default="./configs/dataset_landing_transfer.yaml", help="Path to training data.")
     parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/artifacts", help="Path to training data.")
     parser.add_argument("--experiment", type=str, required=True)
     parser.add_argument("--cuda", type=int, default=0, help="Path to training data.")
     parser.add_argument("--eval", dest="run_train", action='store_true')
+    parser.add_argument("--eval_all", dest="eval_all", action='store_true')
     args = parser.parse_args()
     args.split = [0.0, 0.05, 0.2, 0.5, 1.0]
     #args.split = [0.0]
@@ -298,6 +352,9 @@ if __name__ == "__main__":
         print("Running EVAL")
         run_eval(args)
         #run(args)
+    elif args.eval_all:
+        print("Running EVAL ALL")
+        run_eval(args)
     else:
         print("Running Experiments")
         run_experiment(args)

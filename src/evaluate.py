@@ -570,7 +570,7 @@ def get_mse_distribution(mse_dict):
     return fig_mse_dict
 
 def run(args, logger = None):
-    np.random.seed(42)
+    seed_everything(42)
     global device 
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
     model_name = args.model_name
@@ -864,7 +864,7 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
 
 
 def run_perturbation(args, logger = None):
-    np.random.seed(42)
+    seed_everything(42)
     model_name = "PerturbationModel"
 
     data_path = args.data_path
