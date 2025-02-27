@@ -418,10 +418,10 @@ class TrafficDataset(Dataset):
         data = data.reshape(-1, 200, len(self.features))
 
         # Restore latitude
-        data[idx, :, 0] = data[idx, :, 0] + self.lat_refs[idx]
+        data[:, :, 0] = data[idx, :, 0] + self.lat_refs[idx]
 
         # Restore longitude with scaling correction
-        data[idx, :, 1] = data[idx, :, 1] / torch.cos(torch.deg2rad(self.lat_refs[idx])) + self.lon_refs[idx]
+        data[:, :, 1] = data[idx, :, 1] / torch.cos(torch.deg2rad(self.lat_refs[idx])) + self.lon_refs[idx]
 
         return data.reshape(shape)
 
