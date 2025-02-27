@@ -246,19 +246,38 @@ class TrafficDataset(Dataset):
         self.conditional_features = conditional_features 
         self.shape = shape
         self.scaler = scaler
-
         self.data: torch.Tensor
         self.continuous_conditions: torch.Tensor
         self.categorical_conditions: torch.Tensor
         self.variables = variables
         self.metar = metar
 
-        if  traffic.data.columns:
+        df = traffic
+        lat_refs = np.zeros(len(df))
+        lon_refs = np.zeros(len(df))
+        
+        df = df.data
+        for ades in df['ADES'].unique():
+            ades_data = df[df['ADES'] == ades]
+            indices = ades_data.index
 
-        self.inverse_scale_factor = 1.0
+            # Compute reference point (center)
+            lat_ref, lon_ref = ades_data[['latitude', 'longitude']].mean().values
+
+            # Store reference points for tensor conversion
+            lat_refs[indices] = lat_ref
+            lon_refs[indices] = lon_ref
+
+            # Center the data (set mean to 0,0)
+            df.loc[indices, 'latitude'] = ades_data['latitude'] - lat_ref
+            df.loc[indices, 'longitude'] = ades_data['longitude'] - lon_ref
+
+        self.lat_refs = torch.tensor(lat_refs, dtype=torch.float32)
+        self.lon_refs = torch.tensor(lon_refs, dtype=torch.float32)
 
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
+
 
         data = data.reshape(data.shape[0], -1)
         print(data.shape)
@@ -410,7 +429,15 @@ class TrafficDataset(Dataset):
         print("Continuous conditions: ", len(condition_continuous))
         print("Categorical conditions: ", len(condition_categorical))
         return condition_continuous, condition_categorical
+    
+    def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
+        shape = data.shape
+        data = data.reshape(-1, 200, len(self.features))
 
+        data[idx,:, 0] = data[idx,:, 0] + self.lat_refs[idx]
+        data[idx,:, 1] = data[idx,:, 1] + self.lon_refs[idx]
+
+        return data.reshape(shape)
 
     @classmethod
     def from_file(
@@ -425,10 +452,6 @@ class TrafficDataset(Dataset):
     ) -> "TrafficDataset":
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
         traffic = Traffic.from_file(file_path)
-
-        ##### REMOVE THIS
-        #traffic = traffic.between("2018-01-01", "2021-12-31")
-        #traffic = traffic.between("2018-01-01", "2018-01-31")
 
         dataset = cls(traffic, features, shape, scaler, conditional_features, variables, metar)
         dataset.file_path = file_path

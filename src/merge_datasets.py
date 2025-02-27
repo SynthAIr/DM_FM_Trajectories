@@ -81,7 +81,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 # Create a new Traffic object with the cleaned DataFrame
                 traffic_obj = Traffic(df_clean)
             
-            traffic_obj.data['latitude'] = traffic_obj.data['latitude'] * 0.0174533
+            """
             lat_ref = traffic_obj.data['latitude'].mean()
             lon_ref = traffic_obj.data['longitude'].mean()
 
@@ -99,6 +99,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
             traffic_obj.data['lat_scale'] = lat_scale
             traffic_obj.data['lon_scale'] = lon_scale
+            """
             
             if filter_alt:
                 print("Filtering Altitude")

@@ -271,9 +271,9 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         # Move data to CPU and reshape for inverse transformation
         data_cpu = data.cpu().numpy()
         reco_x = data_cpu.transpose(0, 2, 1).reshape(data_cpu.shape[0], -1)
-        
         # Inverse scaling and traffic reconstruction
         decoded = dataset.scaler.inverse_transform(reco_x)
+        decoded = dataset.inverse_airport_coordinates(decoded, rnd)
         reconstructed_traf = trajectory_generation_model.build_traffic(
             decoded.reshape(n, -1, len(dataset.features)),
             coordinates=dict(latitude=48.5, longitude=8.4),
@@ -690,8 +690,7 @@ def run(args, logger = None):
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
     decoded = dataset.scaler.inverse_transform(reco_x)
-    
-
+    decoded = dataset.inverse_airport_coordinates(decoded, rnd)
     
     X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:2]
     X_gen = decoded.reshape(-1, length, len(dataset.features))[:,:,:2]
@@ -779,12 +778,13 @@ def run(args, logger = None):
 
     logger.finalize()
 
-def get_traffic_from_tensor(data, dataset, trajectory_generation_model):
+def get_traffic_from_tensor(data, dataset, trajectory_generation_model, rnd):
     print(data.shape)
     reco_x = data.transpose(0, 2, 1).reshape(data.shape[0], -1)
     n = data.shape[0]
     # Inverse scaling and traffic reconstruction
     decoded = dataset.scaler.inverse_transform(reco_x)
+    decoded = dataset.inverse_airport_coordinates(decoded, rnd)
     reconstructed_traf = trajectory_generation_model.build_traffic(
         decoded.reshape(n, -1, len(dataset.features)),
         coordinates=dict(latitude=48.5, longitude=8.4),
@@ -927,8 +927,8 @@ def run_perturbation(args, logger = None):
 
     #samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
-    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model)
-    X_traffic = get_traffic_from_tensor(dataset[rnd][0].cpu().numpy().reshape(-1, len(dataset.features), length), dataset, trajectory_generation_model)
+    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model, rnd)
+    X_traffic = get_traffic_from_tensor(dataset[rnd][0].cpu().numpy().reshape(-1, len(dataset.features), length), dataset, trajectory_generation_model, rnd)
 
     JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_traffic.data[cols],decoded.data[cols] , model_name = model_name)
     logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
