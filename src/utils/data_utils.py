@@ -253,6 +253,10 @@ class TrafficDataset(Dataset):
         self.variables = variables
         self.metar = metar
 
+        if  traffic.data.columns:
+
+        self.inverse_scale_factor = 1.0
+
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
 
@@ -423,7 +427,7 @@ class TrafficDataset(Dataset):
         traffic = Traffic.from_file(file_path)
 
         ##### REMOVE THIS
-        traffic = traffic.between("2018-01-01", "2021-12-31")
+        #traffic = traffic.between("2018-01-01", "2021-12-31")
         #traffic = traffic.between("2018-01-01", "2018-01-31")
 
         dataset = cls(traffic, features, shape, scaler, conditional_features, variables, metar)

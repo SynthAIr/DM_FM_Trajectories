@@ -80,7 +80,25 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
                 # Create a new Traffic object with the cleaned DataFrame
                 traffic_obj = Traffic(df_clean)
+            
+            traffic_obj.data['latitude'] = traffic_obj.data['latitude'] * 0.0174533
+            lat_ref = traffic_obj.data['latitude'].mean()
+            lon_ref = traffic_obj.data['longitude'].mean()
 
+            # Compute the scaling factors (max absolute difference from center)
+            lat_scale = traffic_obj.data['latitude'].sub(lat_ref).abs().max()
+            lon_scale = traffic_obj.data['longitude'].sub(lon_ref).abs().max()
+
+            # Avoid division by zero
+            lat_scale = lat_scale if lat_scale != 0 else 1
+            lon_scale = lon_scale if lon_scale != 0 else 1
+
+            # Normalize the data (center at 0, scale by factor)
+            traffic_obj.data['latitude'] = (traffic_obj.data['latitude'] - lat_ref) / lat_scale
+            traffic_obj.data['longitude'] = (traffic_obj.data['longitude'] - lon_ref) / lon_scale
+
+            traffic_obj.data['lat_scale'] = lat_scale
+            traffic_obj.data['lon_scale'] = lon_scale
             
             if filter_alt:
                 print("Filtering Altitude")
