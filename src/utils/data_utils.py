@@ -253,11 +253,13 @@ class TrafficDataset(Dataset):
         self.metar = metar
 
         self.lat_refs = torch.FloatTensor(np.stack(list(f.data['lat_ref'].values[0] for f in traffic)))
-        self.lon_refs = torch.FloatTensor(np.stack(list(f.data['lon_ref'].values[1] for f in traffic)))
+        self.lon_refs = torch.FloatTensor(np.stack(list(f.data['lon_ref'].values[0] for f in traffic)))
         print(self.lat_refs.shape, self.lon_refs.shape)
+        assert self.lon_refs.shape == self.lat_refs.shape
 
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
+        assert self.lon_refs.shape[0] == data.shape[0]
 
 
         data = data.reshape(data.shape[0], -1)
