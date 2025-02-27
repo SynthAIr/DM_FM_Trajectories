@@ -80,26 +80,18 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
                 # Create a new Traffic object with the cleaned DataFrame
                 traffic_obj = Traffic(df_clean)
-            
-            """
-            lat_ref = traffic_obj.data['latitude'].mean()
-            lon_ref = traffic_obj.data['longitude'].mean()
 
-            # Compute the scaling factors (max absolute difference from center)
-            lat_scale = traffic_obj.data['latitude'].sub(lat_ref).abs().max()
-            lon_scale = traffic_obj.data['longitude'].sub(lon_ref).abs().max()
-
-            # Avoid division by zero
-            lat_scale = lat_scale if lat_scale != 0 else 1
-            lon_scale = lon_scale if lon_scale != 0 else 1
-
-            # Normalize the data (center at 0, scale by factor)
-            traffic_obj.data['latitude'] = (traffic_obj.data['latitude'] - lat_ref) / lat_scale
-            traffic_obj.data['longitude'] = (traffic_obj.data['longitude'] - lon_ref) / lon_scale
-
-            traffic_obj.data['lat_scale'] = lat_scale
-            traffic_obj.data['lon_scale'] = lon_scale
-            """
+            airport_coordinates = {
+                "EHAM": (52.3105, 4.7683),  # Amsterdam Schiphol
+                "LFPG": (49.0097, 2.5479),  # Paris Charles de Gaulle (CDG)
+                "EIDW": (53.4213, -6.2701), # Dublin Airport
+                "EGLL": (51.4700, -0.4543), # London Heathrow
+                "EGLC": (51.5053, 0.0553),  # London City Airport
+                "LFBO": (43.6293, 1.3673),  # Toulouse-Blagnac
+                "LSZH": (47.4647, 8.5492),  # Zurich Airport
+            }
+            traffic_obj.data['lon_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
+            traffic_obj.data['lat_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
             
             if filter_alt:
                 print("Filtering Altitude")

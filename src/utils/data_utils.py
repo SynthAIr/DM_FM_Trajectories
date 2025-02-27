@@ -252,28 +252,8 @@ class TrafficDataset(Dataset):
         self.variables = variables
         self.metar = metar
 
-        df = traffic
-        lat_refs = np.zeros(len(df))
-        lon_refs = np.zeros(len(df))
-        
-        df = df.data
-        for ades in df['ADES'].unique():
-            ades_data = df[df['ADES'] == ades]
-            indices = ades_data.index
-
-            # Compute reference point (center)
-            lat_ref, lon_ref = ades_data[['latitude', 'longitude']].mean().values
-
-            # Store reference points for tensor conversion
-            lat_refs[indices] = lat_ref
-            lon_refs[indices] = lon_ref
-
-            # Center the data (set mean to 0,0)
-            df.loc[indices, 'latitude'] = ades_data['latitude'] - lat_ref
-            df.loc[indices, 'longitude'] = ades_data['longitude'] - lon_ref
-
-        self.lat_refs = torch.tensor(lat_refs, dtype=torch.float32)
-        self.lon_refs = torch.tensor(lon_refs, dtype=torch.float32)
+        self.lat_refs = torch.FloatTensor(np.stack(list(f.data['lat_ref'].values[0] for f in traffic)))
+        self.lon_refs = torch.FloatTensor(np.stack(list(f.data['lon_ref'].values[1] for f in traffic)))
 
         data = np.stack(list(f.data[self.features].values.ravel() for f in traffic))
         data = data.reshape(data.shape[0], -1, len(self.features))
