@@ -72,8 +72,8 @@ def compute_dtw_3d_batch(traj1, traj2):
         dtw_distances[i] = distance
         dtw_stds[i] = std_dev
         dtw_paths.append(path)
-
-    return dtw_distances, dtw_stds, dtw_paths
+    
+    return dtw_distances.mean(), dtw_stds.mean(), dtw_paths
 
 def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
@@ -95,16 +95,17 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     subset2_data = reconstructions[2].data[cols].dropna().values
     #subset2_data = .data.dropna().values
 
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[2] )
+    l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
+
     # Compute energy distance between the raw trajectories
     energy_dist, edist_std = compute_energy_distance(subset1_data, subset2_data)
     l_logger.log_metrics({"edist": energy_dist, "edist_std": edist_std})
     
-    dtw, dtw_std = compute_dtw_3d_batch(subset1_data, subset2_data)
+    dtw, dtw_std, _ = compute_dtw_3d_batch(subset1_data, subset2_data)
     l_logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
 
-    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[2] )
-    l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
     
 
 
@@ -319,7 +320,7 @@ def run_eval(args):
     train_config["epochs"] = 100
     config["logger"]["experiment_name"] = "transfer learning EIDW"
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
-    n = 1000
+    n = 100
     #model_name = start_model
     split = 0.0
     #print(f"Training with {split} of the dataset...")

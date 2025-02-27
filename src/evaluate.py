@@ -617,6 +617,7 @@ def run(args, logger = None):
     batch_size = dataset_config["batch_size"]
     n = 100
     n_samples = 1
+
     logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
     
     reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device)
@@ -659,11 +660,12 @@ def run(args, logger = None):
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
     cols = [ 'latitude', 'longitude', 'altitude']
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
-    logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
-    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[2].data[cols], model_name = model_name)
-    logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
+    if n != 1000:
+        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
+        logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
+        logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
+        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[2].data[cols], model_name = model_name)
+        logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
     #density(reconstructions, model_name = model_name)
 
     #if False
@@ -715,9 +717,11 @@ def run(args, logger = None):
 
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
-    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols],reconstructed_traf.data[cols] , model_name = model_name)
-    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
-    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
+
+    if n != 1000:
+        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols],reconstructed_traf.data[cols] , model_name = model_name)
+        logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
+        logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
     fig_2 = plot_from_array(reconstructed_traf, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")

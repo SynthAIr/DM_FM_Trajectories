@@ -11,7 +11,7 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: AirLatFMTraj
   run_name: AirLatFMTraj
-  tags: {'model': 'Latent Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "landing_4_size"}
+  tags: {'model': 'Latent Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "landing_4_size_ch_64_nbr_4"}
   
 model:
   type: "LatFM"
@@ -26,7 +26,7 @@ model:
   out_ch: 8
   ch: 64
   ch_mult: [ 1, 2, 4, 4, 8 ]
-  num_res_blocks: 6
+  num_res_blocks: 4
   attn_resolutions: [32, 16]
   dropout: 0.0
   resamp_with_conv: True
