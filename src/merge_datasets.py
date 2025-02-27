@@ -4,6 +4,7 @@ from traffic.core import Traffic
 from argparse import ArgumentParser
 from preprocess import clean_trajectory_data, clean_and_smooth_flight_with_tight_threshold
 import pandas as pd
+import numpy as np
 
 
 def load_traffic_object(filepath):
@@ -92,7 +93,9 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             }
             traffic_obj.data['lon_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
             traffic_obj.data['lat_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
-            traffic_obj.data['longitude'] = traffic_obj.data['longitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
+
+            val_lat = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
+            traffic_obj.data['longitude'] = (traffic_obj.data['longitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]) * np.cos(np.deg2rad(val_lat))
             traffic_obj.data['latitude'] = traffic_obj.data['latitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
             
             if filter_alt:
