@@ -92,6 +92,8 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             }
             traffic_obj.data['lon_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
             traffic_obj.data['lat_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
+            traffic_obj.data['longitude'] = traffic_obj.data['longitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
+            traffic_obj.data['latitude'] = traffic_obj.data['latitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
             
             if filter_alt:
                 print("Filtering Altitude")
