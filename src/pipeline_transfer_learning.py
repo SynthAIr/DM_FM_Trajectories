@@ -16,6 +16,7 @@ from traffic.algorithms.generation import Generation
 import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
+from evaluation.diversity import data_diversity
 
 def train_and_evaluate(model, train_loader, val_loader, logger, split):
     """Train the model and evaluate its performance."""
@@ -105,7 +106,10 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     dtw, dtw_std, _ = compute_dtw_3d_batch(subset1_data, subset2_data)
     l_logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
-
+    fig_pca = data_diversity(subset1_data, subset2_data, 'PCA', 'samples', model_name=model_name)
+    fig_tsne = data_diversity(subset1_data, subset2_data, 't-SNE', 'samples', model_name = model_name)
+    logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
+    logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
     
 
 
