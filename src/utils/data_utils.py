@@ -252,8 +252,8 @@ class TrafficDataset(Dataset):
         self.variables = variables
         self.metar = metar
 
-        self.lat_refs = torch.FloatTensor(np.stack(list(f.data['lat_ref'].values[0] for f in traffic)))
-        self.lon_refs = torch.FloatTensor(np.stack(list(f.data['lon_ref'].values[0] for f in traffic)))
+        self.lat_refs = np.stack(list(f.data['lat_ref'].values[0] for f in traffic)).reshape(-1,1)
+        self.lon_refs = np.stack(list(f.data['lon_ref'].values[0] for f in traffic)).reshape(-1,1)
         print(self.lat_refs.shape, self.lon_refs.shape)
         assert self.lon_refs.shape == self.lat_refs.shape
 
@@ -416,12 +416,18 @@ class TrafficDataset(Dataset):
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
+        print(data.shape)
+        print(self.lat_refs.shape)
+        print(self.lat_refs[idx])
+        print(data.shape, self.lat_refs[idx].shape)
+        print(type(data))
+        print(type(self.lat_refs))
 
         # Restore latitude
-        data[:, :, 0] = data[idx, :, 0] + self.lat_refs[idx]
+        data[:, :, 0] += self.lat_refs[idx]
 
         # Restore longitude with scaling correction
-        data[:, :, 1] = data[idx, :, 1] / torch.cos(torch.deg2rad(self.lat_refs[idx])) + self.lon_refs[idx]
+        data[:, :, 1] = (data[:, :, 1] / np.cos(np.deg2rad(self.lat_refs[idx]))) + self.lon_refs[idx]
 
         return data.reshape(shape)
 
