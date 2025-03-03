@@ -175,13 +175,7 @@ class Wrapper(ModelWrapper):
             grid = grid,
             #cfg_scale=self.model.guidance_scale,
         )
-                # Scaling to [0, 1] from [-1, 1]
-        #synthetic_samples = torch.clamp(
-            #synthetic_samples * 0.5 + 0.5, min=0.0, max=1.0
-        #)
-        #synthetic_samples = torch.floor(synthetic_samples * 255)
-        #synthetic_samples = synthetic_samples.to(torch.float32) / 255.0
-        #print(synthetic_samples.shape)
+
         return synthetic_samples, []
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
