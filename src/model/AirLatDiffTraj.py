@@ -49,7 +49,7 @@ class LatentDiffusionTraj(L.LightningModule):
         _ = []
         return x_hat, _
 
-    def sample(self, n,con, cat, grid, length = 200, features=8, sampling="ddpm"):
+    def sample(self, n, con, cat, grid, length = 200, features=8, sampling="ddpm"):
         self.eval()
         features = 1
         length = self.generative_model.ch

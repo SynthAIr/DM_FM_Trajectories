@@ -145,6 +145,7 @@ def run(args: argparse.Namespace):
     l_logger.log_metrics({"Size (MB)": model_size})
     l_logger.log_metrics({"training_time_seconds": (end_time - start_time).total_seconds()})
 
+    l_logger.experiment.log_dict(l_logger.run_id, config, "config.yaml")
     return l_logger, run_name, artifact_location
 
 
