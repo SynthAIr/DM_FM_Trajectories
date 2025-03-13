@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Any, List, Optional, Protocol, Tuple, TypedDict, Union
+import joblib
 
 import numpy as np
 import pandas as pd
@@ -303,7 +304,24 @@ class TrafficDataset(Dataset):
         print(len(self.grid_conditions))
         print(self.grid_conditions[0].shape)
 
+        def save_scaler_if_not_exists(scaler, path):
+            if not os.path.exists(path):
+                joblib.dump(scaler, path)
+                print(f"Scaler saved at: {path}")
+            else:
+                print(f"Scaler already exists at: {path}")
+
+
         if self.conditional_features is not None and len(self.conditional_features) > 0:
+            
+            def load_scaler_if_exists(path):
+                """Load and return the scaler if it exists, otherwise return None."""
+                if os.path.exists(path):
+                    print(f"Loading scaler from: {path}")
+                    return joblib.load(path)
+                else:
+                    print(f"Scaler not found at: {path}")
+                    return None
 
             def scale_conditions(conditions_fs: List[torch.Tensor], axis=1):
 
@@ -327,9 +345,12 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
+                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets_con.gz")
+                if s is None:
+                    s = MinMaxScaler(feature_range=(-1, 1))
+                    s.fit(conditions)
 
-                s = MinMaxScaler(feature_range=(-1, 1))
-                conditions = s.fit_transform(conditions)
+                conditions = s.transform(conditions)
                 conditions = torch.FloatTensor(conditions)
 
                     # Reshape back to the original shape if necessary (e.g., return to 3D)
@@ -352,6 +373,7 @@ class TrafficDataset(Dataset):
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
+            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets_con.gz") 
 
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
@@ -367,6 +389,9 @@ class TrafficDataset(Dataset):
                 # If not: fit and transform
                 self.scaler = self.scaler.fit(data)
                 data = self.scaler.transform(data)
+        
+
+        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets.gz")
 
         data = torch.FloatTensor(data)
         self.data = data
@@ -416,12 +441,12 @@ class TrafficDataset(Dataset):
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
-        print(data.shape)
-        print(self.lat_refs.shape)
-        print(self.lat_refs[idx])
-        print(data.shape, self.lat_refs[idx].shape)
-        print(type(data))
-        print(type(self.lat_refs))
+        #print(data.shape)
+        #print(self.lat_refs.shape)
+        #print(self.lat_refs[idx])
+        #print(data.shape, self.lat_refs[idx].shape)
+        #print(type(data))
+        #print(type(self.lat_refs))
 
         # Restore latitude
         data[:, :, 0] += self.lat_refs[idx]

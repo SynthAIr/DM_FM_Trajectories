@@ -51,6 +51,7 @@ gcsfs = "^2024.10.0"
 flow-matching = "^1.0.9"
 ruamel.yaml = "^0.18.10"
 fastdtw = "0.3.4"
+joblib = "1.4.2"
 
 [tool.poetry.group.dev.dependencies]
 make = "^0.1.6.post2"

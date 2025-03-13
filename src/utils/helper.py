@@ -12,6 +12,7 @@ from model.AirLatDiffTraj import LatentDiffusionTraj
 from model.tcvae import TCVAE
 from model.flow_matching import AirFMTraj, FlowMatching, Wrapper
 from model.diffusion import Diffusion
+import joblib
 
 def sample_batch(size, noise=1.0):
     x, _= make_swiss_roll(size, noise=noise)
@@ -57,11 +58,12 @@ def load_and_prepare_data(dataset_config):
     """
     Load and prepare the dataset for the model.
     """
+    scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else MinMaxScaler(feature_range=(-1, 1))
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
         features=dataset_config["features"],
         shape=dataset_config["data_shape"],
-        scaler=MinMaxScaler(feature_range=(-1, 1)),
+        scaler=scaler,
         conditional_features = load_conditions(dataset_config) ,
         variables = dataset_config["weather_grid"]["variables"] if dataset_config["weather_grid"]["enabled"] else [],
         metar=dataset_config["metar"],
