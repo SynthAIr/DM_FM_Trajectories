@@ -303,10 +303,6 @@ def run_eval(args):
     checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
     config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
     artifact_location = args.artifact_location
-    #start_model = get_lowest_model_folder(artifact_location, args.model_name)
-
-    #checkpoint = f"{artifact_location}/{start_model}/best_model.ckpt"
-    #config_file = f"{artifact_location}/{start_model}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = "transfer learning EIDW")

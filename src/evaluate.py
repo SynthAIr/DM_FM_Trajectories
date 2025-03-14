@@ -26,7 +26,7 @@ from traffic.algorithms.generation import Generation
 from sklearn.preprocessing import MinMaxScaler
 from utils.condition_utils import load_conditions
 from tqdm import tqdm
-from utils.helper import load_and_prepare_data, get_model
+from utils.helper import load_and_prepare_data, get_model, init_model_config
 from evaluation.diversity import data_diversity
 from evaluation.similarity import jensenshannon_distance
 from evaluation.time_series import duration_and_speed, timeseries_plot
@@ -229,6 +229,7 @@ def plot_traffics(traffic_list: list,
 
     plt.legend()
     return fig
+
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None, d=None):
     # Select random samples from the dataset
@@ -594,134 +595,95 @@ def run_refactored(args, logger = None):
     seed_everything(42)
     global device 
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
+
     model_name = args.model_name
     artifact_location= args.artifact_location
     checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
     config_file = f"{artifact_location}/{model_name}/config.yaml"
+
     config = load_config(config_file)
     dataset_config = config["data"]
     logger = get_logger(logger, dataset_config, config)
 
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
-    config['model']["data"] = dataset_config
-    config['model']["traj_length"] = dataset.parameters['seq_len']
-    config['model']["continuous_len"] = dataset.con_conditions.shape[1]
 
-    if config['model']['type'] == "TCVAE" or config['model']['type'] == "VAE":
-        logger.log_metrics({"type": config['model']['type']})
+    #config['model']["data"] = dataset_config
+    #config['model']["traj_length"] = dataset.parameters['seq_len']
+    #config['model']["continuous_len"] = dataset.con_conditions.shape[1]
+    model_config = init_model_config(config, dataset_config, dataset)
 
-    model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
-    batch_size = dataset_config["batch_size"]
+    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE":
+        logger.log_metrics({"type": model_config['type']})
+
+    model, trajectory_generation_model = get_models(model_config, dataset.parameters, checkpoint, dataset.scaler)
+
     n = 100
     n_samples = 1
-    logger.log_metrics({"n reconstructions": n, "n samples per" : n_samples})
+    logger.log_metrics({"n": n, "n samples per" : n_samples})
+    rnd = np.random.randint(0, len(dataset), (n,))
+    X_original = get_traffic_from_tensor(dataset[rnd][0], dataset, trajectory_generation_model ,rnd) 
 
-    reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device)
-    logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
-    logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
 
-    fig_mse_dict = get_mse_distribution(mse_dict)
-    logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
-    mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
-    print("MSE Smooth", mse_smooth)
-    logger.log_metrics({"Eval_MSE_smooth": mse_smooth})
-    fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
-    logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE":
+        logger.log_metrics({"type": model_config['type']})
+        reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device, rnd=rnd)
+        logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
+        logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
 
-    logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
-    mmd, mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[1])
-    print("MMD", mmd)
-    logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
+        fig_mse_dict = get_mse_distribution(mse_dict)
+        logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
+        mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
+        print("MSE Smooth", mse_smooth)
+        logger.log_metrics({"Eval_MSE_smooth": mse_smooth})
+        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+        logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
 
-    mmd,mmd_std = compute_partial_mmd(reconstructions[0], reconstructions[2])
-    print("MMD smooth", mmd)
-    logger.log_metrics({"mmd_smooth": mmd, "mmd_std_smooth": mmd_std})
+        logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
 
-    #fig_track_speed = plot_track_groundspeed(reconstructions[:2])
-    #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
-    #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
-    #print(reconstructions[1].data)
+
     cols = [ 'latitude', 'longitude', 'altitude']
-    if n != 1000:
-        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
-        logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
-        logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison.png")
-        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[2].data[cols], model_name = model_name)
-        logger.log_metrics({"Eval_edistance_smoothed": e_distance, "Eval_JSD_smoothed": JSD, "Eval_KL_smoothed": KL})
+    length = model_config['traj_length']
 
-    #density(reconstructions, model_name = model_name)
-
-    #if False
-    #fig_landing = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = True)
-    #fig_takeoff = plot_traffic_comparison(reconstructions[:2], 2, f"./figures/{model_name}_", landing = False)
-    #logger.experiment.log_figure(logger.run_id, fig_landing, f"figures/landing_comparison.png")
-    #logger.experiment.log_figure(logger.run_id, fig_takeoff, f"figures/takeoff_comparison.png")
-
-    length = config['model']['traj_length']
-    
     start_time = datetime.now()
     samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
     logger.log_metrics({"sampling_time_seconds": duration})
     
-    #fig_99 = get_figure_from_sample_steps(steps, dataset, length)
-    #fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
-    #logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
-
-
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
-    reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
-    decoded = dataset.scaler.inverse_transform(reco_x)
-    decoded = dataset.inverse_airport_coordinates(decoded, rnd)
-    
-    X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:3]
-    X_gen = reco_x.reshape(-1, length, len(dataset.features))[:,:,:3]
-
-    ### SECOND
-
-    reconstructed_traf = trajectory_generation_model.build_traffic(
-    decoded,
-    coordinates=dict(latitude=48.5, longitude=8.4),
-    forward=False,
-    )
-
-    df = reconstructed_traf.data
+    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+    df = decoded.data
     numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
     
     # Convert back to DataFrame
     df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
-    reconstructed_traf = Traffic(df)
+    generated_traffic = Traffic(df)
 
-    fig_pca = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 'PCA', 'else', model_name=model_name)
-    fig_tsne = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 't-SNE','else', model_name = model_name)
+    fig_pca = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 'PCA', 'else', model_name=model_name)
+    fig_tsne = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 't-SNE','else', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
     logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
 
-    if n != 1000:
-        JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols],reconstructed_traf.data[cols] , model_name = model_name)
-        logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
-        logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
+    JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_original.data[cols],generated_traffic.data[cols] , model_name = model_name)
+    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
+    logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
-    fig_2 = plot_from_array(reconstructed_traf, model_name)
+    fig_2 = plot_from_array(generated_traffic, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
-    reconstructed_traf.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
+    generated_traffic.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
 
-    reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
+    generated_traffic.data['track'] = generated_traffic.data.apply(
         lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
     )
-    #fig_track_speed = plot_track_groundspeed([reconstructed_traf])
-    #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_generation_track_speed.png")
-    mmd_gen, mmd_gen_std = compute_partial_mmd(reconstructed_traf, reconstructions[0])
+    mmd_gen, mmd_gen_std = compute_partial_mmd(generated_traffic, X_original)
     print("MMD GEN", mmd_gen)
     logger.log_metrics({"mmd_gen": mmd_gen, "mmd_gen_std": mmd_gen_std})
 
-    training_trajectories = reconstructions[0]
-    #synthetic_trajectories = reconstructions[1]
-    synthetic_trajectories = reconstructed_traf
+    training_trajectories = X_original
+    synthetic_trajectories = generated_traffic
 
     fig_3 = duration_and_speed(training_trajectories, synthetic_trajectories, model_name = model_name)
     logger.experiment.log_figure(logger.run_id,fig_3, f"figures/Eval_distribution_plots.png")
@@ -743,8 +705,6 @@ def run_refactored(args, logger = None):
     )
     logger.experiment.log_figure(logger.run_id,fig_4, f"figures/Eval_timeseries_plots.png")
     
-    # NOTE THIS IS PERHAPS NOT THE BEST WAY TO DO THIS BECAUSE USES RECONSRUCTED NOT GENERATED TRAFFIC
-
     accuracy, score, conf_matrix, tpr, tnr = discriminative_score(training_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, length, 3), synthetic_trajectories.data[['latitude', 'longitude', 'altitude']].to_numpy().reshape(-1, length, 3))
     logger.log_metrics({"Discriminator_Accuracy": accuracy, "Discriminator_Score": score, "Discriminator_TPR": tpr, "Discriminator_TNR": tnr})
     print("Accuracy on test data:", accuracy)
@@ -857,22 +817,8 @@ def run(args, logger = None):
     #fig_99.savefig(f"./figures/{model_name}_generated_steps.png")
     #logger.experiment.log_figure(logger.run_id, fig_99, f"figures/generated_steps.png")
 
-
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
-    reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
-    decoded = dataset.scaler.inverse_transform(reco_x)
-    decoded = dataset.inverse_airport_coordinates(decoded, rnd)
-    
-    X = dataset[rnd][0].reshape(-1, length, len(dataset.features))[:,:,:3]
-    X_gen = reco_x.reshape(-1, length, len(dataset.features))[:,:,:3]
-
-    ### SECOND
-
-    reconstructed_traf = trajectory_generation_model.build_traffic(
-    decoded,
-    coordinates=dict(latitude=48.5, longitude=8.4),
-    forward=False,
-    )
+    reconstructed_traf = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model, rnd)
 
     df = reconstructed_traf.data
     numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
@@ -950,7 +896,7 @@ def run(args, logger = None):
     logger.finalize()
 
 def get_traffic_from_tensor(data, dataset, trajectory_generation_model, rnd):
-    print(data.shape)
+    #print(data.shape)
     reco_x = data.transpose(0, 2, 1).reshape(data.shape[0], -1)
     n = data.shape[0]
     # Inverse scaling and traffic reconstruction
@@ -1079,4 +1025,6 @@ if __name__ == "__main__":
     #parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models", help="Path to training data.")
 
     args = parser.parse_args()
+    run_refactored(args)
+    
     run(args)
