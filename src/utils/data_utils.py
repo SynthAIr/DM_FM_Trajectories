@@ -345,7 +345,7 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
-                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets_con.gz")
+                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con.gz")
                 if s is None:
                     s = MinMaxScaler(feature_range=(-1, 1))
                     s.fit(conditions)
@@ -373,7 +373,7 @@ class TrafficDataset(Dataset):
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
-            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets_con.gz") 
+            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con.gz") 
 
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
@@ -391,7 +391,7 @@ class TrafficDataset(Dataset):
                 data = self.scaler.transform(data)
         
 
-        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/4_datasets.gz")
+        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets.gz")
 
         data = torch.FloatTensor(data)
         self.data = data
