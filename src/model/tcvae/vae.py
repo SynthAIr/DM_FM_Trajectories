@@ -133,7 +133,7 @@ class VampPriorLSR(LSR):
 
         pseudo_inputs_layers = []
         pseudo_inputs_layers.append(nn.Linear(n_components, n_components))
-        pseudo_inputs_layers.append(nn.ReLU())
+        pseudo_inputs_layers.append(nn.SiLU())
         pseudo_inputs_layers.append(
             nn.Linear(
                 n_components,

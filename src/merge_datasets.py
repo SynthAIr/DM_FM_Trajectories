@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from preprocess import clean_trajectory_data, clean_and_smooth_flight_with_tight_threshold
 import pandas as pd
 import numpy as np
+import utm
 
 
 def load_traffic_object(filepath):
@@ -91,12 +92,21 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 "LFBO": (43.6293, 1.3673),  # Toulouse-Blagnac
                 "LSZH": (47.4647, 8.5492),  # Zurich Airport
             }
-            traffic_obj.data['lon_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
-            traffic_obj.data['lat_ref'] = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
+            
+            lat_ref = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
+            lon_ref = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]
 
-            val_lat = airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
-            traffic_obj.data['longitude'] = (traffic_obj.data['longitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][1]) * np.cos(np.deg2rad(val_lat))
-            traffic_obj.data['latitude'] = traffic_obj.data['latitude'] - airport_coordinates[traffic_obj.data['ADES'].unique()[0]][0]
+            traffic_obj.data['lat_ref'] = lat_ref
+            traffic_obj.data['lon_ref'] = lon_ref
+
+            easting_ref, northing_ref, _, _ = utm.from_latlon(lat_ref, lon_ref)
+            easting, northing, _, _ = utm.from_latlon(traffic_obj['latitude'].values, traffic_obj['longitude'].values)
+
+            x =  easting - easting_ref
+            y =  northing - northing_ref
+
+            traffic_obj.data['latitude'] = x
+            traffic_obj.data['longitude'] = y
             
             if filter_alt:
                 print("Filtering Altitude")

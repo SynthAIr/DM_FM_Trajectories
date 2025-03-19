@@ -11,7 +11,7 @@ logger:
   mlflow_uri: http://100.64.0.15:7979
   experiment_name: AirFMTraj
   run_name: AirFMTraj
-  tags: {'model': 'Flow Matching', 'dataset': 'opensky', 'weather': False}
+  tags: {'model': 'Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "norm_landing_4"}
  
 model:
   type: "FM"
@@ -40,7 +40,7 @@ model:
     ema: True
     ema_rate: 0.999999
   weather_config:
-    weather_grid: True
+    weather_grid: False
     variables: 1
     levels: 1
     lon: 5

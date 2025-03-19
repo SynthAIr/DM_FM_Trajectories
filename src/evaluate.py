@@ -622,10 +622,10 @@ def run_refactored(args, logger = None):
     n_samples = 1
     logger.log_metrics({"n": n, "n samples per" : n_samples})
     rnd = np.random.randint(0, len(dataset), (n,))
-    X_original = get_traffic_from_tensor(dataset[rnd][0], dataset, trajectory_generation_model ,rnd) 
+    X_original = get_traffic_from_tensor(dataset[rnd][0].detach().numpy(), dataset, trajectory_generation_model ,rnd) 
 
 
-    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE":
+    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE" or model_config['type'] == "FM":
         logger.log_metrics({"type": model_config['type']})
         reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device, rnd=rnd)
         logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
@@ -896,7 +896,8 @@ def run(args, logger = None):
     logger.finalize()
 
 def get_traffic_from_tensor(data, dataset, trajectory_generation_model, rnd):
-    #print(data.shape)
+    print(data.shape)
+
     reco_x = data.transpose(0, 2, 1).reshape(data.shape[0], -1)
     n = data.shape[0]
     # Inverse scaling and traffic reconstruction
@@ -1027,4 +1028,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_refactored(args)
     
-    run(args)
+    #run(args)

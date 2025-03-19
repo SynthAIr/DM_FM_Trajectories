@@ -244,7 +244,7 @@ class TCVAE(VAE):
             dilation_base=self.hparams.dilation_base,
             sampling_factor=self.hparams.sampling_factor,
             dropout=self.hparams.dropout,
-            h_activ=nn.ReLU()
+            h_activ=nn.SiLU()
             )
 
         self.decoder = TCDecoder(
@@ -256,7 +256,7 @@ class TCVAE(VAE):
             dilation_base=self.hparams.dilation_base,
             sampling_factor=self.hparams.sampling_factor,
             dropout=self.hparams.dropout,
-            h_activ=nn.ReLU(),
+            h_activ=nn.SiLU(),
         )
         h_dim = self.hparams.h_dims[-1] * (int(self.config["traj_length"] / self.hparams.sampling_factor))
         

@@ -8,6 +8,7 @@ from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Any, List, Optional, Protocol, Tuple, TypedDict, Union
 import joblib
+import utm
 
 import numpy as np
 import pandas as pd
@@ -252,9 +253,14 @@ class TrafficDataset(Dataset):
         self.categorical_conditions: torch.Tensor
         self.variables = variables
         self.metar = metar
+        
+        if "lat_ref" in traffic.data.columns:
+            self.lat_refs = np.stack(list(f.data['lat_ref'].values[0] for f in traffic)).reshape(-1,1)
+            self.lon_refs = np.stack(list(f.data['lon_ref'].values[0] for f in traffic)).reshape(-1,1)
+        else:
+            self.lat_refs = np.zeros((len(traffic), 1))
+            self.lon_refs = np.zeros((len(traffic), 1))
 
-        self.lat_refs = np.stack(list(f.data['lat_ref'].values[0] for f in traffic)).reshape(-1,1)
-        self.lon_refs = np.stack(list(f.data['lon_ref'].values[0] for f in traffic)).reshape(-1,1)
         print(self.lat_refs.shape, self.lon_refs.shape)
         assert self.lon_refs.shape == self.lat_refs.shape
 
@@ -441,18 +447,22 @@ class TrafficDataset(Dataset):
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
-        #print(data.shape)
-        #print(self.lat_refs.shape)
-        #print(self.lat_refs[idx])
-        #print(data.shape, self.lat_refs[idx].shape)
-        #print(type(data))
-        #print(type(self.lat_refs))
+        easting_ref, northing_ref, zone_number, zone_letter = utm.from_latlon(lat_refs[idx], lon_refs[idx])
+        # Compute absolute easting/northing
+        easting = easting_ref + data[:, :, 0]
+        northing = northing_ref + data[:, :, 1]
+
+        # Convert back to latitude/longitude
+        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+        data[:, :, 0] = easting
+        data[:, :, 1] = northing
 
         # Restore latitude
-        data[:, :, 0] += self.lat_refs[idx]
+        #data[:, :, 0] += self.lat_refs[idx]
 
         # Restore longitude with scaling correction
-        data[:, :, 1] = (data[:, :, 1] / np.cos(np.deg2rad(self.lat_refs[idx]))) + self.lon_refs[idx]
+        #data[:, :, 1] = (data[:, :, 1] / np.cos(np.deg2rad(self.lat_refs[idx]))) + self.lon_refs[idx]
+        #data[:, :, 1] = data[:, :, 1] + self.lon_refs[idx]
 
         return data.reshape(shape)
 
