@@ -100,7 +100,7 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             traffic_obj.data['lon_ref'] = lon_ref
 
             easting_ref, northing_ref, _, _ = utm.from_latlon(lat_ref, lon_ref)
-            easting, northing, _, _ = utm.from_latlon(traffic_obj['latitude'].values, traffic_obj['longitude'].values)
+            easting, northing, _, _ = utm.from_latlon(traffic_obj.data['latitude'].values, traffic_obj.data['longitude'].values)
 
             x =  easting - easting_ref
             y =  northing - northing_ref
