@@ -3,7 +3,7 @@ import yaml
 from sklearn.datasets import make_swiss_roll
 from utils.condition_utils import load_conditions
 from traffic.core import Traffic
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
@@ -58,7 +58,8 @@ def load_and_prepare_data(dataset_config):
     """
     Load and prepare the dataset for the model.
     """
-    scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else MinMaxScaler(feature_range=(-1, 1))
+    #scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else MinMaxScaler(feature_range=(-1, 1))
+    scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else StandardScaler()
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
         features=dataset_config["features"],

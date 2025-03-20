@@ -20,7 +20,7 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 from torch.utils.data import Dataset
 from traffic.core import Traffic
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from .condition_utils import Condition
 from .weather_utils import load_weather_data, load_weather_data_function, load_weather_data_arrival_airport
 from .metar_utils import load_metar_data
@@ -351,9 +351,10 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
-                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con.gz")
+                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
                 if s is None:
-                    s = MinMaxScaler(feature_range=(-1, 1))
+                    #s = MinMaxScaler(feature_range=(-1, 1))
+                    s = StandardScaler()
                     s.fit(conditions)
 
                 conditions = s.transform(conditions)
@@ -379,7 +380,7 @@ class TrafficDataset(Dataset):
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
-            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con.gz") 
+            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz") 
 
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
@@ -397,7 +398,8 @@ class TrafficDataset(Dataset):
                 data = self.scaler.transform(data)
         
 
-        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets.gz")
+        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_utm_standard.gz")
+        exit()
 
         data = torch.FloatTensor(data)
         self.data = data
@@ -447,15 +449,16 @@ class TrafficDataset(Dataset):
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
-        easting_ref, northing_ref, zone_number, zone_letter = utm.from_latlon(lat_refs[idx], lon_refs[idx])
+        easting_ref, northing_ref, zone_number, zone_letter = utm.from_latlon(self.lat_refs[idx], self.lon_refs[idx])
         # Compute absolute easting/northing
         easting = easting_ref + data[:, :, 0]
         northing = northing_ref + data[:, :, 1]
 
         # Convert back to latitude/longitude
         lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-        data[:, :, 0] = easting
-        data[:, :, 1] = northing
+
+        data[:, :, 0] = lat
+        data[:, :, 1] = lon
 
         # Restore latitude
         #data[:, :, 0] += self.lat_refs[idx]
