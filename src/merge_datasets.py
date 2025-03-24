@@ -83,6 +83,8 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 # Create a new Traffic object with the cleaned DataFrame
                 traffic_obj = Traffic(df_clean)
 
+            traffic_obj = traffic_obj.cumulative_distance().eval()
+
             airport_coordinates = {
                 "EHAM": (52.3105, 4.7683),  # Amsterdam Schiphol
                 "LFPG": (49.0097, 2.5479),  # Paris Charles de Gaulle (CDG)
@@ -137,7 +139,6 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
     # Feet to meters
 
-    big_traffic = big_traffic.cumulative_distance().eval()
     big_traffic = big_traffic = big_traffic.query('flight_id != "SWR983_17905"')
 
     

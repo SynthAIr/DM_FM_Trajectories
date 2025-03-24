@@ -351,14 +351,21 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
-                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
+                #s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
+                s = None
                 if s is None:
                     #s = MinMaxScaler(feature_range=(-1, 1))
                     s = StandardScaler()
                     s.fit(conditions)
-
+                
+                print("Nan in conditions pre transform", np.isnan(conditions).any())
                 conditions = s.transform(conditions)
                 conditions = torch.FloatTensor(conditions)
+                print("Nan in conditions post transform", torch.isnan(conditions).any())
+
+                if torch.isnan(conditions).any()[0]:
+                    print("aborting, found nan in cond")
+                    exit()
 
                     # Reshape back to the original shape if necessary (e.g., return to 3D)
                 if len(original_shape) != 2:
@@ -426,7 +433,9 @@ class TrafficDataset(Dataset):
                     feature_data = feature_data.reshape(-1, 1)
                 print(feature_names)
                 print(feature_data.shape)
+                print("Data contains nan? ",torch.isnan(feature_data).any())
                 condition_continuous.append(feature_data)
+
 
             elif feature_type == "cyclic":
                 #feature_data = np.array([f.data[feature.label].values.ravel() for f in traffic])

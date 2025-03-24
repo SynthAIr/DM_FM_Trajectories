@@ -15,7 +15,7 @@ logger:
   
 model:
   type: "LatFM"
-  vae: "./artifacts/VAE_norm_landing_4_all_landings"
+  vae: "./artifacts/VAE_landing_2_utm_stand_256"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128
@@ -34,10 +34,6 @@ model:
   resamp_with_conv: True
   cnn: True
   diffusion:
-    beta_schedule: 'linear'
-    beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 1000
     ema: True
     #ema_rate: 0.999999
     ema_rate: 0.99999

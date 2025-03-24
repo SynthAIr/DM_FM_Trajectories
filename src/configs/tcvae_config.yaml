@@ -1,5 +1,5 @@
 train:
-  epochs: 100
+  epochs: 200
   accelerator: 'auto'
   devices: 1
   seed: 42
@@ -19,9 +19,9 @@ model:
   #type: "TCVAE"
   type: "VAE"
   #h_dims: [256, 512, 512, 256]
-  h_dims: [512, 512, 512, 512]
-  #encoding_dim: 256
-  encoding_dim: 512
+  h_dims: [256, 512, 512, 256]
+  encoding_dim: 256
+  #encoding_dim: 512
   #encoding_dim: 64
   lr: 0.0001
   lr_step_size: 200
@@ -31,7 +31,7 @@ model:
   out_ch: 8
   llv_coef: 1.0
   #kld_coef: 1.0
-  kld_coef: 0.00000001
+  kld_coef: 0.000001
   reg_pseudo: False
   scale: 1.0
   fix_prior: True
