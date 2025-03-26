@@ -152,12 +152,15 @@ class Wrapper(ModelWrapper):
         #raise NotImplementedError("Test step not implemented")
 
     def sample(self, n, con, cat, grid, features , length,  sampling="ddpm"):
+        self.device = con.device
         x_0 = torch.randn((n, features, length), dtype=torch.float32, device=self.device)
 
         if False:
             time_grid = get_time_discretization(nfes=ode_opts["nfe"])
         else:
             time_grid = torch.tensor([0.0, 1.0], device=self.device)
+
+        ##print(self.solver.device())
 
         synthetic_samples = self.solver.sample(
             time_grid=time_grid,

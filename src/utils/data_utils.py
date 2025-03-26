@@ -351,8 +351,8 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
-                #s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
-                s = None
+                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
+                #s = None
                 if s is None:
                     #s = MinMaxScaler(feature_range=(-1, 1))
                     s = StandardScaler()
@@ -363,7 +363,7 @@ class TrafficDataset(Dataset):
                 conditions = torch.FloatTensor(conditions)
                 print("Nan in conditions post transform", torch.isnan(conditions).any())
 
-                if torch.isnan(conditions).any()[0]:
+                if torch.isnan(conditions).any().item():
                     print("aborting, found nan in cond")
                     exit()
 
@@ -388,6 +388,7 @@ class TrafficDataset(Dataset):
 
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
             save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz") 
+            #exit()
 
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
@@ -406,7 +407,6 @@ class TrafficDataset(Dataset):
         
 
         save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_utm_standard.gz")
-        exit()
 
         data = torch.FloatTensor(data)
         self.data = data
