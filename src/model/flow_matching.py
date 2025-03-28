@@ -187,6 +187,7 @@ class Wrapper(ModelWrapper):
 
     def reconstruct(self, x, con, cat, grid):
         self.eval()
+        self.device = con.device
         con = con.to(self.device)
         cat = cat.to(self.device)
         steps = []

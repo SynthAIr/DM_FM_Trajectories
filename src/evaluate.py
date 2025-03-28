@@ -625,7 +625,7 @@ def run_refactored(args, logger = None):
     X_original = get_traffic_from_tensor(dataset[rnd][0].detach().numpy(), dataset, trajectory_generation_model ,rnd) 
 
 
-    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE" or model_config['type'] == "FM":
+    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE" or model_config['type'] == "LatFM":
         logger.log_metrics({"type": model_config['type']})
         reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device, rnd=rnd)
         logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
@@ -673,7 +673,7 @@ def run_refactored(args, logger = None):
 
     fig_2 = plot_from_array(generated_traffic, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
-    generated_traffic.to_pickle(f"./artifacts/{model_name}/generated_samples.pkl")
+    generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
 
     generated_traffic.data['track'] = generated_traffic.data.apply(
         lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1

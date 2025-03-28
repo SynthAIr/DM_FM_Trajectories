@@ -464,6 +464,7 @@ class TrafficDataset(Dataset):
         northing = northing_ref + data[:, :, 1]
 
         # Convert back to latitude/longitude
+
         lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
 
         data[:, :, 0] = lat
