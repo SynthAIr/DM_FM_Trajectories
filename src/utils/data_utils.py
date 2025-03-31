@@ -256,9 +256,9 @@ class TrafficDataset(Dataset):
          
         if "lat_original" in traffic.data.columns:
             print("Initing refs as original")
-            self.lat_refs = np.stack(list(f.data['lat_original'].values for f in traffic)).reshape(-1, 200)
-            self.lon_refs = np.stack(list(f.data['lon_original'].values for f in traffic)).reshape(-1, 200)
-        elif "lat_ref" in traffic.data.columns:
+            self.lat_original = np.stack(list(f.data['lat_original'].values for f in traffic)).reshape(-1, 200)
+            self.lon_original = np.stack(list(f.data['lon_original'].values for f in traffic)).reshape(-1, 200)
+        if "lat_ref" in traffic.data.columns:
             print("Initing refs as refs")
             self.lat_refs = np.stack(list(f.data['lat_ref'].values[0] for f in traffic)).reshape(-1,1)
             self.lon_refs = np.stack(list(f.data['lon_ref'].values[0] for f in traffic)).reshape(-1,1)
@@ -463,24 +463,23 @@ class TrafficDataset(Dataset):
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
-        easting_ref, northing_ref, zone_number, zone_letter = utm.from_latlon(self.lat_refs[idx], self.lon_refs[idx])
+        easting_ref, northing_ref, _, _= utm.from_latlon(self.lat_refs[idx], self.lon_refs[idx])
         # Compute absolute easting/northing
         easting = easting_ref + data[:, :, 0]
         northing = northing_ref + data[:, :, 1]
 
-        # Convert back to latitude/longitude
+        _, _, zone_number, zone_letter = utm.from_latlon(self.lat_original[idx], self.lon_original[idx])
+
+        min_val, max_val = 100000.0, 999999.0
+        # Check if any value is outside the range
+        if (easting < min_val).any() or (easting > max_val).any():
+            print("easting outside of range, clamping...")
+            #tensor = np.clip(easting, min=min_val, max=max_val)
 
         lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
 
         data[:, :, 0] = lat
         data[:, :, 1] = lon
-
-        # Restore latitude
-        #data[:, :, 0] += self.lat_refs[idx]
-
-        # Restore longitude with scaling correction
-        #data[:, :, 1] = (data[:, :, 1] / np.cos(np.deg2rad(self.lat_refs[idx]))) + self.lon_refs[idx]
-        #data[:, :, 1] = data[:, :, 1] + self.lon_refs[idx]
 
         return data.reshape(shape)
 
