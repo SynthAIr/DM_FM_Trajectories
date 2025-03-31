@@ -253,8 +253,13 @@ class TrafficDataset(Dataset):
         self.categorical_conditions: torch.Tensor
         self.variables = variables
         self.metar = metar
-        
-        if "lat_ref" in traffic.data.columns:
+         
+        if "lat_original" in traffic.data.columns:
+            print("Initing refs as original")
+            self.lat_refs = np.stack(list(f.data['lat_original'].values for f in traffic)).reshape(-1, 200)
+            self.lon_refs = np.stack(list(f.data['lon_original'].values for f in traffic)).reshape(-1, 200)
+        elif "lat_ref" in traffic.data.columns:
+            print("Initing refs as refs")
             self.lat_refs = np.stack(list(f.data['lat_ref'].values[0] for f in traffic)).reshape(-1,1)
             self.lon_refs = np.stack(list(f.data['lon_ref'].values[0] for f in traffic)).reshape(-1,1)
         else:

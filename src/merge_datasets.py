@@ -101,6 +101,10 @@ def main(directory, target_length, output_filepath, filter_alt = False):
             traffic_obj.data['lat_ref'] = lat_ref
             traffic_obj.data['lon_ref'] = lon_ref
 
+            traffic_obj.data['lat_original'] = traffic_obj.data['latitude'].copy()
+            traffic_obj.data['lon_original'] = traffic_obj.data['longitude'].copy()
+
+
             easting_ref, northing_ref, _, _ = utm.from_latlon(lat_ref, lon_ref)
             easting, northing, _, _ = utm.from_latlon(traffic_obj.data['latitude'].values, traffic_obj.data['longitude'].values)
 
