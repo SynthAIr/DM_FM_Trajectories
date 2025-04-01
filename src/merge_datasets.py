@@ -84,6 +84,19 @@ def main(directory, target_length, output_filepath, filter_alt = False):
                 traffic_obj = Traffic(df_clean)
 
             traffic_obj = traffic_obj.cumulative_distance().eval()
+            """
+            traffic_obj = Traffic.from_flights(
+                flight.assign(
+                    delta_lat=lambda r: r.latitude - flight['latitude'],  # Change in latitude
+                    delta_lon=lambda r: r.longitude - flight['longitude'],  # Change in longitude
+                    delta_groundspeed=lambda r: r.groundspeed - flight['groundspeed'],  # Change in speed
+                    delta_altitude=lambda r: r.altitude - flight['altitude'],  # Change in altitude
+                    delta_track_sin=lambda r: r.track_sin - flight['track_sin'], # Change in altitude
+                    delta_track_cos=lambda r: r.track_cos - flight['track_cos'], # Change in altitude
+                )
+                for flight in traffic_obj
+            )
+            """
 
             airport_coordinates = {
                 "EHAM": (52.3105, 4.7683),  # Amsterdam Schiphol
@@ -106,6 +119,11 @@ def main(directory, target_length, output_filepath, filter_alt = False):
 
             easting_ref, northing_ref, _, _ = utm.from_latlon(lat_ref, lon_ref)
             easting, northing, _, _ = utm.from_latlon(traffic_obj.data['latitude'].values, traffic_obj.data['longitude'].values)
+
+            # Delta lon lat
+            # Delta speed, delta angle
+            # Delta timdelta
+            # Delta altitude
 
             x =  easting - easting_ref
             y =  northing - northing_ref

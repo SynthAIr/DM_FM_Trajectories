@@ -218,7 +218,7 @@ def plot_traffics(traffic_list: list,
 
     plt.style.use("ggplot")
     fig = plt.figure(figsize=(12, 12))
-    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
+    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax1.coastlines()
     ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
     plt.xlabel('Longitude')

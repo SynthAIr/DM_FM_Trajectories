@@ -2,7 +2,8 @@ dataset: landing
 data_path: ./data/traffic.pkl
 train_ratio: 0.8
 val_ratio: 0.2
-batch_size: 1024
+#batch_size: 1024
+batch_size: 256
 test_batch_size: 32
 features: [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']
 #features: [ 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate']

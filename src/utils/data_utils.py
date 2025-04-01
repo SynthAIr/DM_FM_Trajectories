@@ -465,18 +465,12 @@ class TrafficDataset(Dataset):
         data = data.reshape(-1, 200, len(self.features))
         easting_ref, northing_ref, _, _= utm.from_latlon(self.lat_refs[idx], self.lon_refs[idx])
         # Compute absolute easting/northing
-        easting = easting_ref + data[:, :, 0]
-        northing = northing_ref + data[:, :, 1]
+        easting = data[:, :, 0]
+        northing = data[:, :, 1]
 
-        _, _, zone_number, zone_letter = utm.from_latlon(self.lat_original[idx], self.lon_original[idx])
+        _, _, zone_number, zone_letter = utm.from_latlon(0, 0)
 
-        min_val, max_val = 100000.0, 999999.0
-        # Check if any value is outside the range
-        if (easting < min_val).any() or (easting > max_val).any():
-            print("easting outside of range, clamping...")
-            #tensor = np.clip(easting, min=min_val, max=max_val)
-
-        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter, strict = False)
 
         data[:, :, 0] = lat
         data[:, :, 1] = lon

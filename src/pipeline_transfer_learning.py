@@ -106,10 +106,10 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     dtw, dtw_std, _ = compute_dtw_3d_batch(subset1_data, subset2_data)
     l_logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
-    fig_pca = data_diversity(subset1_data, subset2_data, 'PCA', 'samples', model_name=model_name)
-    fig_tsne = data_diversity(subset1_data, subset2_data, 't-SNE', 'samples', model_name = model_name)
-    logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
-    logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
+    fig_pca = data_diversity(subset1_data.reshape(-1, 200, 3), subset2_data.reshape(-1, 200, 3), 'PCA', 'else', model_name=str(split))
+    fig_tsne = data_diversity(subset1_data.reshape(-1, 200, 3), subset2_data.reshape(-1, 200, 3), 't-SNE','else', model_name = str(split))
+    l_logger.experiment.log_figure(l_logger.run_id, fig_pca, f"figures/pca.png")
+    l_logger.experiment.log_figure(l_logger.run_id, fig_tsne, f"figures/tsne.png")
     
 
 
@@ -204,8 +204,8 @@ def run(args):
 
 def run_experiment(args):
     experiment_name = "transfer learning EIDW"
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
@@ -300,8 +300,8 @@ def increment_model_name(model_name):
     return f"{model_name}_1"
 
 def run_eval(args):
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained_models/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/config.yaml"
     artifact_location = args.artifact_location
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_config)
