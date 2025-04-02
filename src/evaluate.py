@@ -230,14 +230,15 @@ def plot_traffics(traffic_list: list,
     plt.legend()
     return fig
 
-def latlon_from_trackgs(df):
+def latlon_from_trackgs(traffic):
+    df = traffic.data
     df['track'] = df.apply(
         lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
     )
 
     df["timestamp"] = pd.to_timedelta(df["timedelta"], unit="s")
     df = df.reset_index()
-    df = compute_latlon_from_trackgs(df, len(df), 200, {"latitude" : 0, "longitude": 0}, forward = False)
+    df = compute_latlon_from_trackgs(df, len(traffic), 200, {"latitude" : 0, "longitude": 0}, forward = False)
     df = df.set_index('index')
     return Traffic(df)
 
@@ -291,7 +292,7 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             forward=False
         )
             #reconstructed_traf = reconstructed_traf.filter("agressive").eval()
-        reconstructed_traf = latlon_from_trackgs(reconstructed_traf.data)
+        reconstructed_traf = latlon_from_trackgs(reconstructed_traf)
         reconstructions.append(reconstructed_traf)
 
         if c == 1:
@@ -674,7 +675,7 @@ def run_refactored(args, logger = None):
 
 
 
-    generated_traffic = latlon_from_trackgs(generated_traffic.data)
+    generated_traffic = latlon_from_trackgs(generated_traffic)
 
     mmd_gen, mmd_gen_std = compute_partial_mmd(generated_traffic, X_original)
     print("MMD GEN", mmd_gen)
