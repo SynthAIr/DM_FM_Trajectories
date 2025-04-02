@@ -230,6 +230,16 @@ def plot_traffics(traffic_list: list,
     plt.legend()
     return fig
 
+def latlon_from_trackgs(df):
+    df['track'] = df.apply(
+        lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
+    )
+
+    df["timestamp"] = pd.to_timedelta(df["timedelta"], unit="s")
+    df = df.reset_index()
+    df = compute_latlon_from_trackgs(df, len(df), 200, {"latitude" : 0, "longitude": 0}, forward = False)
+    df = df.set_index('index')
+    return Traffic(df)
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None, d=None):
     # Select random samples from the dataset
@@ -277,21 +287,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
         decoded = dataset.inverse_airport_coordinates(decoded, rnd)
         reconstructed_traf = trajectory_generation_model.build_traffic(
             decoded.reshape(n, -1, len(dataset.features)),
-            coordinates=dict(latitude=48.5, longitude=8.4),
+            coordinates=dict(latitude=0, longitude=0),
             forward=False
         )
             #reconstructed_traf = reconstructed_traf.filter("agressive").eval()
-        reconstructed_traf.data['track'] = reconstructed_traf.data.apply(
-            lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
-        )
-
-        def convert_sin_cos_to_lat_lon(traffic):
-            df = traffic.data
-            # Calculate latitude from sine and cosine
-            return np.degrees(np.arctan2(df["track_sin"], df["track_cos"]))
-            # Calculate longitude from sine and cosine
-            #return Traffic(df)
-
+        reconstructed_traf = latlon_from_trackgs(reconstructed_traf.data)
         reconstructions.append(reconstructed_traf)
 
         if c == 1:
@@ -303,9 +303,6 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
             reconstructions.append(Traffic(df))
         
-        #reconstructed_traf = convert_sin_cos_to_lat_lon(reconstructed_traf)
-        
-        # Plot reconstructed data on the map
 
 
     fig = plot_traffics(reconstructions[:2], title = title)
@@ -675,9 +672,10 @@ def run_refactored(args, logger = None):
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
 
-    generated_traffic.data['track'] = generated_traffic.data.apply(
-        lambda row: np.degrees(np.arctan2(row['track_sin'], row['track_cos'])), axis=1
-    )
+
+
+    generated_traffic = latlon_from_trackgs(generated_traffic.data)
+
     mmd_gen, mmd_gen_std = compute_partial_mmd(generated_traffic, X_original)
     print("MMD GEN", mmd_gen)
     logger.log_metrics({"mmd_gen": mmd_gen, "mmd_gen_std": mmd_gen_std})

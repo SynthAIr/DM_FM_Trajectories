@@ -461,6 +461,7 @@ class TrafficDataset(Dataset):
         return condition_continuous, condition_categorical
     
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
+        return data
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
         easting_ref, northing_ref, _, _= utm.from_latlon(self.lat_refs[idx], self.lon_refs[idx])
