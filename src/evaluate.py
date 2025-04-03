@@ -411,13 +411,6 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         all_samples.append(samples)
         all_steps.append(steps)
         
-        # Print out shapes for verification (optional)
-        #print("cat shape:", cat.shape)
-        #print("grid shape:", grid.shape)
-        #print("samples shape:", samples.shape)
-        #print("steps length:", len(steps))
-
-    #all_samples = list of rnd with list of tensors (n, 7, len)
     # len(rnd), len(steps), n, 7, len
     
     return all_samples, all_steps
@@ -651,6 +644,9 @@ def run_refactored(args, logger = None):
     
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+
+    decoded = latlon_from_trackgs(decoded)
+
     df = decoded.data
     numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
     
@@ -672,8 +668,6 @@ def run_refactored(args, logger = None):
     fig_2 = plot_from_array(generated_traffic, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
-
-
 
     generated_traffic = latlon_from_trackgs(generated_traffic)
 

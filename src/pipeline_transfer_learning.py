@@ -90,7 +90,8 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.experiment.log_figure(l_logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
 
     #cols = [ 'latitude', 'longitude', 'altitude', 'groundspeed']
-    cols = [ 'latitude', 'longitude', 'altitude']
+    #cols = [ 'latitude', 'longitude', 'altitude']
+    cols = [ 'latitude', 'longitude']
     subset1_data = reconstructions[0].data[cols].dropna().values
     #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
     subset2_data = reconstructions[2].data[cols].dropna().values
