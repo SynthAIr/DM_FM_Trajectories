@@ -304,9 +304,11 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
             reconstructions.append(Traffic(df))
         
-
-
+    
     fig = plot_traffics(reconstructions[:2], title = title)
+    cols = ['longitude', 'latitude']
+    mse_lat_lon = torch.nn.functional.mse_loss(torch.tensor(reconstructions[0].data[cols].to_numpy()), torch.tensor(reconstructions[1].data[cols].to_numpy()))
+    mse_lat_lon_std = torch.std(((torch.tensor(reconstructions[0].data[cols].to_numpy()) - torch.tensor(reconstructions[1].data[cols].to_numpy())) ** 2), unbiased=True)
     # Show the plot
     #fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
 
@@ -316,6 +318,8 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
             "mse_dist" : mse_dist,
             "mse_dist_std" : mse_dist_std,
             "mse_median" : mse_median,
+            "mse_lat_lon" : mse_lat_lon,
+            "mse_lat_lon_std" : mse_lat_lon_std,
             }
     
     return reconstructions, mse_dict, rnd, fig
@@ -616,21 +620,23 @@ def run_refactored(args, logger = None):
     X_original = get_traffic_from_tensor(dataset[rnd][0].detach().numpy(), dataset, trajectory_generation_model ,rnd) 
 
 
-    if model_config['type'] == "TCVAE" or model_config['type'] == "VAE" or model_config['type'] == "LatFM":
-        logger.log_metrics({"type": model_config['type']})
-        reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device, rnd=rnd)
-        logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
-        logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
+    #if model_config['type'] == "TCVAE" or model_config['type'] == "VAE" or model_config['type'] == "LatFM":
+    logger.log_metrics({"type": model_config['type']})
+    reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, model_name = model_name, d = device, rnd=rnd)
+    logger.log_metrics({"Eval_MSE": mse_dict['mse'], "Eval_MSE_std": mse_dict['mse_std']})
+    logger.log_metrics({"mse_lat_lon": mse_dict['mse_lat_lon'], "mse_lat_lon_std": mse_dict['mse_lat_lon_std']})
+    logger.log_metrics({"Eval_MSE_median": mse_dict['mse_median']})
 
-        fig_mse_dict = get_mse_distribution(mse_dict)
-        logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
-        mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
-        print("MSE Smooth", mse_smooth)
-        logger.log_metrics({"Eval_MSE_smooth": mse_smooth})
-        fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
-        logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
 
-        logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
+    fig_mse_dict = get_mse_distribution(mse_dict)
+    logger.experiment.log_figure(logger.run_id, fig_mse_dict, "figures/Eval_mse_per_feature.png")
+    mse_smooth = mse_df(reconstructions[0].data, reconstructions[2].data)
+    print("MSE Smooth", mse_smooth)
+    logger.log_metrics({"Eval_MSE_smooth": mse_smooth})
+    fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+    logger.experiment.log_figure(logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+
+    logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
 
 
     #cols = [ 'latitude', 'longitude', 'altitude']
@@ -665,7 +671,7 @@ def run_refactored(args, logger = None):
     ##reconstructed_traf = reconstructed_traf.filter("agressive").eval()
 
     JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(X_original.data[cols],generated_traffic.data[cols] , model_name = model_name)
-    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
+    logger.log_metrics({"Eval_edistance_generation": e_distance, "Eval_edistance_std": e_distance_std, "Eval_JSD_generation": JSD, "Eval_KL_generation": KL})
     logger.experiment.log_figure(logger.run_id, fig_1, f"figures/Eval_comparison_generated.png")
 
     fig_2 = plot_from_array(generated_traffic, model_name)

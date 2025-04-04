@@ -9,13 +9,13 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirLatDiffTraj
-  run_name: AirLatDiffTraj
+  experiment_name: AirLatDiffTraj track
+  run_name: AirLatDiffTraj track
   tags: {'model': 'Latent diffusion', 'dataset': 'opensky', 'weather': False}
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/VAE_14"
+  vae: "./artifacts/VAE_landing_1_track_latlon"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128
