@@ -47,8 +47,8 @@ def compute_dtw_3d_batch(traj1, traj2):
         np.ndarray: Standard deviation of DTW alignment distances for each pair (N,).
         list: List of DTW paths for each trajectory pair.
     """
-    trajs1 = traj1.reshape(-1, 200, 3)
-    trajs2 = traj2.reshape(-1, 200, 3)
+    trajs1 = traj1.reshape(-1, 200, 2)
+    trajs2 = traj2.reshape(-1, 200, 2)
     
     assert trajs1.shape[0] == trajs2.shape[0], "Both trajectory batches must have the same number of samples (N)."
 
@@ -107,8 +107,9 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     dtw, dtw_std, _ = compute_dtw_3d_batch(subset1_data, subset2_data)
     l_logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
-    fig_pca = data_diversity(subset1_data.reshape(-1, 200, 3), subset2_data.reshape(-1, 200, 3), 'PCA', 'else', model_name=str(split))
-    fig_tsne = data_diversity(subset1_data.reshape(-1, 200, 3), subset2_data.reshape(-1, 200, 3), 't-SNE','else', model_name = str(split))
+    tn = 2
+    fig_pca = data_diversity(subset1_data.reshape(-1, 200, tn), subset2_data.reshape(-1, 200, tn), 'PCA', 'else', model_name=str(split))
+    fig_tsne = data_diversity(subset1_data.reshape(-1, 200, tn), subset2_data.reshape(-1, 200, tn), 't-SNE','else', model_name = str(split))
     l_logger.experiment.log_figure(l_logger.run_id, fig_pca, f"figures/pca.png")
     l_logger.experiment.log_figure(l_logger.run_id, fig_tsne, f"figures/tsne.png")
     
@@ -183,6 +184,8 @@ def run(args):
             features=dataset.parameters['features'],
             scaler=dataset.scaler,
         )
+
+
         
         local_eval(model_non_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
         save_config(config, os.path.join(artifact_location, "config.yaml"))
@@ -204,7 +207,7 @@ def run(args):
 
 
 def run_experiment(args):
-    experiment_name = "transfer learning EIDW"
+    experiment_name = "transfer learning EIDW track"
     checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
     config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/config.yaml"
     config = load_config(config_file)

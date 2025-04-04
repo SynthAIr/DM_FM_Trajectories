@@ -24,8 +24,8 @@ model:
   lr_gamma: 0.5
   attr_dim: 32
   guidance_scale: 1
-  in_channels: 8
-  out_ch: 8
+  in_channels: 2
+  out_ch: 2
   ch: 64
   ch_mult: [ 1, 2, 4, 4, 8 ]
   num_res_blocks: 8
@@ -37,7 +37,7 @@ model:
     beta_schedule: 'linear'
     beta_start: 0.0001            # Slightly increased for faster diffusion
     beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 1000
+    num_diffusion_timesteps: 500
     ema: True
     #ema_rate: 0.999999
     ema_rate: 0.99999

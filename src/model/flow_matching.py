@@ -38,7 +38,7 @@ class FlowMatching(Generative):
         #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
         self.ch = config["ch"] * 4
-        self.in_channels = 8 if lat else 1
+        self.in_channels = config["in_channels"] if lat else 1
         #self.resolution = config['traj_length']
         self.resolution = config['traj_length'] if lat else self.ch
 

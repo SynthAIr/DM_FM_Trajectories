@@ -9,8 +9,8 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirLatFMTraj
-  run_name: AirLatFMTraj
+  experiment_name: AirLatFMTraj track
+  run_name: AirLatFMTraj track
   tags: {'model': 'Latent Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "norm_landing_4"}
   
 model:

@@ -633,7 +633,8 @@ def run_refactored(args, logger = None):
         logger.experiment.log_figure(logger.run_id,fig_0, f"figures/Eval_reconstruction.png")
 
 
-    cols = [ 'latitude', 'longitude', 'altitude']
+    #cols = [ 'latitude', 'longitude', 'altitude']
+    cols = [ 'latitude', 'longitude']
     length = model_config['traj_length']
 
     start_time = datetime.now()
@@ -648,14 +649,16 @@ def run_refactored(args, logger = None):
     decoded = latlon_from_trackgs(decoded)
 
     df = decoded.data
-    numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+    #numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+
+    numpy_array = df[cols].to_numpy().reshape(-1, 200, len(cols))
     
     # Convert back to DataFrame
-    df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
+    df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
     generated_traffic = Traffic(df)
 
-    fig_pca = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 'PCA', 'else', model_name=model_name)
-    fig_tsne = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 't-SNE','else', model_name = model_name)
+    fig_pca = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 'PCA', 'else', model_name=model_name)
+    fig_tsne = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 't-SNE','else', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
     logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()
@@ -669,7 +672,7 @@ def run_refactored(args, logger = None):
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
     generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
 
-    generated_traffic = latlon_from_trackgs(generated_traffic)
+    #generated_traffic = latlon_from_trackgs(generated_traffic)
 
     mmd_gen, mmd_gen_std = compute_partial_mmd(generated_traffic, X_original)
     print("MMD GEN", mmd_gen)
@@ -783,7 +786,8 @@ def run(args, logger = None):
     #logger.experiment.log_figure(logger.run_id,fig_track_speed, f"figures/Eval_reconstruction_track_speed.png")
     #logger.experiment.log_figure(logger.run_id, fig, "figures/my_plot.png")
     #print(reconstructions[1].data)
-    cols = [ 'latitude', 'longitude', 'altitude']
+    #cols = [ 'latitude', 'longitude', 'altitude']
+    cols = [ 'latitude', 'longitude']
     if n != 1000:
         JSD, KL, (e_distance, e_distance_std), fig_1 = jensenshannon_distance(reconstructions[0].data[cols], reconstructions[1].data[cols], model_name = model_name)
         logger.log_metrics({"Eval_edistance": e_distance, "Eval_JSD": JSD, "Eval_KL": KL})
@@ -814,14 +818,15 @@ def run(args, logger = None):
     reconstructed_traf = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model, rnd)
 
     df = reconstructed_traf.data
-    numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
+    #numpy_array = exponentially_weighted_moving_average(df[cols].to_numpy().reshape(-1, 200, 3))
     
     # Convert back to DataFrame
-    df[['longitude', 'latitude', 'altitude']] = pd.DataFrame(numpy_array.reshape(-1,3), columns=['longitude', 'latitude', 'altitude'])
+    numpy_array = df[cols].to_numpy().reshape(-1, 200, len(cols))
+    df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
     reconstructed_traf = Traffic(df)
 
-    fig_pca = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 'PCA', 'else', model_name=model_name)
-    fig_tsne = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, 3), numpy_array, 't-SNE','else', model_name = model_name)
+    fig_pca = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 'PCA', 'else', model_name=model_name)
+    fig_tsne = data_diversity(reconstructions[0].data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 't-SNE','else', model_name = model_name)
     logger.experiment.log_figure(logger.run_id, fig_pca, f"figures/pca.png")
     logger.experiment.log_figure(logger.run_id, fig_tsne, f"figures/tsne.png")
     #reconstructed_traf = reconstructed_traf.simplify(5e2, altitude="altitude").eval()

@@ -9,8 +9,8 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirFMTraj
-  run_name: AirFMTraj
+  experiment_name: AirFMTraj track
+  run_name: AirFMTraj track
   tags: {'model': 'Flow Matching', 'dataset': 'opensky', 'weather': False, "model_id": "norm_landing_4"}
  
 model:
@@ -23,8 +23,8 @@ model:
   lr_gamma: 0.5
   attr_dim: 64
   guidance_scale: 1
-  in_channels: 8
-  out_ch: 8
+  in_channels: 6
+  out_ch: 6
   ch: 64
   ch_mult: [ 1, 2, 4, 8 ]
   num_res_blocks: 8
@@ -33,10 +33,6 @@ model:
   resamp_with_conv: True
   cnn: True
   diffusion:
-    beta_schedule: 'linear'
-    beta_start: 0.0001            # Slightly increased for faster diffusion
-    beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 1000
     ema: True
     ema_rate: 0.999999
   weather_config:
