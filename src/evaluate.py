@@ -28,7 +28,7 @@ from utils.condition_utils import load_conditions
 from tqdm import tqdm
 from utils.helper import load_and_prepare_data, get_model, init_model_config
 from evaluation.diversity import data_diversity
-from evaluation.similarity import jensenshannon_distance
+from evaluation.similarity import jensenshannon_distance,compute_dtw_3d_batch
 from evaluation.time_series import duration_and_speed, timeseries_plot
 from evaluation.fidelity import discriminative_score
 from lightning.pytorch.loggers import MLFlowLogger
@@ -225,7 +225,7 @@ def plot_traffics(traffic_list: list,
     plt.ylabel('Latitude')
     plt.title(title)
     for c, t in enumerate(traffic_list):
-        t.plot(ax1, alpha=0.3, color=colors[c], linewidth=0.5)
+        t.plot(ax1, alpha=0.2, color=colors[c], linewidth=0.5)
 
     plt.legend()
     return fig
@@ -681,6 +681,9 @@ def run_refactored(args, logger = None):
     mmd_gen, mmd_gen_std = compute_partial_mmd(generated_traffic, X_original)
     print("MMD GEN", mmd_gen)
     logger.log_metrics({"mmd_gen": mmd_gen, "mmd_gen_std": mmd_gen_std})
+
+    dtw, dtw_std, _ = compute_dtw_3d_batch(X_original.data[cols].to_numpy(),generated_traffic.data[cols].to_numpy())
+    logger.log_metrics({"dtw": dtw, "dtw_std": dtw_std})
 
     training_trajectories = X_original
     synthetic_trajectories = generated_traffic

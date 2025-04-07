@@ -9,12 +9,11 @@ from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_par
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
-from evaluation.similarity import compute_energy_distance
+from evaluation.similarity import compute_energy_distance, compute_dtw_3d_batch
 import os
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from traffic.algorithms.generation import Generation
 import numpy as np
-from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 from evaluation.diversity import data_diversity
 
@@ -34,52 +33,10 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
     
     return DataLoader(dataset, batch_size=dataloader.batch_size, sampler=sampler, num_workers=dataloader.num_workers)
 
-def compute_dtw_3d_batch(traj1, traj2):
-    """
-    Computes the DTW distance and standard deviation for batches of 3D trajectories.
-
-    Args:
-        trajs1 (np.ndarray): First batch of trajectories, shape (N, T1, 3).
-        trajs2 (np.ndarray): Second batch of trajectories, shape (N, T2, 3).
-
-    Returns:
-        np.ndarray: DTW distances for each trajectory pair (N,).
-        np.ndarray: Standard deviation of DTW alignment distances for each pair (N,).
-        list: List of DTW paths for each trajectory pair.
-    """
-    trajs1 = traj1.reshape(-1, 200, 2)
-    trajs2 = traj2.reshape(-1, 200, 2)
-    
-    assert trajs1.shape[0] == trajs2.shape[0], "Both trajectory batches must have the same number of samples (N)."
-
-    N = trajs1.shape[0]
-    dtw_distances = np.zeros(N)
-    dtw_stds = np.zeros(N)
-    dtw_paths = []
-
-    for i in range(N):
-        traj1, traj2 = trajs1[i], trajs2[i]
-
-        # Compute DTW distance and warping path
-        distance, path = fastdtw(traj1, traj2, dist=euclidean)
-
-        # Compute distances for each aligned point pair in the warping path
-        alignment_distances = np.array([euclidean(traj1[i], traj2[j]) for i, j in path])
-
-        # Compute standard deviation of alignment distances
-        std_dev = np.std(alignment_distances)
-
-        # Store results
-        dtw_distances[i] = distance
-        dtw_stds[i] = std_dev
-        dtw_paths.append(path)
-    
-    return dtw_distances.mean(), dtw_stds.mean(), dtw_paths
-
 def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
     reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
-    fig_smooth = plot_traffics([reconstructions[0],reconstructions[2]])
+    fig_smooth = plot_traffics([reconstructions[0],reconstructions[1]])
     l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
     l_logger.log_metrics({"Eval_MSE": mse_dict["mse"], "Eval_MSE_std": mse_dict["mse_std"]})
 
@@ -94,10 +51,10 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     cols = [ 'latitude', 'longitude']
     subset1_data = reconstructions[0].data[cols].dropna().values
     #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
-    subset2_data = reconstructions[2].data[cols].dropna().values
+    subset2_data = reconstructions[1].data[cols].dropna().values
     #subset2_data = .data.dropna().values
 
-    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[2] )
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[1] )
     l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
     # Compute energy distance between the raw trajectories

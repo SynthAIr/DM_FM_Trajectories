@@ -15,7 +15,7 @@ logger:
   
 model:
   type: "LatFM"
-  vae: "./artifacts/VAE_landing_EIDW"
+  vae: "./artifacts/VAE_landing_1_track"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128
