@@ -440,7 +440,7 @@ def plot_from_array(t: Traffic, model_name = "model"):
     plt.style.use("ggplot")
     fig = plt.figure(figsize=(12, 12))
 
-    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
+    ax1 = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax1.coastlines()
     t.plot(ax1, alpha=0.3, color="red", linewidth=0.5)
     ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
@@ -651,17 +651,15 @@ def run_refactored(args, logger = None):
     
     detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
     decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+    #decoded = latlon_from_trackgs(decoded)
 
-    decoded = latlon_from_trackgs(decoded)
-
-    df = decoded.data
+    #df = decoded.data
     #numpy_array = exponentially_weighted_moving_average(df[['longitude', 'latitude', 'altitude']].to_numpy().reshape(-1, 200, 3))
-
-    numpy_array = df[cols].to_numpy().reshape(-1, 200, len(cols))
-    
+    numpy_array = decoded.data[cols].to_numpy().reshape(-1, 200, len(cols))
     # Convert back to DataFrame
-    df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
-    generated_traffic = Traffic(df)
+    #df[cols] = pd.DataFrame(numpy_array.reshape(-1,len(cols)), columns=cols)
+    #generated_traffic = Traffic(df)
+    generated_traffic = decoded
 
     fig_pca = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 'PCA', 'else', model_name=model_name)
     fig_tsne = data_diversity(X_original.data[cols].to_numpy().reshape(-1, 200, len(cols)), numpy_array, 't-SNE','else', model_name = model_name)
@@ -909,9 +907,10 @@ def get_traffic_from_tensor(data, dataset, trajectory_generation_model, rnd):
     decoded = dataset.inverse_airport_coordinates(decoded, rnd)
     reconstructed_traf = trajectory_generation_model.build_traffic(
         decoded.reshape(n, -1, len(dataset.features)),
-        #coordinates=dict(latitude=48.5, longitude=8.4),
+        coordinates=dict(latitude=0, longitude=0),
         forward=False
     )
+    reconstructed_traf = latlon_from_trackgs(reconstructed_traf)
     return reconstructed_traf
 
 def exponential_kernel(x, y, gamma=1e-8):
