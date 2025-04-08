@@ -61,7 +61,7 @@ class PerturbationModel(pl.LightningModule):
         #trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
         return trajectory + noise
 
-    def sample(self, trajectory: torch.Tensor, method="gaussian", n_samples: int = 1) -> torch.Tensor:
+    def sample(self, trajectory: torch.Tensor, method="random", n_samples: int = 1) -> torch.Tensor:
         """
         Sample perturbed trajectories using the specified method.
 
