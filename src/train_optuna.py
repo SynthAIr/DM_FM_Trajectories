@@ -46,7 +46,8 @@ def train(
         max_epochs=train_config["epochs"],
         gradient_clip_val=train_config["gradient_clip_val"],
         log_every_n_steps=train_config["log_every_n_steps"],
-        strategy="ddp_find_unused_parameters_true",
+        strategy="auto",
+        #strategy="ddp_ipfind_unused_parameters_true",
         logger=logger,
         callbacks=[
             PyTorchLightningPruningCallback(trial, monitor="valid_loss"),
@@ -74,6 +75,7 @@ def setup_logger(args, config):
     logger_config = config["logger"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
 
+    logger_config["experiment_name"] = logger_config["experiment_name"] + "_optuna" 
     logger = MLFlowLogger(
         experiment_name=logger_config["experiment_name"],
         run_name=run_name,
