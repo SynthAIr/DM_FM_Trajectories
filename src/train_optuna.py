@@ -96,13 +96,21 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
 
     if trial:
         config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
-        config['model']['dropout'] = trial.suggest_float("dropout", 0.0, 0.5)
+        config['model']['guidance_scale'] = trial.suggest_float("guidance_scale", 0, 10.0)
         config['model']['diffusion']['beta_end'] = trial.suggest_float("beta_end", 0.03, 0.08)
         config['model']['diffusion']['num_diffusion_timesteps'] = trial.suggest_int("num_diffusion_timesteps", 300, 1000)
         config['model']['diffusion']['beta_schedule'] = trial.suggest_categorical("beta_schedule", ["linear", "cosine"])
         
 
     l_logger, run_name, artifact_location = setup_logger(args, config)
+
+    if trial:
+        l_logger.log_metrics({"lr": config['train']['learning_rate']})
+        l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
+        l_logger.log_metrics({"beta_end": config['model']['diffusion']['beta_end']})
+        l_logger.log_metrics({"num_diffusion_timesteps": config['model']['diffusion']['num_diffusion_timesteps']})
+        l_logger.log_metrics({"beta_schedule": config['model']['diffusion']['beta_schedule']})
+
 
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
