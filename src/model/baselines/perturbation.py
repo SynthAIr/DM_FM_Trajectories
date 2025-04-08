@@ -3,10 +3,14 @@ from torch import nn
 import pytorch_lightning as pl
 
 class PerturbationModel(pl.LightningModule):
-    def __init__(self, noise_ratio=0.01, variance=0.01):
+    def __init__(self, config ):
         super().__init__()
-        self.noise_ratio = noise_ratio
-        self.variance = variance
+        self.config = config
+        self.noise_ratio = config['noise_ratio']
+        self.variance = config['variance']
+
+    def to(self, device):
+        return self
 
     def forward(self, trajectory: torch.Tensor) -> torch.Tensor:
         """
@@ -32,10 +36,11 @@ class PerturbationModel(pl.LightningModule):
             Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
         """
         # Generate noise for n_samples
-        noise = (torch.rand((n_samples, *trajectory.shape)) * 2 * self.noise_ratio) - self.noise_ratio
+        noise = (torch.rand((trajectory.shape)) * 2 * self.noise_ratio) - self.noise_ratio
+        noise = noise.to(trajectory.device)
         # Expand trajectory and add noise
-        trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
-        return trajectory_expanded + noise
+        #trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
+        return trajectory + noise
 
     def gaussian_perturbation(self, trajectory: torch.Tensor, n_samples: int = 1) -> torch.Tensor:
         """
@@ -49,10 +54,12 @@ class PerturbationModel(pl.LightningModule):
             Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
         """
         # Generate Gaussian noise for n_samples
-        noise = torch.randn((n_samples, *trajectory.shape)) * torch.sqrt(torch.tensor(self.variance))
+        noise = torch.randn((trajectory.shape)) * torch.sqrt(torch.tensor(self.variance))
+
+        noise = noise.to(trajectory.device)
         # Expand trajectory and add noise
-        trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
-        return trajectory_expanded + noise
+        #trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
+        return trajectory + noise
 
     def sample(self, trajectory: torch.Tensor, method="gaussian", n_samples: int = 1) -> torch.Tensor:
         """
@@ -67,11 +74,14 @@ class PerturbationModel(pl.LightningModule):
             Tensor of shape (n_samples, ..., 2) containing sampled perturbed trajectories.
         """
         if method == "random":
-            return self.random_perturbation(trajectory, n_samples)
+            return self.random_perturbation(trajectory, n_samples), []
         elif method == "gaussian":
-            return self.gaussian_perturbation(trajectory, n_samples)
+            return self.gaussian_perturbation(trajectory, n_samples), []
         else:
             raise ValueError(f"Unknown sampling method: {method}")    
+
+    def reconstruct(self, x, con, cat, grid):
+        return self.sample(x, n_samples = x.shape[0])
 
 if __name__ == "__main__":
     # Initialize model

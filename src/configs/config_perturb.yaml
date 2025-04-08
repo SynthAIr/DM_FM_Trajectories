@@ -1,0 +1,16 @@
+logger:
+  mlflow_uri: http://100.64.0.15:7979
+  experiment_name: perturbation
+  run_name: perturbation
+  tags: {'model': 'perturbation'}
+model:
+  type: "PER"
+  noise_ratio: 0.01
+  variance: 0.01
+  weather_config: 
+    weather_grid: False
+    variables: 1
+    levels: 1
+    lon: 5
+    lat: 5
+    type: "ADES"

@@ -40,6 +40,7 @@ import cvxopt
 from traffic.algorithms.generation import compute_latlon_from_trackgs
 import pandas as pd
 import seaborn as sns
+from model.baselines import PerturbationModel, TimeGAN
 
 
 def get_checkpoint_path(logger_config: Dict[str, Any]):
@@ -69,6 +70,7 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=
     """
     Load the trained model and create the trajectory generation model.
     """
+    per = False
     if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -96,6 +98,8 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, model = fm, cuda = "0")
         #fm = FlowMatching(model_config)
         #model = get_model(model_config)(model_config, fm)
+    elif model_config["type"] == "PER":
+        model = get_model(model_config)(model_config)
     else:
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config)
     if not d:
@@ -254,6 +258,9 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     X_ = X2.reshape(n, len(dataset.features), -1).to(device)
     con_ = con.reshape(n, -1).to(device)
     cat_ = cat.reshape(n, -1).to(device)
+
+    perturb = isinstance(model, PerturbationModel)
+    print(perturb)
     model = model.to(device)
     
     print("Shapes:", con.shape, cat.shape, X_.shape)
@@ -389,6 +396,7 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
     # Initialize lists to store results for each sample
     all_samples = []
     all_steps = []
+    perturb = isinstance(model, PerturbationModel)
     for i in tqdm(rnd):
         # Load the i-th sample from the dataset
         x, con, cat, grid = dataset[i]
@@ -407,7 +415,11 @@ def generate_samples(dataset, model, rnd, n=10, length=200):
         #print("Features", x.shape)
         
         # Generate samples and steps using the model
-        samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[0])
+        if not perturb:
+            samples, steps = model.sample(n, con, cat, grid, length, features=x.shape[0])
+        else:
+            samples, steps = model.reconstruct(x, con, cat, grid)
+
         # (steps=50, n, 7, len)
         # list (steps=50) of tensors (n, 7, len)
         
@@ -596,8 +608,13 @@ def run_refactored(args, logger = None):
     checkpoint = f"{artifact_location}/{model_name}/best_model.ckpt"
     config_file = f"{artifact_location}/{model_name}/config.yaml"
 
-    config = load_config(config_file)
-    dataset_config = config["data"]
+    if args.perturb:
+        config_file = "./configs/config_perturb.yaml"
+        config = load_config(config_file)
+        dataset_config = load_config(args.dataset_config)
+    else:
+        config = load_config(config_file)
+        dataset_config = config["data"]
     logger = get_logger(logger, dataset_config, config)
 
     dataset_config["data_path"] = args.data_path
@@ -606,6 +623,7 @@ def run_refactored(args, logger = None):
     #config['model']["data"] = dataset_config
     #config['model']["traj_length"] = dataset.parameters['seq_len']
     #config['model']["continuous_len"] = dataset.con_conditions.shape[1]
+
     model_config = init_model_config(config, dataset_config, dataset)
 
     if model_config['type'] == "TCVAE" or model_config['type'] == "VAE":
@@ -1029,7 +1047,12 @@ if __name__ == "__main__":
             default=0,
             help="GPU to use",
             )
-    #parser.add_argument("--artifact_location", type=str, default="/mnt/data/synthair/synthair_diffusion/data/experiments/transfer_learning_EIDW/pretrained_models", help="Path to training data.")
+
+    parser.add_argument("--eval", dest="run_train", action='store_true')
+    parser.add_argument(
+            "--perturb",
+            dest="perturb", 
+            action='store_true')
 
     args = parser.parse_args()
     run_refactored(args)
