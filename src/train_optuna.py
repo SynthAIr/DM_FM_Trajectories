@@ -94,22 +94,37 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
     if hasattr(args, 'model_name'):
         config['logger']['run_name'] = args.model_name
 
+    model_str = "fm"
+
     if trial:
-        config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
-        config['model']['guidance_scale'] = trial.suggest_float("guidance_scale", 0, 10.0)
-        config['model']['diffusion']['beta_end'] = trial.suggest_float("beta_end", 0.03, 0.08)
-        config['model']['diffusion']['num_diffusion_timesteps'] = trial.suggest_int("num_diffusion_timesteps", 300, 1000)
-        config['model']['diffusion']['beta_schedule'] = trial.suggest_categorical("beta_schedule", ["linear", "cosine"])
-        
+        if model_str == "diffusion":
+            config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+            config['model']['guidance_scale'] = trial.suggest_categorical("guidance_scale", [0, 1, 3, 5, 10.0])
+            config['model']['diffusion']['beta_end'] = trial.suggest_float("beta_end", 0.03, 0.08)
+            config['model']['diffusion']['num_diffusion_timesteps'] = trial.suggest_categorical("num_diffusion_timesteps", [300, 400, 500])
+            config['model']['diffusion']['beta_schedule'] = trial.suggest_categorical("beta_schedule", ["linear", "cosine"])
+        elif model_str == "fm":
+            config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+            config['model']['guidance_scale'] = trial.suggest_categorical("guidance_scale", [0, 1, 3, 5, 10])
+            config['model']['num_res_blocks'] = trial.suggest_categorical("num_res_blocks", [4, 6, 8, 10])
+            config['model']['attr_dim'] = trial.suggest_categorical("attr_dim", [32, 64, 128])
+
 
     l_logger, run_name, artifact_location = setup_logger(args, config)
 
     if trial:
-        l_logger.log_metrics({"lr": config['train']['learning_rate']})
-        l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
-        l_logger.log_metrics({"beta_end": config['model']['diffusion']['beta_end']})
-        l_logger.log_metrics({"num_diffusion_timesteps": config['model']['diffusion']['num_diffusion_timesteps']})
-        l_logger.log_metrics({"beta_schedule": config['model']['diffusion']['beta_schedule']})
+        if model_str == "diffusion":
+            l_logger.log_metrics({"lr": config['train']['learning_rate']})
+            l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
+            l_logger.log_metrics({"beta_end": config['model']['diffusion']['beta_end']})
+            l_logger.log_metrics({"num_diffusion_timesteps": config['model']['diffusion']['num_diffusion_timesteps']})
+            l_logger.log_metrics({"beta_schedule": config['model']['diffusion']['beta_schedule']})
+        elif model_str == "fm":
+            l_logger.log_metrics({"lr": config['train']['learning_rate']})
+            l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
+            l_logger.log_metrics({"num_res_blocks": config['model']['num_res_blocks']})
+            l_logger.log_metrics({"attr_dim": config['model']['attr_dim']})
+
 
 
     dataset_config["data_path"] = args.data_path
@@ -159,7 +174,8 @@ def get_unique_run_name_and_artile_location(logger_config: Dict[str, Any]) -> Tu
 
 def objective(trial: optuna.Trial):
     args = argparse.Namespace(
-        config_file="./configs/config.yaml",
+        #config_file="./configs/config.yaml",
+        config_file="./configs/config_fm.yaml",
         dataset_config="./configs/dataset_landing_transfer.yaml",
         data_path="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_LSZH_200.pkl",
         artifact_location="./artifacts",

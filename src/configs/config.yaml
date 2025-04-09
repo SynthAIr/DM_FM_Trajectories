@@ -16,14 +16,14 @@ logger:
 model:
   type: "DDIM"
   cnn: True
-  attr_dim: 32
+  attr_dim: 64
   guidance_scale: 1
   in_channels: 6
   out_ch: 6
   ch: 128
-  ch_mult: [ 1, 2, 2, 4 ]
-  num_res_blocks: 6
-  attn_resolutions: [16, 32]
+  ch_mult: [ 1, 2, 2, 8 ]
+  num_res_blocks: 8
+  attn_resolutions: [32, 16]
   dropout: 0.1
   lr: 0.00002
   resamp_with_conv: True
