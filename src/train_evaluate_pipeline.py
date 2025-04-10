@@ -59,6 +59,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+            "--perturb",
+            dest="perturb", 
+            action='store_true')
+
+    parser.add_argument(
             "--cuda",
             type=int,
             default=0,

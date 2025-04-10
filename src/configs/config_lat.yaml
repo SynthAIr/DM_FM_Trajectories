@@ -27,19 +27,18 @@ model:
   in_channels: 2
   out_ch: 2
   ch: 64
-  ch_mult: [ 1, 2, 4, 4, 8 ]
-  num_res_blocks: 8
+  ch_mult: [ 1, 2, 2, 8 ]
+  num_res_blocks: 6
   attn_resolutions: [32, 16]
-  dropout: 0.0
+  dropout: 0.1
   resamp_with_conv: True
   cnn: True
   diffusion:
     beta_schedule: 'linear'
     beta_start: 0.0001            # Slightly increased for faster diffusion
     beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 500
+    num_diffusion_timesteps: 300
     ema: True
-    #ema_rate: 0.999999
     ema_rate: 0.99999
   weather_config:
     weather_grid: False

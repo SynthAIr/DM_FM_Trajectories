@@ -94,7 +94,8 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
     if hasattr(args, 'model_name'):
         config['logger']['run_name'] = args.model_name
 
-    model_str = "fm"
+    #model_str = "fm"
+    model_str = "vae"
 
     if trial:
         if model_str == "diffusion":
@@ -108,6 +109,19 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
             config['model']['guidance_scale'] = trial.suggest_categorical("guidance_scale", [0, 1, 3, 5, 10])
             config['model']['num_res_blocks'] = trial.suggest_categorical("num_res_blocks", [4, 6, 8, 10])
             config['model']['attr_dim'] = trial.suggest_categorical("attr_dim", [32, 64, 128])
+        elif model_str == "vae":
+            config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+            config['model']['kld_coef'] = trial.suggest_categorical("kld_coef", [0.000001, 0.0001, 0.01, 1])
+            category_hdims = trial.suggest_categorical("h_dims", [0, 1, 2])
+
+            if category_hdims == 0:
+                config['model']['h_dims'] = [256, 128, 256]
+            if category_hdims == 1:
+                config['model']['h_dims'] = [256, 512, 512, 256]
+            if category_hdims == 2:
+                config['model']['h_dims'] = [256, 512, 256]
+
+        
 
 
     l_logger, run_name, artifact_location = setup_logger(args, config)
@@ -124,6 +138,10 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
             l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
             l_logger.log_metrics({"num_res_blocks": config['model']['num_res_blocks']})
             l_logger.log_metrics({"attr_dim": config['model']['attr_dim']})
+        elif model_str == "vae":
+            l_logger.log_metrics({"lr": config['train']['learning_rate']})
+            l_logger.log_metrics({"kld_coef": config['model']['kld_coef']})
+            l_logger.log_metrics({"h_dims": config['model']['h_dims']})
 
 
 
@@ -148,7 +166,7 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
     end_time = datetime.now()
 
     config["data"] = dataset_config
-    save_config(config, os.path.join(artifact_location, "config.yaml"))
+    save_config(config, os.path.join(artifact_location, "tcvae_config.yaml"))
     checkpoint_path = artifact_location + "/best_model.ckpt"
     model_size = os.path.getsize(checkpoint_path) / (1024 * 1024)
     l_logger.log_metrics({"Size (MB)": model_size})
@@ -175,7 +193,8 @@ def get_unique_run_name_and_artile_location(logger_config: Dict[str, Any]) -> Tu
 def objective(trial: optuna.Trial):
     args = argparse.Namespace(
         #config_file="./configs/config.yaml",
-        config_file="./configs/config_fm.yaml",
+        #config_file="./configs/config_fm.yaml",
+        config_file="./configs/tcvae_config.yaml",
         dataset_config="./configs/dataset_landing_transfer.yaml",
         data_path="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_LSZH_200.pkl",
         artifact_location="./artifacts",

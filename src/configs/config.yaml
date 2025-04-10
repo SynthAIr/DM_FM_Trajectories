@@ -17,12 +17,12 @@ model:
   type: "DDIM"
   cnn: True
   attr_dim: 64
-  guidance_scale: 1
+  guidance_scale: 3
   in_channels: 6
   out_ch: 6
   ch: 128
   ch_mult: [ 1, 2, 2, 8 ]
-  num_res_blocks: 8
+  num_res_blocks: 6
   attn_resolutions: [32, 16]
   dropout: 0.1
   lr: 0.00002
@@ -31,7 +31,7 @@ model:
     beta_schedule: 'linear'
     beta_start: 0.0001            # Slightly increased for faster diffusion
     beta_end: 0.05               # Slightly increased for faster diffusion
-    num_diffusion_timesteps: 500
+    num_diffusion_timesteps: 300
     ema: True
     ema_rate: 0.99999
   weather_config:
