@@ -95,7 +95,8 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
         config['logger']['run_name'] = args.model_name
 
     #model_str = "fm"
-    model_str = "vae"
+    #model_str = "vae"
+    model_str = "lfm"
 
     if trial:
         if model_str == "diffusion":
@@ -113,6 +114,7 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
             config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
             config['model']['kld_coef'] = trial.suggest_categorical("kld_coef", [0.000001, 0.0001, 0.01, 1])
             category_hdims = trial.suggest_categorical("h_dims", [0, 1, 2])
+            dataset_config["batch_size"] = 1024
 
             if category_hdims == 0:
                 config['model']['h_dims'] = [256, 128, 256]
@@ -120,6 +122,19 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
                 config['model']['h_dims'] = [256, 512, 512, 256]
             if category_hdims == 2:
                 config['model']['h_dims'] = [256, 512, 256]
+
+        elif model_str == "lfm":
+            config['train']['learning_rate'] = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+            category_vae = trial.suggest_categorical("vae", [0, 1])
+            config['model']['guidance_scale'] = trial.suggest_categorical("guidance_scale", [0, 1, 3, 5, 10])
+            config['model']['num_res_blocks'] = trial.suggest_categorical("num_res_blocks", [4, 6, 8, 10])
+
+            if category_vae == 0:
+                config['model']['vae'] = "./artifacts/VAE_2"
+            if category_vae == 1:
+                config['model']['vae'] = "./artifacts/VAE_4"
+
+
 
         
 
@@ -141,8 +156,12 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
         elif model_str == "vae":
             l_logger.log_metrics({"lr": config['train']['learning_rate']})
             l_logger.log_metrics({"kld_coef": config['model']['kld_coef']})
-            l_logger.log_metrics({"h_dims": config['model']['h_dims']})
-
+            l_logger.log_metrics({"h_dims": str(config['model']['h_dims'])})
+        elif model_str == "lfm":
+            l_logger.log_metrics({"lr": config['train']['learning_rate']})
+            l_logger.log_metrics({"guidance_scale": config['model']['guidance_scale']})
+            l_logger.log_metrics({"num_res_blocks": config['model']['num_res_blocks']})
+            l_logger.log_metrics({"vae": config['model']['vae']})
 
 
     dataset_config["data_path"] = args.data_path
@@ -194,7 +213,8 @@ def objective(trial: optuna.Trial):
     args = argparse.Namespace(
         #config_file="./configs/config.yaml",
         #config_file="./configs/config_fm.yaml",
-        config_file="./configs/tcvae_config.yaml",
+        config_file="./configs/config_fm_lat.yaml",
+        #config_file="./configs/tcvae_config.yaml",
         dataset_config="./configs/dataset_landing_transfer.yaml",
         data_path="/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_LSZH_200.pkl",
         artifact_location="./artifacts",
