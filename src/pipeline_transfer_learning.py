@@ -165,8 +165,8 @@ def run(args):
 
 def run_experiment(args):
     experiment_name = "transfer learning EIDW track"
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments/{args.experiment}/pretrained/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
@@ -176,6 +176,7 @@ def run_experiment(args):
     print(dataset.data.shape)
     print(dataset.con_conditions.shape, dataset.cat_conditions.shape)
 
+    dataset_config["batch_size"] = 128
     train_loader, val_loader, test_loader = get_dataloaders(
         dataset,
         dataset_config["train_ratio"],

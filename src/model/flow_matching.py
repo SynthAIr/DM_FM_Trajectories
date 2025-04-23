@@ -172,7 +172,7 @@ class Wrapper(ModelWrapper):
             #step_size=ode_opts["step_size"] if "step_size" in ode_opts else None,
             atol= 1e-5,
             rtol= 1e-5,
-            step_size= 0.1,
+            step_size= 0.01,
             con= con,
             cat = cat,
             grid = grid,

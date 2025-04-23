@@ -9,8 +9,8 @@ train:
   precision: 'high'
 logger:
   mlflow_uri: http://100.64.0.15:7979
-  experiment_name: AirLatDiffTraj track
-  run_name: AirLatDiffTraj track
+  experiment_name: AirLatDiffTraj_track
+  run_name: AirLatDiffTraj_track
   tags: {'model': 'Latent diffusion', 'dataset': 'opensky', 'weather': False}
   
 model:
