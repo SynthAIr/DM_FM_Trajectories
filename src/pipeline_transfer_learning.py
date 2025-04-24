@@ -5,7 +5,7 @@ import torch
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch import seed_everything
 from utils.helper import load_and_prepare_data, get_model, save_config, load_config, init_config, init_model_config, get_model_train
-from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd, get_mse_distribution
+from evaluate import get_models,reconstruct_and_plot, plot_traffics, compute_partial_mmd, get_mse_distribution, detach_to_tensor, generate_samples, get_traffic_from_tensor
 from train import setup_logger, get_dataloaders, train
 from model.flow_matching import FlowMatching, Wrapper
 from model.diffusion import Diffusion
@@ -33,11 +33,18 @@ def reduce_dataloader(dataloader, keep_fraction=0.2):
     
     return DataLoader(dataset, batch_size=dataloader.batch_size, sampler=sampler, num_workers=dataloader.num_workers)
 
-def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split):
+def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger, split, length = 200):
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
     reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
-    fig_smooth = plot_traffics([reconstructions[0],reconstructions[1]])
-    l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_reconstruction_smoothed.png")
+    #rnd = np.random.randint(0, len(dataset), (n,))
+    samples, steps = generate_samples(dataset, model, rnd, n = n, length = length)
+    detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
+    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+
+    #numpy_array = d#ecoded.data[cols].to_numpy().reshape(-1, 200, len(cols))
+    generated_traffic = decoded
+    fig_smooth = plot_traffics([reconstructions[0],generated_traffic])
+    l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_generations.png")
     l_logger.log_metrics({"Eval_MSE": mse_dict["mse"], "Eval_MSE_std": mse_dict["mse_std"]})
 
     #subset1_data = reconstructions[0].data.dropna().values
@@ -51,10 +58,10 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     cols = [ 'latitude', 'longitude']
     subset1_data = reconstructions[0].data[cols].dropna().values
     #subset2_data = df_subset2[['latitude', 'longitude']].dropna().values
-    subset2_data = reconstructions[1].data[cols].dropna().values
+    subset2_data = generated_traffic.data[cols].dropna().values
     #subset2_data = .data.dropna().values
 
-    mmd, mmd_std = compute_partial_mmd(reconstructions[0],reconstructions[1] )
+    mmd, mmd_std = compute_partial_mmd(reconstructions[0],generated_traffic )
     l_logger.log_metrics({"mmd": mmd, "mmd_std": mmd_std})
 
     # Compute energy distance between the raw trajectories
@@ -144,7 +151,7 @@ def run(args):
 
 
         
-        local_eval(model_non_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
+        local_eval(model_non_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split, config['model']['traj_length'])
         save_config(config, os.path.join(artifact_location, "config.yaml"))
         model_non_pretrained = model_non_pretrained.to("cpu")
         # Train pretrained model
@@ -158,7 +165,8 @@ def run(args):
             train_encoder(model_pretrained.vae, train_config, train_loader_reduced, val_loader, test_loader, c)
         train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
 
-        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
+        #local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
+        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split, config['model']['traj_length'])
         config["data"] = dataset_config
         save_config(config, os.path.join(artifact_location, "config.yaml"))
 
@@ -226,7 +234,8 @@ def run_experiment(args):
 
             train(train_config, model_pretrained, train_loader_reduced, val_loader, test_loader, l_logger, artifact_location)
     
-        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
+        local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split, config['model']['traj_length'])
+        #local_eval(model_pretrained, dataset, trajectory_generation_model, n, device, l_logger, split)
         config["data"] = dataset_config
         if split != 0.0:
             save_config(config, os.path.join(artifact_location, "config.yaml"))

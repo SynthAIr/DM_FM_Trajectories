@@ -692,7 +692,10 @@ def run_refactored(args, logger = None):
 
     fig_2 = plot_from_array(generated_traffic, model_name)
     logger.experiment.log_figure(logger.run_id, fig_2, f"figures/Eval_generated_samples.png")
-    generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
+    try:
+        generated_traffic.to_pickle(f"{artifact_location}/{model_name}/generated_samples.pkl")
+    except:
+        print("Error saving samples")
 
     #generated_traffic = latlon_from_trackgs(generated_traffic)
 
