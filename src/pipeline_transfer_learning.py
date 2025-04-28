@@ -37,12 +37,15 @@ def local_eval(model, dataset, trajectory_generation_model, n, device, l_logger,
     l_logger.log_metrics({"dataset_samples": int(split * len(dataset) * 0.8 * 0.8)})
     reconstructions, mse_dict, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=n, d=device)
     #rnd = np.random.randint(0, len(dataset), (n,))
-    samples, steps = generate_samples(dataset, model, rnd, n = n, length = length)
-    detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
-    decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+    
+    if False:
+        samples, steps = generate_samples(dataset, model, rnd, n = n, length = length, device = device)
+        detached_samples = detach_to_tensor(samples).reshape(-1, len(dataset.features), length)
+        decoded = get_traffic_from_tensor(detached_samples, dataset, trajectory_generation_model,rnd)
+        generated_traffic = decoded
+    else:
+        generated_traffic = reconstructions[1]
 
-    #numpy_array = d#ecoded.data[cols].to_numpy().reshape(-1, 200, len(cols))
-    generated_traffic = decoded
     fig_smooth = plot_traffics([reconstructions[0],generated_traffic])
     l_logger.experiment.log_figure(l_logger.run_id,fig_smooth, f"figures/Eval_generations.png")
     l_logger.log_metrics({"Eval_MSE": mse_dict["mse"], "Eval_MSE_std": mse_dict["mse_std"]})

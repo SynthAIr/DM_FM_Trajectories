@@ -392,7 +392,7 @@ def density(reconstructions, model_name="model"):
 
         #plt.savefig(f"./figures/{model_name}_density.png")
 
-def generate_samples(dataset, model, rnd, n=10, length=200):
+def generate_samples(dataset, model, rnd, n=10, length=200, device = "cuda:0"):
     # Initialize lists to store results for each sample
     all_samples = []
     all_steps = []
@@ -662,7 +662,7 @@ def run_refactored(args, logger = None):
     length = model_config['traj_length']
 
     start_time = datetime.now()
-    samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
+    samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length, device = device)
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
     logger.log_metrics({"sampling_time_seconds": duration})
@@ -833,7 +833,7 @@ def run(args, logger = None):
     length = config['model']['traj_length']
     
     start_time = datetime.now()
-    samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length)
+    samples, steps = generate_samples(dataset, model, rnd, n = n_samples, length = length, device = device)
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
     logger.log_metrics({"sampling_time_seconds": duration})

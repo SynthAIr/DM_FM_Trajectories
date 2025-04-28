@@ -15,7 +15,7 @@ logger:
   
 model:
   type: "LatDiff"
-  vae: "./artifacts/VAE_landing_1_track_latlon"
+  vae: "./artifacts/VAE_track_EIDW"
   #h_dims: [128, 256, 256, 128]
   #encoding_dim: 256
   #encoding_dim: 128
