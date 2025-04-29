@@ -691,7 +691,8 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
         flight_points.data['ADEP'] = "ZZZZ"
     #flight_points.data['ADES'] = 'LSZH'
     flight_points.data['ADES'] = ADES
-    flight_points.data['runway'] = ADES
+    if ADES != 'LSZH':
+        flight_points.data['runway'] = ADES 
 
 
     print("Adding weather data")

@@ -176,8 +176,10 @@ def run(args):
 
 def run_experiment(args):
     experiment_name = "transfer learning EIDW track"
-    checkpoint = f"/mnt/data/synthair/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
-    config_file = f"/mnt/data/synthair/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/config.yaml"
+    checkpoint = f"/mnt/ssda/synthair_temp/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
+    config_file = f"/mnt/ssda/synthair_temp/{args.experiment}/pretrained/{args.model_name}/config.yaml"
+    #checkpoint = f"/mnt/ssda/synthair_temp/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/best_model.ckpt"
+    #config_file = f"/mnt/ssda/synthair_temp/synthair/synthair_diffusion/data/experiments_track/{args.experiment}/pretrained/{args.model_name}/config.yaml"
     config = load_config(config_file)
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment = experiment_name)
