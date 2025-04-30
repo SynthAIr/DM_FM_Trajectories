@@ -203,10 +203,10 @@ def plot_simulation_results(
 
     # Plotting trajectories
     plot_trajectories(
-        GenTrajs_list, ax0, f"Generated Trajectories: {ADEP_code} -> {ADES_code}"
+        GenTrajs_list, ax0, f"Generated Trajectories:  {ADES_code}"
     )
     plot_trajectories(
-        SimuTrajs_list, ax2, f"Simulated Trajectories: {ADEP_code} -> {ADES_code}"
+        SimuTrajs_list, ax2, f"Simulated Trajectories:  {ADES_code}"
     )
 
     # Function to plot trajectories with altitude on a Basemap
@@ -263,10 +263,10 @@ def plot_simulation_results(
 
     # Plotting trajectories with altitude
     plot_altitude_trajectories(
-        GenTrajs_list, ax1, f"Generated Trajectories: {ADEP_code} -> {ADES_code}"
+        GenTrajs_list, ax1, f"Generated Trajectories:  {ADES_code}"
     )
     plot_altitude_trajectories(
-        SimuTrajs_list, ax3, f"Simulated Trajectories: {ADEP_code} -> {ADES_code}"
+        SimuTrajs_list, ax3, f"Simulated Trajectories:  {ADES_code}"
     )
     # plt.tight_layout()
 
