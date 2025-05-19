@@ -1,13 +1,10 @@
-import math
 import torch
-import torch.nn as nn
-import numpy as np
-from einops import rearrange
-from tqdm import tqdm
-from torch.nn import functional as F
-import lightning as L
 
 class Generative(torch.nn.Module):
+    """
+    Abstract class for all the generative models used to make it easier to work and switch between them.
+    """
+
     def __init__(self) -> None:
         super().__init__()
     

@@ -1,13 +1,19 @@
 import argparse
-import os
-from typing import Any, Dict, Tuple
-import torch
 from train import run as train_run
 from evaluate import run_refactored as evaluate_run
-from lightning.pytorch.loggers import MLFlowLogger
 from utils.helper import load_config
 
 def run(args):
+    """
+    Run the training and evaluation pipeline.
+    Parameters
+    ----------
+    args
+
+    Returns
+    -------
+
+    """
     configs = load_config(args.config_file)
     logger_config = configs["logger"]
     l_logger, run_name, artifact_location = train_run(args)

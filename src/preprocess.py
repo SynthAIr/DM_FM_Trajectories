@@ -1,3 +1,8 @@
+"""
+Preprocess OpenSky data and save it to a pickle file.
+This script is taken from https://github.com/SynthAIr/SynTraj
+"""
+
 import glob
 import os
 import numpy as np
@@ -15,7 +20,6 @@ from utils import (calculate_consecutive_distances,
                            calculate_final_distance,
                            calculate_initial_distance, plot_training_data,
                            plot_training_data_with_altitude)
-import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import scipy.stats as stats
 
@@ -25,7 +29,6 @@ print(os.getcwd())
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-# Create a StreamHandler that sends output to the standard output
 info_handler = logging.StreamHandler()
 info_handler.setLevel(level=logging.DEBUG)
 logger.addHandler(info_handler)

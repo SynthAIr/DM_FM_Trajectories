@@ -5,9 +5,6 @@ from tqdm import tqdm
 import torch
 import numpy as np
 
-
-
-
 def load_weather_data(file_paths, traffic, preprocess, save_path):
     # Load dataset using xarray's open_mfdataset with the preprocess function
     ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
@@ -20,7 +17,6 @@ def load_weather_data(file_paths, traffic, preprocess, save_path):
         print("ERA5 file not found - creating new")
 
         for flight in tqdm(traffic):
-            # Extracting the average time for the flight and rounding it to the nearest hour
             t = flight.mean("timestamp").round('h')
             formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
             

@@ -1,25 +1,14 @@
 """
 Taken from https://github.com/SynthAIr/T-VQ-VAE-TrajGen/blob/main/timevqvae/scripts/evaluate_flyability.py
+Never used in the thesis, but included for completeness.
 """
 
 
 import argparse
-import glob
 import os
-import pickle
-import re
 from typing import Any, Dict, List, Tuple
-
-import cartopy.crs as ccrs
-import cartopy.feature
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from matplotlib import gridspec
-from matplotlib import pyplot as plt
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-from mpl_toolkits.basemap import Basemap
 from traffic.core import Traffic
 
 from utils.helper import load_config

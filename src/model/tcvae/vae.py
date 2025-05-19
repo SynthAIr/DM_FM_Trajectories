@@ -1,12 +1,11 @@
 """
-Implementation of Latent Space Regularization Networks (LSR), based on  https://github.com/kruuZHAW/deep-traffic-generation-paper
+Implementation of Latent Space Regularization Networks (LSR), based on  https://github.com/kruuZHAW/deep-traffic-generation-paper, taken from https://github.com/SynthAIr/SynTraj
 """
 
 from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions import (
     Distribution,
     Independent,
@@ -14,8 +13,6 @@ from torch.distributions import (
     Normal,
 )
 from torch.distributions.categorical import Categorical
-from utils.data_utils import DatasetParams
-from model.AirDiffTraj import EmbeddingBlock
 
 
 class LSR(nn.Module):
@@ -204,16 +201,14 @@ class VampPriorLSR(LSR):
         return pseudo_means, pseudo_scales
 
 """
-Implementation of abstract classes for Variational Autoencoder (VAE) in Lightning, based on  https://github.com/kruuZHAW/deep-traffic-generation-paper
+Implementation of abstract classes for Variational Autoencoder (VAE) in Lightning, based on  https://github.com/kruuZHAW/deep-traffic-generation-paper , taken from https://github.com/SynthAIr/SynTraj
 """
 
 from argparse import Namespace
 from typing import Dict, Tuple, Union
-
 import lightning as L
 import torch
 import torch.nn as nn
-from cartopy.crs import EuroPP
 from torch.distributions.distribution import Distribution
 from torch.nn import functional as F
 

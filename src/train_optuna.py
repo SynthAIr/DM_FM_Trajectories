@@ -9,8 +9,6 @@ from optuna.integration import PyTorchLightningPruningCallback
 from lightning.pytorch.loggers import MLFlowLogger
 from utils.helper import load_config, save_config, load_and_prepare_data, get_model, init_config, init_model_config, get_model_train
 from utils.train_utils import get_dataloaders
-from model.diffusion import Diffusion
-from model.flow_matching import FlowMatching, Wrapper
 import optuna
 
 
@@ -24,6 +22,23 @@ def train(
     artifact_location: str,
     trial: optuna.trial.Trial
 ) -> None:
+    """
+    Train the model with the given configuration and data loaders.
+    Parameters
+    ----------
+    train_config
+    model
+    train_loader
+    val_loader
+    test_loader
+    logger
+    artifact_location
+    trial
+
+    Returns
+    -------
+
+    """
     seed_everything(train_config["seed"], workers=True)
 
     class FlexibleDeviceCheckCallback(Callback):
@@ -87,6 +102,17 @@ def setup_logger(args, config):
 
 
 def run(args: argparse.Namespace, trial: optuna.Trial = None):
+    """
+    Pipeline to do a hyperparameter search with Optuna for each model with different parameters.
+    Parameters
+    ----------
+    args
+    trial
+
+    Returns
+    -------
+
+    """
     config = load_config(args.config_file)
     dataset_config = load_config(args.dataset_config)
     config = init_config(config, dataset_config, args, experiment="cloud coverage real")

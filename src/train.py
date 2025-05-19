@@ -1,3 +1,6 @@
+"""
+This script is partly taken from https://github.com/SynthAIr/SynTraj
+"""
 import argparse
 from datetime import datetime
 import os
@@ -5,13 +8,9 @@ from typing import Any, Dict, Tuple
 import torch
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, Callback
-from optuna.integration import PyTorchLightningPruningCallback
 from lightning.pytorch.loggers import MLFlowLogger
 from utils.helper import load_config, save_config, load_and_prepare_data, get_model, init_config, init_model_config, get_model_train
 from utils.train_utils import get_dataloaders
-from model.diffusion import Diffusion
-from model.flow_matching import FlowMatching, Wrapper
-import optuna
 
 def train(
     train_config: Dict[str, Any],
@@ -25,6 +24,9 @@ def train(
     seed_everything(train_config["seed"], workers=True)
 
     class FlexibleDeviceCheckCallback(Callback):
+        """
+        Callback to check if the model is running on the expected GPU device.
+        """
         def __init__(self, expected_device_ids):
             """
             Args:
@@ -33,10 +35,19 @@ def train(
             self.expected_device_ids = expected_device_ids
 
         def on_train_start(self, trainer, pl_module):
-            # Get the root device dynamically
+            """
+            Check if the model is running on the expected GPU device.
+            Parameters
+            ----------
+            trainer
+            pl_module
+
+            Returns
+            -------
+
+            """
             active_device = trainer.strategy.root_device
 
-            # Check if the active device index is in the expected list
             if active_device.type == "cuda":
                 print(f"Training is running on device: {active_device} ({torch.cuda.get_device_name(active_device.index)})")
                 assert active_device.index in self.expected_device_ids, (
@@ -58,7 +69,6 @@ def train(
         strategy="ddp_find_unused_parameters_true",
         logger=logger,
         callbacks=[
-            #PyTorchLightningPruningCallback(trial, monitor="valid_loss"),
             EarlyStopping(
                 monitor="valid_loss",
                 patience=train_config["early_stop_patience"],
@@ -74,14 +84,8 @@ def train(
         ],
     )
 
-    # Set precision for matrix multiplication
-    # torch.set_float32_matmul_precision("highest") # Default used by PyTorch
-    # torch.set_float32_matmul_precision("high") # Faster, but less precise
-    # torch.set_float32_matmul_precision("medium") # Even faster, but also less precise
     torch.set_float32_matmul_precision(precision=train_config["precision"])
-    # Start the model training and validation process.
     trainer.fit(model, train_loader, val_loader)
-    # Optionally evaluate the model on test data using the best model checkpoint.
     trainer.test(model, test_loader, ckpt_path="best")
 
 def setup_logger(args, config):

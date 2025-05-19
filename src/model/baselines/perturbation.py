@@ -1,8 +1,10 @@
 import torch
-from torch import nn
 import pytorch_lightning as pl
 
 class PerturbationModel(pl.LightningModule):
+    """
+    Perturbation model that applies random or Gaussian noise to trajectories.
+    """
     def __init__(self, config ):
         super().__init__()
         self.config = config
@@ -17,7 +19,7 @@ class PerturbationModel(pl.LightningModule):
         Forward pass: Applies random perturbation to the trajectory.
         
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates
+            trajectory:
         
         Returns:
             Perturbed trajectory.
@@ -29,11 +31,11 @@ class PerturbationModel(pl.LightningModule):
         Add uniform random noise to the trajectory to generate n_samples.
 
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
-            n_samples: Number of perturbed samples to generate.
+            trajectory:
+            n_samples:
 
         Returns:
-            Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
+
         """
         # Generate noise for n_samples
         noise = (torch.rand((trajectory.shape)) * 2 * self.noise_ratio) - self.noise_ratio
@@ -47,18 +49,15 @@ class PerturbationModel(pl.LightningModule):
         Add Gaussian noise to the trajectory to generate n_samples.
 
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
-            n_samples: Number of perturbed samples to generate.
+            trajectory:
+            n_samples:
 
         Returns:
-            Tensor of shape (n_samples, ..., 2) containing perturbed trajectories.
+
         """
-        # Generate Gaussian noise for n_samples
         noise = torch.randn((trajectory.shape)) * torch.sqrt(torch.tensor(self.variance))
 
         noise = noise.to(trajectory.device)
-        # Expand trajectory and add noise
-        #trajectory_expanded = trajectory.unsqueeze(0).expand(n_samples, *trajectory.shape)
         return trajectory + noise
 
     def sample(self, trajectory: torch.Tensor, method="random", n_samples: int = 1) -> torch.Tensor:
@@ -66,12 +65,11 @@ class PerturbationModel(pl.LightningModule):
         Sample perturbed trajectories using the specified method.
 
         Args:
-            trajectory: Tensor of shape (..., 2) containing lat/lon coordinates.
-            method: Perturbation method - "random" or "gaussian".
-            n_samples: Number of perturbed samples to generate.
+            trajectory:
+            method:
+            n_samples:
 
         Returns:
-            Tensor of shape (n_samples, ..., 2) containing sampled perturbed trajectories.
         """
         if method == "random":
             return self.random_perturbation(trajectory, n_samples), []

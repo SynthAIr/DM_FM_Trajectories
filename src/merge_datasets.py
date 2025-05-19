@@ -1,10 +1,11 @@
+"""
+Parts of this code are taken from the original Synthair repository: https://github.com/SynthAIr/SynTraj
+"""
 import os
-import pickle
 from traffic.core import Traffic
 from argparse import ArgumentParser
 from preprocess import clean_trajectory_data, clean_and_smooth_flight_with_tight_threshold
 import pandas as pd
-import numpy as np
 import utm
 
 
@@ -16,8 +17,6 @@ def load_traffic_object(filepath):
 def interpolate_trajectory(traffic_obj, target_length):
     """Interpolates the trajectory of a Traffic object to a target length."""
     return traffic_obj.resample(target_length)
-
-
 
 def main(directory, target_length, output_filepath, filter_alt = False):
     """Loads all .pkl files in the directory, interpolates each Traffic object, combines them, and saves as one."""

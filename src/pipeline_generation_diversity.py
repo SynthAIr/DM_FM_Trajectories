@@ -1,17 +1,23 @@
 import argparse
-import os
-import sys
 import numpy as np
 from lightning.pytorch.loggers import MLFlowLogger
-from utils.helper import load_and_prepare_data, get_model
 from evaluate import get_config_data, get_models, load_config, reconstruct_and_plot
 from evaluation.similarity import jensenshannon_distance
 
 def run(args, logger = None):
+    """
+    Pipeline to run a model with different guidance scales to evaluate the effect of the guidance scale on the model's performance.
+    Parameters
+    ----------
+    args
+    logger
+
+    Returns
+    -------
+
+    """
     model_name = args.model_name
-
     w = np.arange(0, 1.25, 0.25)
-
     data_path = args.data_path
     artifact_location= "./artifacts"
     checkpoint = f"./artifacts/{model_name}/best_model.ckpt"
@@ -25,18 +31,14 @@ def run(args, logger = None):
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
-            #artifact_location=artifact_location,
         )
 
     config, dataset, traffic, conditions = get_config_data(config_file, data_path, artifact_location)
     config['model']["traj_length"] = dataset.parameters['seq_len']
     config['model']["continuous_len"] = dataset.con_conditions.shape[1]
     model, trajectory_generation_model = get_models(config["model"], dataset.parameters, checkpoint, dataset.scaler)
-    dataset_config = config["data"]
-    batch_size = dataset_config["batch_size"]
-    
+
     rnd = None
-    ## Should check for generated samples not reconstructions
     for w_i in w:
         model.guidance_scale = w_i
         reconstructions, mse, rnd, fig_0 = reconstruct_and_plot(dataset, model, trajectory_generation_model, n=30, model_name = model_name, rnd = rnd)
