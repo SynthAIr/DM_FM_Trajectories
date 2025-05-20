@@ -1,16 +1,13 @@
-# SynTraj - Synthetic Aircraft Trajectory Generation
+# Repository for Master's Thesis using Diffusion- and Flow Matching-based models for generating synthetic aircraft trajectories
 
-SynTraj is a project that aims to generate synthetic aircraft trajectories, using various generative models. The project focuses on generating realistic aircraft trajectories that can be used for various downstream applications, such as air traffic simulation, capacity planning, and data augmentation. The project uses a dataset of real aircraft trajectories from Eurocontrol to train the generative models,then the trained models can generate new trajectories that are similar to the real data.
-
-Currently, the project supports two types of generative models: Fully Connected Variational Autoencoder (FCVAE) and Temporal Convolutional Variational Autoencoder (TCVAE). The models are trained on flight trajectories from specific departure and arrival airports and can generate new trajectories for the same route. We can control the shape of the generated trajectories by sampling withing the cluster of the latent space of a similar real trajectory.
-
+Code used for all models and experiments in the thesis
 
 ## Installation
 
 The projects contains `pyproject.toml` file that specifies the dependencies and the build system. The project uses `poetry` for dependency management and packaging. To install the SynTraj package locally, clone the repository and install the dependencies using poetry:
 
 ```bash
-git clone git@github.com:SynthAIr/SynTraj.git
+git clone git@github.com:SynthAIr/DM_FM_Trajectories.git
 cd SynTraj
 poetry install
 ```
