@@ -1,6 +1,6 @@
 """
 Evaluation script for the thesis
-Some functions are taken from https://github.com/SynthAIr/SynTraj
+Some functions are adapted from https://github.com/SynthAIr/SynTraj
 """
 from datetime import datetime
 import cartopy.feature
@@ -25,6 +25,13 @@ from traffic.algorithms.generation import compute_latlon_from_trackgs
 import pandas as pd
 import seaborn as sns
 from model.baselines import PerturbationModel, TimeGAN
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy
+import argparse
+from traffic.algorithms.generation import Generation
 
 
 def get_checkpoint_path(logger_config: Dict[str, Any]):
@@ -54,7 +61,6 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=
     """
     Load the trained model and create the trajectory generation model.
     """
-    per = False
     if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -62,26 +68,17 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=
         c = load_config(config_file)
         c = c['model']
         c["traj_length"] = model_config['traj_length']
-        #print(c)
         vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c)
-        #print(model_config)
-        #diff = Diffusion(model_config)
         if model_config["type"] == "LatDiff":
             diff = Diffusion(model_config)
         else:
             m = FlowMatching(model_config)
             diff = Wrapper(model_config, m)
-        #m = FlowMatching(model_config)
-        #diff = Wrapper(model_config, m)
         print("Loading", checkpoint_path)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, vae=vae, generative = diff)
-        #model.vae = get_model(temp_conf).load_from_checkpoint(checkpoint, dataset_params = dataset_params, config = c['model'])
-        #model.phase = Phase.EVAL
     elif model_config["type"] == "FM":
         fm = FlowMatching(model_config, "0", lat=True)
         model = get_model(model_config).load_from_checkpoint(checkpoint_path, dataset_params = dataset_params, config = model_config, model = fm, cuda = "0")
-        #fm = FlowMatching(model_config)
-        #model = get_model(model_config)(model_config, fm)
     elif model_config["type"] == "PER":
         model = get_model(model_config)(model_config)
     else:
@@ -93,7 +90,6 @@ def get_models(model_config, dataset_params, checkpoint_path, dataset_scaler, d=
     model.eval()  # Set the model to evaluation mode
     print("Model loaded with checkpoint!")
 
-    from traffic.algorithms.generation import Generation
 
     trajectory_generation_model = Generation(
         generation=model,
@@ -120,49 +116,12 @@ def get_config_data(configs, data_path: str, artifact_location: str):
 
     return configs, dataset, traffic, conditions
 
-def plot_track_groundspeed(reconstructions):
-    plt.style.use("ggplot")
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.EuroPP())
-    ax.coastlines()
-    ax.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
-    #ax1.coastlines()
-    #ax1.add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
-    plt.xlabel('X values')
-    plt.ylabel('Y values')
-    plt.title('Plot of Real (Red) and Reconstructed Data (Blue)')
-    
-    # Calculate and print MSE
-    # Colors for different sets
-    colors = ["red", "blue"]
-    labels = ["real", "synthetic"]
-    simple = False
 
 
-    # Assuming df contains 'latitude', 'longitude', 'groundspeed', 'timedelta', and 'track'
-
-    # Now create a new Traffic object with the updated DataFrame
-    #t_updated = Traffic(reconstructions[1].data[['timedelta', 'groundspeed', 'track', 'timestamp', 'icao24']])
-
-    # Now plot the entire updated traffic data
-    #reconstructions[1].plot(ax, alpha=0.5, color='red')
-
-    # Show the plot
-    plt.title("Flight Trajectories", fontsize=16)
-    for c, data in enumerate(reconstructions):
-        df = data.data
-        obv = 200
-        n = df.shape[0] // obv
-        df["groundspeed"] = df["groundspeed"] * 18/5
-        df = compute_latlon_from_trackgs(df, n, obv,coordinates=dict(latitude=47.546585, longitude=8.447731), forward=False)
-        t = Traffic(df)
-        t.plot(ax, alpha=0.3, color=colors[c], linewidth=0.5)
-
-    return fig
-
-# SEBESTIAAN
 def exponentially_weighted_moving_average(data, alpha=0.3):
     """
+    This function is adapted from https://github.com/SynthAIr/TimeGAN_Trajectories
+
     Apply an exponentially weighted moving average (EWMA) filter to the first three features 
     of each sample in the input array.
 
@@ -192,9 +151,19 @@ def exponentially_weighted_moving_average(data, alpha=0.3):
     return output
 
 def mse_df(df1, df2, columns_to_compare = [ 'latitude', 'longitude', 'altitude', 'timedelta', 'groundspeed', 'track_cos', 'track_sin', 'vertical_rate'] ):
+    """
+    Calculate the Mean Squared Error (MSE) between two DataFrames for specified columns.
+    Parameters
+    ----------
+    df1
+    df2
+    columns_to_compare
+
+    Returns
+    -------
+
+    """
     
-    # Compute MSE
-    ## Problem because this is after rescaling :))) 
     mse = ((df1[columns_to_compare] - df2[columns_to_compare]) ** 2).mean().mean()
     return mse
 
@@ -231,11 +200,25 @@ def latlon_from_trackgs(traffic):
     return Traffic(df)
 
 def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, model_name = "model", rnd = None, d=None):
-    # Select random samples from the dataset
+    """
+    Reconstruct and plot the data using the given model and dataset.
+    Parameters
+    ----------
+    dataset
+    model
+    trajectory_generation_model
+    n
+    model_name
+    rnd
+    d
+
+    Returns
+    -------
+
+    """
     rnd = np.random.randint(0, len(dataset), (n,)) if rnd is None else rnd
     X2, con, cat, grid = dataset[rnd]
     
-    # Move data to GPU if available
     if d:
         device = d
     grid = grid.to(device)
@@ -249,8 +232,6 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     
     print("Shapes:", con.shape, cat.shape, X_.shape)
     
-    # Set model guidance scale and perform reconstruction
-    #model.unet.guidance_scale = 3
     x_rec, steps = model.reconstruct(X_, con_, cat_, grid)
     
     # Plotting setup
@@ -300,8 +281,6 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     cols = ['longitude', 'latitude']
     mse_lat_lon = torch.nn.functional.mse_loss(torch.tensor(reconstructions[0].data[cols].to_numpy()), torch.tensor(reconstructions[1].data[cols].to_numpy()))
     mse_lat_lon_std = torch.std(((torch.tensor(reconstructions[0].data[cols].to_numpy()) - torch.tensor(reconstructions[1].data[cols].to_numpy())) ** 2), unbiased=True)
-    # Show the plot
-    #fig.savefig(f"./figures/{model_name}_reconstructed_data.png")
 
     mse_dict = {
             "mse": mse,
@@ -316,72 +295,27 @@ def reconstruct_and_plot(dataset, model, trajectory_generation_model, n=1000, mo
     return reconstructions, mse_dict, rnd, fig
 
 
-def density(reconstructions, model_name="model"):
-    import matplotlib.pyplot as plt
-
-    from matplotlib.offsetbox import AnchoredText
-    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
-    from cartopy.crs import EuroPP, PlateCarree
-    from cartes.utils.features import countries, ocean
-
-
-    with plt.style.context("traffic"):
-
-        fig = plt.figure(figsize=(15, 10), frameon=False)
-        ax = fig.subplots(1, 2, subplot_kw=dict(projection=EuroPP()))
-
-        for ax_ in ax:
-            ax_.add_feature(countries(scale="10m", linewidth=1.5))
-
-        vmax = None  # this trick will keep the same colorbar scale for both maps
-
-        for i, data in enumerate([reconstructions[0], reconstructions[1]]):
-            # Aggregate and query the data, then convert to xarray
-            data_xarray = data.agg_latlon(
-                # 10 points per integer lat/lon
-                resolution=dict(latitude=10, longitude=10),
-                # count the number of flights
-                flight_id="nunique"
-            ).query(f"flight_id > 1").to_xarray()
-
-            # Sort the DataArray by latitude and longitude
-            data_xarray = data_xarray.sortby(['latitude', 'longitude'])
-
-            # Plot the data using pcolormesh
-            cax = data_xarray.flight_id.plot.pcolormesh(
-                ax=ax[i],
-                cmap="viridis",
-                transform=PlateCarree(),
-                vmax=vmax,
-                add_colorbar=False,
-            )
-
-            cbaxes = inset_axes(ax[i], "4%", "60%", loc=3)
-            cb = fig.colorbar(cax, cax=cbaxes)
-
-            # Keep this value to scale the colorbar for the second day
-            vmax = cb.vmax
-
-            text = AnchoredText(
-                f"Density",
-                loc=1,
-                prop={"size": 24, "fontname": "Ubuntu"},
-                frameon=True,
-            )
-            text.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
-            ax[i].add_artist(text)
-
-        fig.set_tight_layout(True)
-
 
 def generate_samples(dataset, model, rnd, n=10, length=200, device = "cuda:0"):
-    # Initialize lists to store results for each sample
+    """
+    Generate samples from the model using the given dataset and random indices.
+    Parameters
+    ----------
+    dataset
+    model
+    rnd
+    n
+    length
+    device
+
+    Returns
+    -------
+
+    """
     all_samples = []
     all_steps = []
     perturb = isinstance(model, PerturbationModel)
     for i in tqdm(rnd):
-        # Load the i-th sample from the dataset
         x, con, cat, grid = dataset[i]
         
         # Reshape con and cat as required
@@ -397,19 +331,12 @@ def generate_samples(dataset, model, rnd, n=10, length=200, device = "cuda:0"):
             samples, steps = model.reconstruct(x, con, cat, grid)
 
 
-        # Append results to the lists
         all_samples.append(samples)
         all_steps.append(steps)
         
-    # len(rnd), len(steps), n, 7, len
-    
+
     return all_samples, all_steps
 
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy
 
 def detach_to_tensor(tensor_list):
     """
@@ -418,7 +345,6 @@ def detach_to_tensor(tensor_list):
     return np.stack([tensor.cpu().detach() for tensor in tensor_list])
 
 def plot_from_array(t: Traffic, model_name = "model"):
-
     """
     Plots data from a traffic.core.Traffic object on a EuroPP projection.
     """
@@ -452,87 +378,60 @@ def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename:
     if len(traffic_list) != 2:
         raise ValueError("Expected exactly 2 Traffic objects in the list")
         
-    # Create a figure with two subplots side by side
     plt.style.use("ggplot")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5), 
                                   subplot_kw={'projection': ccrs.EuroPP()})
     axes = [ax1, ax2]
     
-    # Plot each traffic object
     for idx, traffic in enumerate(traffic_list):
         # Add map features to each subplot
         axes[idx].coastlines()
         axes[idx].add_feature(cartopy.feature.BORDERS, linestyle=":", alpha=1.0)
         
-        # Extract flight trajectories
         if landing:
             t = traffic.last(minutes=n_samples).eval()
         else:
             t = traffic.first(minutes=n_samples).eval()
         
-        # Plot the trajectory
         t.plot(axes[idx], alpha=0.5, color="red", linewidth=0.3)
         
-        # Customize the subplot
         axes[idx].set_xlabel('Longitude')
         axes[idx].set_ylabel('Latitude')
     
-    # Adjust layout to prevent overlap
     plt.tight_layout()
     
-    # Create the output filename
     suffix = "landing.png" if landing else "take_off.png"
     full_filename = f"{output_filename}_{suffix}"
     
-    # Save the figure
     #plt.savefig(full_filename, bbox_inches='tight', dpi=300)
     return fig
 
 # Assuming 'samples' is a list of tensors generated by model.sample
 # Detach and stack samples into a single tensor
-import argparse
 
-def get_figure_from_sample_steps(steps, dataset, length = 200):
-    # len(rnd), len(steps), n, 7, len
-    """
-    Get a figure showing the steps of the generated samples.
-    """
-    # Create a figure with T subplots
-    len_steps = len(steps[0])
-    fig, axes = plt.subplots(1, len_steps, figsize=(20, 4), sharex=True, sharey=True)
-    
-    # Plot each step on a separate subplot
-    for i, t in enumerate(steps):
-        # rnd
-        for y, s in enumerate(t):
-            # steps
-            detached_samples = detach_to_tensor(s).reshape(-1, len(dataset.features), length)
-            reco_x = detached_samples.transpose(0, 2, 1).reshape(detached_samples.shape[0], -1)
-            decoded = dataset.scaler.inverse_transform(reco_x).reshape(-1, length, len(dataset.features))[:,:,:2]
-            axes[y].plot(decoded[:, :, 0], decoded[:, :, 1], "o", markersize=1)
-            axes[y].axis("off")
-            axes[y].set_title(f"Step {1000 - (y+1) * 200}")
-    
-    plt.tight_layout()
-    
-    return fig
 
 def get_mse_distribution(mse_dict):
+    """
+    Method to plot the MSE distribution of the generated samples.
+    Parameters
+    ----------
+    mse_dict
+
+    Returns
+    -------
+
+    """
     mse_values_np = mse_dict["mse_dist"].cpu().numpy() if isinstance(mse_dict["mse_dist"], torch.Tensor) else np.array(mse_dict["mse_dist"])
     std_values_np = mse_dict["mse_dist_std"].cpu().numpy() if isinstance(mse_dict["mse_dist_std"], torch.Tensor) else np.array(mse_dict["mse_dist_std"])
 
-    # Compute global statistics per feature across all 100 trajectories
     mse_mean = np.mean(mse_values_np, axis=0)  # Shape: (n_features,)
     mse_std = np.std(mse_values_np, axis=0)    # Shape: (n_features,)
 
-    # Define outlier thresholds per feature (mean ± 2*std)
     mse_lower = mse_mean - 2 * mse_std
     mse_upper = mse_mean + 2 * mse_std
 
-    # Remove outliers: Replace them with NaN (they won't appear in plots)
     mse_filtered = np.where((mse_values_np >= mse_lower) & (mse_values_np <= mse_upper), mse_values_np, np.nan)
 
-    # Dynamically adjust subplots based on n_features
     n_features = mse_values_np.shape[1]
     n_cols = min(4, n_features)  # Max 4 columns per row
     n_rows = int(np.ceil(n_features / n_cols))
@@ -551,20 +450,29 @@ def get_mse_distribution(mse_dict):
     return fig_mse_dict
 
 def get_logger(logger, dataset_config, config):
+    """
+    Get the logger for the evaluation.
+    Parameters
+    ----------
+    logger
+    dataset_config
+    config
 
+    Returns
+    -------
+
+    """
     if logger is not None:
         return logger
 
     if logger is None:
         logger_config = config["logger"]
         logger_config["tags"]["dataset"] = dataset_config["dataset"]
-        #config["logger"]["tags"]['weather'] = config["model"]["weather_config"]["weather_grid"]
         logger = MLFlowLogger(
             experiment_name=logger_config["experiment_name"],
             run_name=args.model_name,
             tracking_uri=logger_config["mlflow_uri"],
             tags=logger_config["tags"],
-            #artifact_location=artifact_location,
         )
         logger.experiment.log_dict(logger.run_id, config, "config.yaml")
 
@@ -572,6 +480,17 @@ def get_logger(logger, dataset_config, config):
     
 
 def run_refactored(args, logger = None):
+    """
+    Main function to run the evaluation of the model.
+    Parameters
+    ----------
+    args
+    logger
+
+    Returns
+    -------
+
+    """
     seed_everything(42)
     global device 
     device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
@@ -593,9 +512,6 @@ def run_refactored(args, logger = None):
     dataset_config["data_path"] = args.data_path
     dataset, traffic = load_and_prepare_data(dataset_config)
 
-    #config['model']["data"] = dataset_config
-    #config['model']["traj_length"] = dataset.parameters['seq_len']
-    #config['model']["continuous_len"] = dataset.con_conditions.shape[1]
 
     model_config = init_model_config(config, dataset_config, dataset)
 
@@ -721,6 +637,19 @@ def run_refactored(args, logger = None):
 
 
 def get_traffic_from_tensor(data, dataset, trajectory_generation_model, rnd):
+    """
+    Get the traffic object from the tensor data.
+    Parameters
+    ----------
+    data
+    dataset
+    trajectory_generation_model
+    rnd
+
+    Returns
+    -------
+
+    """
     print(data.shape)
 
     reco_x = data.transpose(0, 2, 1).reshape(data.shape[0], -1)
@@ -761,7 +690,6 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
     n = X.shape[0]  # Number of samples in synthetic data X
     m = Y.shape[0]  # Number of samples in real data Y
     
-    # Step 1: Compute kernel matrices
     K_X = np.zeros((n, n))  # Kernel matrix for X
     K_Y = np.zeros((m, m))  # Kernel matrix for Y
     K_XY = np.zeros((m, n))  # Cross kernel matrix between X and Y
@@ -780,29 +708,20 @@ def compute_partial_mmd(X, Y, alpha=1.0, gamma=1e-8):
         for j in range(m):
             K_XY[j, i] = exponential_kernel(Y[j], X[i], gamma)
 
-    # Step 2: Define weight vector v (for real data Y)
     v = np.ones(m) / m
     
-    # Step 3: Formulate the quadratic programming problem
-    # The objective is to minimize w^T K_X w + v^T K_Y v - 2 v^T K_XY w
-    
-    # Objective quadratic term
     P = cvxopt.matrix(K_X)  # K_X for the quadratic term
     q = cvxopt.matrix(-2 * np.dot(K_XY, v))  # Linear term in the objective
     
-    # Constraints
     G = cvxopt.matrix(np.vstack([-np.eye(n), np.eye(n)]))  # Constraint on w: 0 <= w_i <= 1/(alpha * n)
     h = cvxopt.matrix(np.hstack([np.zeros(n), np.ones(n) * (1 / (alpha * n))]))  # Constraints on w
     
-    # Equality constraint: sum(w) = 1
     A = cvxopt.matrix(np.ones((1, n)))  # Sum of w must be 1
     b = cvxopt.matrix(1.0)
     
-    # Step 4: Solve the quadratic programming problem
     sol = cvxopt.solvers.qp(P, q, G, h, A, b)
     w = np.array(sol['x']).flatten()
     
-    # Step 5: Compute the α-partial MMD² value
     mmd_squared = np.dot(w.T, np.dot(K_X, w)) + np.dot(v.T, np.dot(K_Y, v)) - 2 * np.dot(v.T, np.dot(K_XY, w))
     mmd_values = np.dot(K_X, w) + np.dot(K_Y, v) - 2 * np.dot(K_XY, w)
     std_dev = np.std(np.sqrt(np.abs(mmd_values)), ddof=1)  # Sample standard deviation

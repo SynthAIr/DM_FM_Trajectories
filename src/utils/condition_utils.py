@@ -1,10 +1,10 @@
+"""
+Code is adapted from https://github.com/SynthAIr/SynTraj
+"""
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import abc
 from typing import Dict, Any, List
-from enum import Enum
 import pandas as pd
 
 class Condition(abc.ABC):

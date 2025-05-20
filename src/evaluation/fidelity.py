@@ -1,5 +1,5 @@
 """
-Code taken from https://github.com/SynthAIr/TimeGAN_Trajectories/blob/main/eval_fidelity.py - Paper: https://www.sesarju.eu/sites/default/files/documents/sid/2024/papers/SIDs_2024_paper_054%20final.pdf
+Code adapted from https://github.com/SynthAIr/TimeGAN_Trajectories/blob/main/eval_fidelity.py - Paper: https://www.sesarju.eu/sites/default/files/documents/sid/2024/papers/SIDs_2024_paper_054%20final.pdf
 
 Converted from Keras (original) to PyTorch 
 """

@@ -87,6 +87,17 @@ def train(
 
 
 def setup_logger(args, config):
+    """
+    Setup the logger for MLFlow with unique run name and artifact location.
+    Parameters
+    ----------
+    args
+    config
+
+    Returns
+    -------
+
+    """
     logger_config = config["logger"]
     run_name, artifact_location = get_unique_run_name_and_artile_location(logger_config)
 
@@ -243,6 +254,16 @@ def run(args: argparse.Namespace, trial: optuna.Trial = None):
 
 
 def get_unique_run_name_and_artile_location(logger_config: Dict[str, Any]) -> Tuple[str, str]:
+    """
+    Generate a unique run name and artifact location based on the current date and time.
+    Parameters
+    ----------
+    logger_config
+
+    Returns
+    -------
+
+    """
     run_name = logger_config["run_name"]
     artifact_location = logger_config["artifact_location"]
     os.makedirs(artifact_location, exist_ok=True)
@@ -257,6 +278,16 @@ def get_unique_run_name_and_artile_location(logger_config: Dict[str, Any]) -> Tu
 
 
 def objective(trial: optuna.Trial):
+    """
+    Objective function for Optuna to optimize hyperparameters based on validation loss.
+    Parameters
+    ----------
+    trial
+
+    Returns
+    -------
+
+    """
     args = argparse.Namespace(
         #config_file="./configs/config.yaml",
         #config_file="./configs/config_fm.yaml",

@@ -1,16 +1,8 @@
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional, List
 import os
 import requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import argparse
-import re
-from typing import List, Optional
-import pandas as pd
-from metar import Metar
-import numpy as np
 import re
 import pandas as pd
 import metpy.io as metpy
@@ -19,13 +11,22 @@ import pickle
 from tqdm import tqdm
 
 def extract_metar_data(lines):
+    """
+    Extract METAR data from lines of text.
+    Parameters
+    ----------
+    lines
+
+    Returns
+    -------
+
+    """
     df_all = None
     first = True
     for line in lines:
         match = re.match(r"(\d{4})(\d{2})\d{6}\s(METAR.*)", line)
         if match:
             year, month, metar = match.groups()
-            #print(f"Year: {year}, Month: {month}, METAR: {metar}")
             df =  metpy.parse_metar_to_dataframe(metar, year=int(year), month=int(month))
 
         df_all = pd.concat([df_all, df], ignore_index=True) if not first else df
@@ -33,6 +34,16 @@ def extract_metar_data(lines):
     return df_all
 
 def read_metar_file(filename):
+    """
+    Read METAR data from a file and extract the relevant information.
+    Parameters
+    ----------
+    filename
+
+    Returns
+    -------
+
+    """
     with open(filename, 'r') as file:
         lines = file.readlines()
     return extract_metar_data(lines)
@@ -50,33 +61,39 @@ def preprocess_metar(df):
     Returns:
         pd.DataFrame: Preprocessed DataFrame
     """
-    # Identify categorical columns (assume object type and known categorical columns)
     categorical_cols = [
         "current_wx1", "current_wx2", "current_wx3",
         "low_cloud_type", "medium_cloud_type", "high_cloud_type",
         "highest_cloud_type", "remarks"
     ]
     
-    # Identify numerical columns (everything else except categorical + date_time)
     numerical_cols = df.select_dtypes(include=["number"]).columns.tolist()
     
-    # Ensure only existing columns are selected (in case some don't exist in df)
     categorical_cols = [col for col in categorical_cols if col in df.columns]
     numerical_cols = [col for col in numerical_cols if col in df.columns]
 
-    # Fill NaNs
     df[categorical_cols] = df[categorical_cols].fillna("unknown")
     df[numerical_cols] = df[numerical_cols].fillna(0)
 
-    # Encode categorical columns as numbers for embedding
     for col in categorical_cols:
         df[col] = df[col].astype("category").cat.codes
 
     return df
 
 def load_metar_data(file_path, traffic, save_path):
+    """
+    Load METAR data from a file, preprocess it, and save the processed data as a pickle file.
+    Parameters
+    ----------
+    file_path
+    traffic
+    save_path
 
-    grid_conditions = []
+    Returns
+    -------
+
+    """
+
     important_features = [
         'wind_speed', 'wind_gust', 'wind_direction', 'eastward_wind', 'northward_wind',
         'visibility', 'cloud_coverage', 'low_cloud_level',
@@ -84,7 +101,6 @@ def load_metar_data(file_path, traffic, save_path):
         'altimeter', 'elevation', "low_cloud_type",
     ]
     name = f"flight_processed_{len(traffic)}_METAR_ADES.pkl"
-    #name = f"flight_processed_{len(traffic)}_ADES.pkl"
     if not os.path.isfile(save_path + name):
         print("METAR file not found - creating new")
         df = read_metar_file(file_path)
@@ -103,11 +119,9 @@ def load_metar_data(file_path, traffic, save_path):
         t_df = pd.DataFrame(closest_rows)
         grid_conditions = torch.FloatTensor(t_df.values)
         
-        # Save the processed grid_conditions as a pickle file
         with open(save_path + name, "wb") as fp:
             pickle.dump(grid_conditions, fp)
     else:
-        # Load existing pickle file if available
         print("File found - Loading from pickle")
         with open(save_path + name, 'rb') as f:
             grid_conditions = pickle.load(f)

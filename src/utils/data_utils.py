@@ -1,21 +1,16 @@
-import abc
-from tqdm import tqdm
-import xarray as xr
+"""
+Code is adapted from https://github.com/SynthAIr/SynTraj, who adapted it from https://github.com/kruuZHAW/deep-traffic-generation-paper
+"""
 import logging
 import os
-from argparse import ArgumentParser
-from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Any, List, Optional, Protocol, Tuple, TypedDict, Union
 import joblib
 import utm
-
 import numpy as np
 import pandas as pd
 import torch
 import yaml
-from minio import Minio
-from minio.error import S3Error
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 from torch.utils.data import Dataset
@@ -29,154 +24,10 @@ from .metar_utils import load_metar_data
 logger = logging.getLogger(__name__)
 
 
-def parse_runtime_env(filename):
-    with open(file=filename, mode="r") as f:
-        return yaml.load(f, Loader=yaml.FullLoader)
-
-
-def export_environment_variables(runtime_env_filename):
-    runtime_env = parse_runtime_env(runtime_env_filename)
-    for key, value in runtime_env["env_vars"].items():
-        os.environ[key] = value
-
-
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371  # Radius of Earth in kilometers
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    distance = R * c
-    return distance
-
-
-def calculate_consecutive_distances(df, distance_threshold):
-    """Calculates distances between consecutive points and flags flights with any excessive distance."""
-    # Calculate distances for each point to the next within each flight
-    df = df.sort_values(["flight_id", "timestamp"])
-    df["next_latitude"] = df.groupby("flight_id")["latitude"].shift(-1)
-    df["next_longitude"] = df.groupby("flight_id")["longitude"].shift(-1)
-
-    # Apply the Haversine formula
-    df["segment_distance"] = df.apply(
-        lambda row: (
-            haversine(
-                row["latitude"],
-                row["longitude"],
-                row["next_latitude"],
-                row["next_longitude"],
-            )
-            if not pd.isna(row["next_latitude"])
-            else 0
-        ),
-        axis=1,
-    )
-
-    # Find flights with any segment exceeding the threshold
-    outlier_flights = df[df["segment_distance"] > distance_threshold][
-        "flight_id"
-    ].unique()
-    return outlier_flights
-
-
-def calculate_initial_distance(df, origin_lat_lon, distance_threshold):
-    """Calculates distances between the first point in each flight and the origin airport."""
-    # Calculate distances from the origin airport to the first point of each flight
-
-    # first point of each flight
-    first_points = df.groupby("flight_id").first()
-    # Calculate distances from the origin airport to the first point of each flight
-    first_points["initial_distance"] = [
-        haversine(lat, lon, origin_lat_lon[0], origin_lat_lon[1])
-        for lat, lon in zip(first_points["latitude"], first_points["longitude"])
-    ]
-
-    # Find flights with the first point exceeding the threshold
-    outlier_flights = first_points[
-        first_points["initial_distance"] > distance_threshold
-    ].index
-    return outlier_flights
-
-
-def calculate_final_distance(df, destination_lat_lon, distance_threshold):
-    """Calculates distances between the last point in each flight and the destination airport."""
-    # Calculate distances from the destination airport to the last point of each flight
-
-    # last point of each flight
-    last_points = df.groupby("flight_id").last()
-    # Calculate distances from the destination airport to the last point of each flight
-    last_points["final_distance"] = [
-        haversine(lat, lon, destination_lat_lon[0], destination_lat_lon[1])
-        for lat, lon in zip(last_points["latitude"], last_points["longitude"])
-    ]
-
-    # Find flights with the last point exceeding the threshold
-    outlier_flights = last_points[
-        last_points["final_distance"] > distance_threshold
-    ].index
-    return outlier_flights
-
-
-class Downloader(abc.ABC):
-    @abc.abstractmethod
-    def download(self):
-        pass
-
-
-class MinioInterface:
-
-    def __init__(
-        self,
-        bucket_name: str,
-        object_name: str,
-        local_path: str,
-        endpoint_url: Optional[str] = None,
-        **kwargs,
-    ) -> None:
-        env_endpoint_url = os.environ.get("MINIO_ENDPOINT_URL", None)
-        if endpoint_url is None:
-            endpoint_url = env_endpoint_url
-        self.client = Minio(
-            endpoint_url,
-            access_key=os.environ.get("MINIO_ACCESS_KEY_ID"),
-            secret_key=os.environ.get("MINIO_SECRET_ACCESS_KEY"),
-            secure=False,
-        )
-        self.bucket_name = bucket_name
-        self.object_name = object_name
-        self.local_path = local_path
-        self.kwargs = kwargs
-
-
-class MinioDirectoryDownloader(MinioInterface, Downloader):
-
-    def _download(self):
-
-        objects = self.client.list_objects(
-            self.bucket_name, prefix=self.object_name, recursive=True
-        )
-        for obj in objects:
-            object_name = obj.object_name
-            local_file_path = os.path.join(self.local_path, object_name)
-            try:
-                self.client.fget_object(self.bucket_name, object_name, local_file_path)
-                if self.kwargs.get("verbose", True):
-                    print(
-                        f"File '{object_name}' downloaded as '{local_file_path}' from bucket '{self.bucket_name}'."
-                    )
-            except S3Error as err:
-                logger.error(err)
-
-    def download(self):
-        self._download()
-
-
-class BuilderProtocol(Protocol):
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame: ...
-
-
 class TransformerProtocol(Protocol):
+    """
+    Protocol for a transformer that can be fitted and applied to data.
+    """
     def fit(self, X: np.ndarray) -> "TransformerProtocol": ...
 
     def fit_transform(self, X: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]: ...
@@ -186,12 +37,10 @@ class TransformerProtocol(Protocol):
     def inverse_transform(self, X: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]: ...
 
 
-class Infos(TypedDict):
-    features: List[str]
-    index: Optional[int]
-
-
 class DatasetParams(TypedDict):
+    """
+    Dataset parameters
+    """
     features: List[str]
     file_path: Optional[Path]
     input_dim: int
@@ -204,8 +53,9 @@ class DatasetParams(TypedDict):
 
 
 class TrafficDataset(Dataset):
-    """Traffic Dataset
-
+    """
+    Class is adapted from https://github.com/SynthAIr/SynTraj, who adapted it from https://github.com/kruuZHAW/deep-traffic-generation-paper
+    Traffic Dataset
     Args:
         traffic: Traffic object to extract data from.
         features: features to extract from traffic.
@@ -286,7 +136,6 @@ class TrafficDataset(Dataset):
         self.cat_conditions = torch.empty(len(data))
         self.grid_conditions = torch.empty(len(data))
 
-        #pressure_levels = np.array([ 100,  150,  200,  250,  300,  400,  500,  600,  700,  850,  925, 1000])
         #pressure_levels = np.array([ 925,  950,  975, 1000])[::-1]
         pressure_levels = np.array([1000])[::-1]
         print(data.shape)
@@ -316,6 +165,17 @@ class TrafficDataset(Dataset):
         print(self.grid_conditions[0].shape)
 
         def save_scaler_if_not_exists(scaler, path):
+            """
+            Save the scaler to the specified path if it doesn't already exist.
+            Parameters
+            ----------
+            scaler
+            path
+
+            Returns
+            -------
+
+            """
             if not os.path.exists(path):
                 joblib.dump(scaler, path)
                 print(f"Scaler saved at: {path}")
@@ -335,6 +195,17 @@ class TrafficDataset(Dataset):
                     return None
 
             def scale_conditions(conditions_fs: List[torch.Tensor], axis=1):
+                """
+                Scale the conditions using StandardScaler or MinMaxScaler.
+                Parameters
+                ----------
+                conditions_fs
+                axis
+
+                Returns
+                -------
+
+                """
 
                 if len(conditions_fs) == 0:
                     return torch.empty(len(data)), None
@@ -356,8 +227,8 @@ class TrafficDataset(Dataset):
                     conditions = conditions.reshape(conditions.shape[0], -1)
                     print(conditions.shape)
                 
-                s = load_scaler_if_exists("/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz")
-                #s = None
+                #s = load_scaler_if_exists("data/scaler.gz")
+                s = None
                 if s is None:
                     #s = MinMaxScaler(feature_range=(-1, 1))
                     s = StandardScaler()
@@ -392,8 +263,7 @@ class TrafficDataset(Dataset):
             con_condition_fs, cat_condition_fs = self._get_conditions(traffic)
 
             self.con_conditions, self.con_cond_scaler = scale_conditions(con_condition_fs)
-            save_scaler_if_not_exists(self.con_cond_scaler,"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_con_utm_standard.gz") 
-            #exit()
+            #save_scaler_if_not_exists(self.con_cond_scaler,"data/scaler.gz")
 
             self.cat_conditions = np.concatenate(cat_condition_fs, axis=1)
             self.cat_conditions = torch.IntTensor(self.cat_conditions)
@@ -410,9 +280,6 @@ class TrafficDataset(Dataset):
                 self.scaler = self.scaler.fit(data)
                 data = self.scaler.transform(data)
         
-
-        save_scaler_if_not_exists(self.scaler, f"/mnt/data/synthair/synthair_diffusion/data/resampled/scalers/7_datasets_utm_standard.gz")
-
         data = torch.FloatTensor(data)
         self.data = data
         if self.shape in ["sequence", "image"]:
@@ -423,7 +290,17 @@ class TrafficDataset(Dataset):
                 #self.conditions = torch.transpose(self.conditions, 1, 2)
 
 
-    def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]: 
+    def _get_conditions(self, traffic: Traffic) -> List[torch.Tensor]:
+        """
+        Private method for getting conditions from traffic data to pytorch tensors
+        Parameters
+        ----------
+        traffic
+
+        Returns
+        -------
+
+        """
         condition_continuous = []
         condition_categorical = []
         for feature in self.conditional_features:
@@ -461,6 +338,17 @@ class TrafficDataset(Dataset):
         return condition_continuous, condition_categorical
     
     def inverse_airport_coordinates(self, data, idx) -> torch.Tensor:
+        """
+        Inverse the airport coordinates to lat/lon coordinates
+        Parameters
+        ----------
+        data
+        idx
+
+        Returns
+        -------
+
+        """
         return data
         shape = data.shape
         data = data.reshape(-1, 200, len(self.features))
@@ -489,6 +377,22 @@ class TrafficDataset(Dataset):
         variables = ['v_component_of_wind', 'u_component_of_wind', 'temperature', 'vertical_velocity'],
         metar = False,
     ) -> "TrafficDataset":
+        """
+        Create a TrafficDataset from a file.
+        Parameters
+        ----------
+        file_path
+        features
+        shape
+        scaler
+        conditional_features
+        variables
+        metar
+
+        Returns
+        -------
+
+        """
         file_path = file_path if isinstance(file_path, Path) else Path(file_path)
         traffic = Traffic.from_file(file_path)
 
@@ -568,148 +472,8 @@ class TrafficDataset(Dataset):
     def __repr__(self) -> str:
         head = "Dataset " + self.__class__.__name__
         body = [f"Number of datapoints: {self.__len__()}"]
-        # if self.file_path is not None:
-        #     body.append(f"File location: {self.file_path}")
         if self.scaler is not None:
             body += [repr(self.scaler)]
         lines = [head] + [" " * self._repr_indent + line for line in body]
         return "\n".join(lines)
 
-    @classmethod
-    def add_argparse_args(cls, parser: ArgumentParser) -> ArgumentParser:
-        """Adds TrafficDataset arguments to ArgumentParser.
-
-        List of arguments:
-
-            * ``--data_path``: The path to the traffic data file. Default to
-              None.
-            * ``--features``: The features to keep for training. Default to
-              ``['latitude','longitude','altitude','timedelta']``.
-
-              Usage:
-
-              .. code-block:: console
-
-                python main.py --features track groundspeed altitude timedelta
-
-            * ``--info_features``: Features not passed through the model but
-              useful to keep. For example, if you chose as main features:
-              track, groundspeed, altitude and timedelta ; it might help to
-              keep the latitude and longitude values of the first or last
-              coordinates to reconstruct the trajectory. The values are picked
-              up at the index specified at ``--info_index``. You can also
-              get some labels.
-
-              Usage:
-
-              .. code-block:: console
-
-                python main.py --info_features latitude longitude
-
-                python main.py --info_features label
-
-            * ``--info_index``: Index of information features. Default to None.
-
-        Args:
-            parser (ArgumentParser): ArgumentParser to update.
-
-        Returns:
-            ArgumentParser: updated ArgumentParser with TrafficDataset
-            arguments.
-        """
-        p = parser.add_argument_group("TrafficDataset")
-        p.add_argument(
-            "--data_path",
-            dest="data_path",
-            type=Path,
-            default=None,
-        )
-        p.add_argument(
-            "--features",
-            dest="features",
-            nargs="+",
-            default=["latitude", "longitude", "altitude", "timedelta"],
-        )
-        p.add_argument(
-            "--info_features",
-            dest="info_features",
-            nargs="+",
-            default=[],
-        )
-        p.add_argument(
-            "--info_index",
-            dest="info_index",
-            type=int,
-            default=None,
-        )
-        return parser
-
-
-def extract_features(
-    traffic: Traffic,
-    features: List[str],
-    init_features: List[str] = [],
-) -> np.ndarray:
-    """Extract features from Traffic data according to the feature list.
-
-    Parameters
-    ----------
-    traffic: Traffic
-    features: List[str]
-        Labels of the columns to extract from the underlying dataframe of
-        Traffic object.
-    init_features: List[str]
-        Labels of the features to extract from the first row of each Flight
-        underlying dataframe.
-    Returns
-    -------
-    np.ndarray
-        Feature vector `(N, HxL)` with `N` number of flights, `H` the number
-        of features and `L` the sequence length.
-    """
-    X = np.stack(list(f.data[features].values.ravel() for f in traffic))
-
-    if len(init_features) > 0:
-        init_ = np.stack(list(f.data[init_features].iloc[0].values.ravel() for f in traffic))
-        X = np.concatenate((init_, X), axis=1)
-
-    return X
-
-
-def init_dataframe(
-    data: np.ndarray,
-    features: List[str],
-    init_features: List[str] = [],
-) -> pd.DataFrame:
-    """TODO:"""
-    # handle dense features (features)
-    dense: np.ndarray = data[:, len(init_features) :]
-    nb_samples = data.shape[0]
-    dense = dense.reshape(nb_samples, -1, len(features))
-    nb_obs = dense.shape[1]
-    # handle sparce features (init_features)
-    if len(init_features) > 0:
-        sparce = data[:, : len(init_features)]
-        sparce = sparce[:, np.newaxis]
-        sparce = np.insert(sparce, [1] * (nb_obs - 1), [np.nan] * len(init_features), axis=1)
-        dense = np.concatenate((dense, sparce), axis=2)
-        features = features + init_features
-
-    # generate dataframe
-    df = pd.DataFrame({feature: dense[:, :, i].ravel() for i, feature in enumerate(features)})
-    return df
-
-
-def traffic_from_data(
-    data: np.ndarray,
-    features: List[str],
-    init_features: List[str] = [],
-    builder: Optional[BuilderProtocol] = None,
-) -> Traffic:
-
-    df = init_dataframe(data, features, init_features)
-
-    if builder is not None:
-        df = builder(df)
-
-    return Traffic(df)

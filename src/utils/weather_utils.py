@@ -6,7 +6,19 @@ import torch
 import numpy as np
 
 def load_weather_data(file_paths, traffic, preprocess, save_path):
-    # Load dataset using xarray's open_mfdataset with the preprocess function
+    """
+    Load and process weather data from multiple files using xarray.
+    Parameters
+    ----------
+    file_paths
+    traffic
+    preprocess
+    save_path
+
+    Returns
+    -------
+
+    """
     ds = xr.open_mfdataset(file_paths, combine='by_coords', preprocess=preprocess, chunks={'time': 100})
     print("Data loaded")
 
@@ -41,11 +53,11 @@ def load_weather_data(file_paths, traffic, preprocess, save_path):
 def pad_or_crop_grid(grid, target_shape):
     """
     Pads or crops the grid to match the target shape (variables, levels, grid_size, grid_size).
-    
+
     Args:
         grid (numpy.ndarray): Input array of shape (variables, levels, grid_size, grid_size).
         target_shape (tuple): Target shape (target_vars, target_levels, target_grid_size, target_grid_size).
-        
+
     Returns:
         numpy.ndarray: The padded or cropped grid.
     """
@@ -104,31 +116,31 @@ def m_to_hPa(altitude_m):
     return 1013.25 * (1 - 2.2577e-5 * altitude_m )**5.25588
 
 def find_nearest_pressure_levels(altitude, num_levels, pressure_levels=np.array([100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000])):
-    """ 
+    """
     Map an altitude to the nearest available pressure level and return surrounding levels.
-    
+
     Args:
         altitude: float, altitude in meters
         num_levels: int, number of levels to retrieve (total number, so num_levels // 2 above and below)
         pressure_levels: numpy array of available pressure levels in hPa
-    
+
     Returns:
         list: Sorted list of pressure levels including the nearest and surrounding levels.
     """
     # Convert altitude to pressure (if needed), here using a placeholder conversion for example
     pressure_hPa = m_to_hPa(altitude)  # Convert altitude (meters) to pressure in hPa
-    
+
     # Find the index of the nearest pressure level
     closest_index = np.abs(pressure_levels - pressure_hPa).argmin()
-    
+
     # Calculate the range of indices to select surrounding levels
     half_num_levels = num_levels // 2
     start_index = max(0, closest_index - half_num_levels)
     end_index = min(len(pressure_levels), closest_index + half_num_levels + 1)  # +1 to include the end index
-    
+
     # Select surrounding pressure levels
     selected_levels = pressure_levels[start_index:end_index]
-    
+
     return selected_levels
 
 def round_to_nearest_0_25(value):
@@ -162,15 +174,15 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
         # Select data for variables with 'level'
         if not len(variables_with_level) == 0:
             ds_with_level = ds[variables_with_level].sel(
-                level=pressure_levels, 
-                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+                level=pressure_levels,
+                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid),
                 latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
             )
 
         if not len(variables_without_level) == 0:
             # Select data for variables without 'level' and add a dummy 'level' dimension
             ds_without_level = ds[variables_without_level].sel(
-                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid), 
+                longitude=slice(rounded_lon - half_grid, rounded_lon + half_grid),
                 latitude=slice(rounded_lat + half_grid, rounded_lat - half_grid),
             )
         # Add a dummy 'level' dimension filled with zeros
@@ -186,7 +198,7 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
 
         # Merge the two datasets
         return xr.merge([ds_with_level, ds_without_level])
-    
+
 
     grid_conditions = []
 
@@ -201,16 +213,16 @@ def load_weather_data_arrival_airport(file_paths, traffic, variables, save_path,
             # Extracting the average time for the flight and rounding it to the nearest hour
             t = flight.max("timestamp").round('h')
             formatted_timestamp = t.strftime('%Y-%m-%d %H:00:00')
-            
-            
+
+
             # Select sub-dataset for the timestamp
             sub = ds.sel(time=formatted_timestamp)
-            
+
             # Convert the selected subset to a PyTorch FloatTensor, filling NaN values if necessary
             #data_array = sub.to_array().fillna(0).values  # Filling NaNs with 0 or another appropriate value
             data_array = sub.to_array().values
             grid_conditions.append(torch.FloatTensor(data_array))
-        
+
 
         # Save the processed grid_conditions as a pickle file
         with open(save_path + name, "wb") as fp:

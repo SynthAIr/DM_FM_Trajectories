@@ -1,9 +1,7 @@
 """
-Taken from Murad TODO
+Code is adapted from https://github.com/SynthAIr/SynTraj, who adapted it from https://github.com/kruuZHAW/deep-traffic-generation-paper
 """
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from pyproj import Geod
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -14,6 +12,16 @@ from traffic.core import Traffic
 
 
 def get_flight_durations(traffic):
+    """
+    Calculate the duration of each flight in the traffic data.
+    Parameters
+    ----------
+    traffic
+
+    Returns
+    -------
+
+    """
     durations = []
     for flight in traffic:
         duration = (flight.data['timestamp'].max() - flight.data['timestamp'].min()).total_seconds() / 60  # in minutes
@@ -21,6 +29,20 @@ def get_flight_durations(traffic):
     return np.array(durations)
 
 def get_flight_speeds(traffic, method='calculate', remove_outliers=True, lower_quantile=0.01, upper_quantile=0.99):
+    """
+    Calculate the speed of each flight in the traffic data.
+    Parameters
+    ----------
+    traffic
+    method
+    remove_outliers
+    lower_quantile
+    upper_quantile
+
+    Returns
+    -------
+
+    """
     all_speeds = []
     geod = Geod(ellps="WGS84")
     
@@ -60,6 +82,18 @@ def get_flight_speeds(traffic, method='calculate', remove_outliers=True, lower_q
 
 
 def duration_and_speed(training_trajectories: Traffic, synthetic_trajectories: Traffic, model_name = "model"):
+    """
+    Plot the distribution of flight durations and speeds for both real and synthetic data.
+    Parameters
+    ----------
+    training_trajectories
+    synthetic_trajectories
+    model_name
+
+    Returns
+    -------
+
+    """
     # Suppress specific UserWarnings related to set_xticklabels
     warnings.filterwarnings("ignore", message=".*set_ticklabels.*")
 
@@ -128,6 +162,22 @@ def timeseries_plot(
     alpha: float = 0.3,
     model_name = "model"
 ):
+    """
+    Plot time series data for real and synthetic traffic data.
+    Parameters
+    ----------
+    real_traffic
+    synthetic_traffic
+    features
+    units
+    n_plot_samples
+    alpha
+    model_name
+
+    Returns
+    -------
+
+    """
     # Set the style for a more professional look
     sns.set(style="whitegrid")
     sns.set_context("paper")
@@ -192,7 +242,3 @@ def timeseries_plot(
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.savefig(f"./figures/{model_name}_timeseries_ci.png", bbox_inches='tight')
     return fig
-
-# Usage
-
-

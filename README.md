@@ -25,7 +25,7 @@ make help
 The project is structured as follows:
 
 ```
-SynTraj                             # Root directory 
+DM_FM                               # Root directory 
 ├── config                          # Configuration files for the models and training
 │   ├── fcvae_config.yaml           # Configuration file for the FCVAE model
 │   ├── runtime_env.yaml            # Configuration file for the runtime environment
@@ -34,7 +34,7 @@ SynTraj                             # Root directory
 ├── pyproject.toml                  # Poetry configuration file
 ├── README.md                       # Project README file
 ├── setup.py                        # Setup file for packaging      
-├── SynTraj                         # Main package directory 
+├── src                             # Main package directory 
 │   ├── eval                        # Directory for evaluation scripts
 │   │   ├── trajectory_distances    # Directory for trajectory distance metrics
 │   │   └── eval_logics.py          # Evaluation logic for BlueSky simulation

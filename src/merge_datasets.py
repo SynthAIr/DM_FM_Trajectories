@@ -175,15 +175,8 @@ def main(directory, target_length, output_filepath, filter_alt = False):
         print("No Traffic objects found to combine.")
 
 if __name__ == "__main__":
-    # Directory containing .pkl files
-    #directory = "./data"
-    
-    # Desired target length for all trajectories
     target_length = 200
     filter_alt = False
-    # Change as per your requirements
-    
-    # Output file for the combined Traffic object
     parser = ArgumentParser()
     parser.add_argument("--length", type=int, default=target_length)
     parser.add_argument(
@@ -197,7 +190,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    #output_filepath = f"/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"/mnt/data/synthair/synthair_diffusion/data/resampled/combined_traffic_resampled_landing_{target_length}.pkl" 
     output_filepath = f"/mnt/ssda/synthair_temp/combined_traffic_resampled_landing_{target_length}.pkl"
     args.data_source = output_filepath
     

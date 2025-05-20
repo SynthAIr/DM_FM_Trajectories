@@ -1,6 +1,6 @@
 """
 Preprocess OpenSky data and save it to a pickle file.
-This script is taken from https://github.com/SynthAIr/SynTraj
+This code is adapted from https://github.com/SynthAIr/SynTraj
 """
 
 import glob
@@ -37,6 +37,7 @@ logger.debug("Debugging")
 
 def enforce_increasing(points):
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Adjust points to ensure an increasing sequence from the first to the last,
     with a constraint on maximum growth between consecutive points.
     
@@ -62,6 +63,7 @@ def enforce_increasing(points):
 
 def enforce_non_increasing(points):
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Adjust points to ensure a non-increasing sequence from the first to the last.
     
     Parameters:
@@ -85,6 +87,7 @@ def enforce_non_increasing(points):
 
 def enforce_increasing_with_limit(points, max_growth=1000):
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Adjust points to ensure an increasing sequence from the first to the last,
     with a constraint on maximum growth between consecutive points.
     
@@ -113,6 +116,7 @@ def enforce_increasing_with_limit(points, max_growth=1000):
     
 def clean_and_smooth_flight_with_tight_threshold(flight, target_length, column):
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Removes outliers and smooths the altitude for a single flight with a tighter threshold.
     """
     df = flight.data.copy()
@@ -120,11 +124,6 @@ def clean_and_smooth_flight_with_tight_threshold(flight, target_length, column):
     if df.loc[0, 'altitude'] > 500:
         df.loc[0, 'altitude'] = 0
 
-    #if df.loc[1, 'altitude'] > 2000:
-        #df.loc[1, 'altitude'] = 600
-
-    #if df.loc[2, 'altitude'] > 4000:
-        #df.loc[2, 'altitude'] = 1200
 
     df.loc[int(target_length*0.935):, column] = enforce_non_increasing(df.loc[int(target_length*0.935):, column])
     df.loc[:int(target_length*0.30), column] = enforce_increasing(df.loc[:int(target_length*0.30),column])
@@ -159,6 +158,7 @@ def clean_and_smooth_flight_with_tight_threshold(flight, target_length, column):
 
 def clean_trajectory_data(df, column, n, threshold=3):
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Clean trajectory data by:
     1. Identifying and replacing outliers with NaN.
     2. Capping the last n values to a maximum height if needed.
@@ -173,29 +173,21 @@ def clean_trajectory_data(df, column, n, threshold=3):
     Returns:
     pd.Series: Cleaned data series.
     """
-    # Calculate z-scores to identify outliers
     z_scores = np.abs(stats.zscore(df[column]))
     
-    # Create a copy of the data to modify
     cleaned_data = df[column].copy()
     
-    # Replace outliers with NaN
     cleaned_data[z_scores > threshold] = np.nan
     
-    # Perform interpolation across the entire trajectory
     cleaned_data = cleaned_data.interpolate(method='linear')
 
     return cleaned_data
 
 def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd.DataFrame:
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Add time-based features to the dataframe
     """
-    # Add time-based features
-    # assert coulmn timestamp exists
-
-    # assert 'Time Over' in df.columns, "timestamp column must exist in the dataframe"
-    # timestamps = df['Time Over']
     assert time_col in df.columns, "timestamp column must exist in the dataframe"
     timestamps = df[time_col]
     if not type(timestamps.iloc[0]) == pd.Timestamp: 
@@ -205,25 +197,11 @@ def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd
     hours = timestamps.dt.hour + timestamps.dt.minute / 60.0
     day_of_week = timestamps.dt.dayofweek
 
-    # Calculate sine and cosine for months (12 months in a year)
-    #month_sin = np.sin(2 * np.pi * months / 12)
-    #month_cos = np.cos(2 * np.pi * months / 12)
-
-    # Calculate sine and cosine for hours (24 hours in a day)
-    #hour_sin = np.sin(2 * np.pi * hours / 24)
-    #hour_cos = np.cos(2 * np.pi * hours / 24)
-
-    #day_of_week_sin = np.sin(2 * np.pi * day_of_week / 7)
-    #day_of_week_cos = np.cos(2 * np.pi * day_of_week / 7)
 
     df['hour'] =  hours
     df['month'] = months
     df['day_of_week'] = day_of_week
-    #df['hour_cos'] = hour_cos
-    #df['month_sin'] = month_sin
-    #df['month_cos'] = month_cos
-    #df['day_of_week_sin'] = day_of_week_sin
-    #df['day_of_week_cos'] = day_of_week_cos
+
     if 'track' in df.columns:
         print("Adding Track sine and cosine")
         df['track_cos'] = np.cos(2 * np.pi * df['track'] / 360)
@@ -233,6 +211,7 @@ def add_time_based_features(df: pd.DataFrame, time_col: str = 'Time Over') -> pd
 
 def add_embedding_encoding_index(df: pd.DataFrame, column_name: str, new_column_name: str) -> pd.DataFrame:
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Add an index encoding for a categorical column
     Sorts values to ensure consistent encoding
     """
@@ -244,6 +223,7 @@ def add_embedding_encoding_index(df: pd.DataFrame, column_name: str, new_column_
 
 def month_flight_filter(df:pd.DataFrame, month: int, timestamp_col:str='Time Over') -> pd.DataFrame:
     """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
     Filter flights that both took off and landed within the specified month.
     Overlapping flights are disregarded for simplicity.
     The timestamp_col must be of type timestamp
@@ -260,6 +240,20 @@ def month_flight_filter(df:pd.DataFrame, month: int, timestamp_col:str='Time Ove
 
 
 def load_flights_points(file_flights: str, flight_points_file_path: str, ADEP_code: str, ADES_code: str) -> pd.DataFrame:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Load flights and flight points data from CSV files, filter based on ADEP and ADES codes
+    Parameters
+    ----------
+    file_flights
+    flight_points_file_path
+    ADEP_code
+    ADES_code
+
+    Returns
+    -------
+
+    """
     # Load flights data from a CSV file
     flights_df = pd.read_csv(file_flights)
 
@@ -281,30 +275,31 @@ def load_flights_points(file_flights: str, flight_points_file_path: str, ADEP_co
                  "ACTUAL OFF BLOCK TIME", "ACTUAL ARRIVAL TIME",
                  "Actual Distance Flown (nm)"]], on="ECTRL ID"
     )
-    # Add relevant flight information to the flight points
-    #flights_points = flights_points.merge(
-    #    flights[["ECTRL ID", "ADEP", "ADES", "AC Type"]], on="ECTRL ID"
-    #)
+
 
     # Calculate the average sequence length of the flights
     sequence_lengths = flights_points.groupby("ECTRL ID").size()
     avg_sequence_length = sequence_lengths.mean()
     print(f"Average sequence length: {avg_sequence_length}")
 
-    # # add weather data
-    # flight_file_folder = os.path.dirname(file_flights)
-    # flights_points = add_weather_data(flights_points, folder = flight_file_folder)
-
-    # Add information about the flight duration
-
-    # Add seasonal and other cyclic features
-    # TODO: Temp solution, move function to utils
     flights_points = add_time_based_features(flights_points)
 
     return flights_points
 
 
 def assign_flight_ids(opensky_data: pd.DataFrame, window: int = 6) -> pd.DataFrame:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Assign flight IDs to OpenSky data based on icao24 and callsign.
+    Parameters
+    ----------
+    opensky_data
+    window
+
+    Returns
+    -------
+
+    """
 
     # Initialize the flight_id column and a dictionary to track the last time per (icao24, callsign) df['flight_id'] = None
     opensky_data["flight_id"] = None
@@ -338,6 +333,18 @@ def assign_flight_ids(opensky_data: pd.DataFrame, window: int = 6) -> pd.DataFra
 def remove_outliers(
     opensky_data: pd.DataFrame, thresholds: List[float]
 ) -> Tuple[pd.DataFrame, float]:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Remove outliers from the OpenSky data based on various criteria:
+    Parameters
+    ----------
+    opensky_data
+    thresholds
+
+    Returns
+    -------
+
+    """
 
     # print the number of unique flight ids
     num_flights = opensky_data["flight_id"].nunique()
@@ -478,6 +485,19 @@ def remove_outliers(
 def load_OpenSky_flights_points(
     base_path: str, ADEP_code: str, ADES_code: str
 ) -> pd.DataFrame:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Load OpenSky flights points data from CSV files, filter based on ADEP and ADES codes
+    Parameters
+    ----------
+    base_path
+    ADEP_code
+    ADES_code
+
+    Returns
+    -------
+
+    """
 
     # Look for any .csv files in the base_path
     files = glob.glob(os.path.join(base_path, "*.csv"))
@@ -541,7 +561,17 @@ def load_OpenSky_flights_points(
 
 
 def get_trajectories(flights_points: pd.DataFrame) -> Traffic:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Returns Traffic object from flights points data
+    Parameters
+    ----------
+    flights_points
 
+    Returns
+    -------
+
+    """
     # Convert timestamp to datetime object
     flights_points["timestamp"] = pd.to_datetime(flights_points["timestamp"], format="%d-%m-%Y %H:%M:%S", utc=True)
 
@@ -556,8 +586,21 @@ def get_trajectories(flights_points: pd.DataFrame) -> Traffic:
 def prepare_trajectories(
     trajectories: Traffic, n_samples: int, n_jobs: int, douglas_peucker_coeff: float
 ) -> Traffic:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Prepare trajectories for training by simplifying, clustering, and resampling
+    Parameters
+    ----------
+    trajectories
+    n_samples
+    n_jobs
+    douglas_peucker_coeff
 
-    # trajectories = trajectories.compute_xy(projection=EuroPP())
+    Returns
+    -------
+
+    """
+
 
     # Simplify trajectories with Douglas-Peucker algorithm if a coefficient is provided
     if douglas_peucker_coeff is not None:
@@ -594,25 +637,22 @@ def prepare_trajectories(
     )
     return trajectories
 
-# def prepare_trajectories(trajectories: Traffic, n_samples: int, n_jobs: int, douglas_peucker_coeff: float) -> Traffic:
-#     # Resample trajectories for uniformity
-#     trajectories = trajectories.resample(n_samples).unwrap().eval(max_workers=n_jobs, desc="resampling")
-#     trajectories = trajectories.compute_xy(projection=EuroPP())
-
-#     # simplify trjectories with Douglas-Peucker algorithm if a coefficient is provided
-#     if douglas_peucker_coeff is not None:
-#         print("Simplification...")
-#         trajectories = trajectories.simplify(tolerance=1e3).eval(desc="")
-
-#     # Add elapsed time since start for each flight
-#     trajectories = Traffic.from_flights(
-#         flight.assign(timedelta=lambda r: (r.timestamp - flight.start).apply(lambda t: t.total_seconds()))
-#         for flight in trajectories
-#     )
-
-#     return trajectories
 
 def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
+    """
+    This function is adapted from https://github.com/SynthAIr/SynTraj
+    Preprocess OpenSky data and save it to a pickle file.
+    Parameters
+    ----------
+    base_path
+    ADEP
+    ADES
+    data_source
+
+    Returns
+    -------
+
+    """
 
     flights_points, avg_sequence_length = load_OpenSky_flights_points(
         base_path, ADEP, ADES
@@ -620,9 +660,6 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
 
 
     print("Adding weather data")
-    #flights_points = add_weather_data_gcsfs(flights_points, "./data/ecmwf_gcsfs/")
-
-    # Create Traffic object from flight points
     trajectories = get_trajectories(flights_points)
     del flights_points
 
@@ -642,11 +679,6 @@ def main(base_path: str, ADEP: str, ADES: str, data_source: str) -> None:
 
     del trajectories
 
-    # Plot the training data
-    #plot_training_data(training_data_path=save_path)
-
-    # Plot the training data with altitude
-    #plot_training_data_with_altitude(training_data_path=save_path)
 
 from traffic.data.datasets import (
     landing_amsterdam_2019,
@@ -659,6 +691,16 @@ from traffic.data.datasets import (
 )
 
 def get_airport_data(icao_code: str):
+    """
+    Get the airport data based on the ICAO code.
+    Parameters
+    ----------
+    icao_code
+
+    Returns
+    -------
+
+    """
     # Total 7 airports
     airport_mapping = {
         "EHAM": landing_amsterdam_2019,  # Amsterdam Schiphol
@@ -672,16 +714,25 @@ def get_airport_data(icao_code: str):
     return airport_mapping.get(icao_code.upper(), None)  # Return None if not found
 
 def main_landing(base_path: str, data_source: str, ADES: str) -> None:
+    """
+    Preprocess landing data and save it to a pickle file.
+    Parameters
+    ----------
+    base_path
+    data_source
+    ADES
+
+    Returns
+    -------
+
+    """
     print("Preprocessing Landing")
 
     flight_points = (
-    #landing_zurich_2019
     get_airport_data(ADES)
-    #.query("runway == '14' and initial_flow == '162-216'")
     .assign_id()
     .unwrap()
     .resample(200)
-    #.drop_duplicates()
     .eval()
     )
     print("Finished Preprocessing Landing")
@@ -703,14 +754,6 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
 
     # Create Traffic object from flight points
     flight_points.data["timestamp"] = pd.to_datetime(flight_points.data["timestamp"], format="%d-%m-%Y %H:%M:%S", utc=True)
-    #trajectories = Traffic.from_flights(flight_points)
-    #trajectories = get_trajectories(flight_points)
-    #del flight_points
-
-    # Prepare trajectories for training
-    #trajectories = prepare_trajectories(
-        #trajectories, int(avg_sequence_length), n_jobs=7, douglas_peucker_coeff=None
-    #)
     trajectories = Traffic.from_flights(
         flight.assign(
             timedelta=lambda r: (r.timestamp - flight.start).apply(
@@ -758,7 +801,6 @@ def main_landing(base_path: str, data_source: str, ADES: str) -> None:
         trajectories = Traffic(df_clean)
 
     avg_sequence_length = 200
-    # Save the prepared trajectories to a pickle file in the parent directory of the base_path
     os.makedirs(Path(base_path) / f"landing_{ADES}", exist_ok=True)
     save_path = (
         Path(base_path) / f"landing_{ADES}"

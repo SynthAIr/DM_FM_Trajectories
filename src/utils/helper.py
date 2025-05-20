@@ -1,6 +1,4 @@
-import torch
 import yaml
-from sklearn.datasets import make_swiss_roll
 from utils.condition_utils import load_conditions
 from traffic.core import Traffic
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -14,27 +12,8 @@ from model.flow_matching import AirFMTraj, FlowMatching, Wrapper
 from model.diffusion import Diffusion
 import joblib
 
-def sample_batch(size, noise=1.0):
-    x, _= make_swiss_roll(size, noise=noise)
-    return x[:, [0, 2]] / 10.0
 
-def extract(input, t, x):
-    shape = x.shape
-    out = torch.gather(input, 0, t.to(input.device))
-    reshape = [t.shape[0]] + [1] * (len(shape) - 1)
-    return out.reshape(*reshape)
-
-
-def load_config_2(config_file):
-    with open(config_file, "r") as stream:
-        try:
-            return yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            print(exc)
-
-#from ruamel.yaml import YAML
 def load_config(file_path):
-    """Load YAML and sort keys alphabetically."""
     """Load YAML file and sort keys alphabetically."""
     def recursively_sort_dict(d):
         if isinstance(d, dict):
@@ -49,8 +28,17 @@ def load_config(file_path):
 
 
 def save_config(config, config_file):
-    #with open(config_file, "w") as f:
-    #    yaml.dump(config, f)
+    """
+    Save the configuration to a YAML file.
+    Parameters
+    ----------
+    config
+    config_file
+
+    Returns
+    -------
+
+    """
     with open(config_file, "w") as f:
         yaml.dump(config, f, sort_keys=True, default_flow_style=False)
 
@@ -58,7 +46,6 @@ def load_and_prepare_data(dataset_config):
     """
     Load and prepare the dataset for the model.
     """
-    #scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else MinMaxScaler(feature_range=(-1, 1))
     scaler = joblib.load(f'{dataset_config["scaler_path"]}') if "scaler_path" in dataset_config.keys() else StandardScaler()
     dataset = TrafficDataset.from_file(
         dataset_config["data_path"],
@@ -74,6 +61,16 @@ def load_and_prepare_data(dataset_config):
     return dataset, traffic
 
 def get_model(configs):
+    """
+    Get the model based on the configuration.
+    Parameters
+    ----------
+    configs
+
+    Returns
+    -------
+
+    """
     match configs["type"]:
         case "DDPM":
             return AirDiffTrajDDPM
@@ -97,6 +94,19 @@ def get_model(configs):
             raise NotImplemetedError("Invalid model name")
 
 def init_config(config, dataset_config, args, experiment = "None"):
+    """
+    Initialize the configuration with the given parameters.
+    Parameters
+    ----------
+    config
+    dataset_config
+    args
+    experiment
+
+    Returns
+    -------
+
+    """
     config["logger"]["artifact_location"] = args.artifact_location
     config["logger"]["tags"]['dataset'] = dataset_config["dataset"]
     config["logger"]["tags"]['weather'] = str(config["model"]["weather_config"]["weather_grid"])
@@ -104,6 +114,18 @@ def init_config(config, dataset_config, args, experiment = "None"):
     return config
 
 def init_model_config(config, dataset_config, dataset):
+    """
+    Initialize the model configuration with the dataset parameters.
+    Parameters
+    ----------
+    config
+    dataset_config
+    dataset
+
+    Returns
+    -------
+
+    """
     model_config = config["model"]
     model_config["data"] = dataset_config
     model_config["in_channels"] = len(dataset_config["features"])
@@ -116,6 +138,20 @@ def init_model_config(config, dataset_config, dataset):
     return model_config
 
 def get_model_train(dataset, model_config, dataset_config, args, pretrained_VAE = True):
+    """
+    Get the model for training based on the configuration and dataset.
+    Parameters
+    ----------
+    dataset
+    model_config
+    dataset_config
+    args
+    pretrained_VAE
+
+    Returns
+    -------
+
+    """
     if model_config["type"] == "LatDiff" or model_config["type"] == "LatFM":
         temp_conf = {"type": "TCVAE"}
         config_file = f"{model_config['vae']}/config.yaml"
@@ -139,7 +175,6 @@ def get_model_train(dataset, model_config, dataset_config, args, pretrained_VAE 
             print("Initing LatFM")
             m = FlowMatching(model_config, args.cuda)
             diff = Wrapper(model_config, m, args.cuda)
-        #model = get_model(model_config).load_from_checkpoint("artifacts/AirLatDiffTraj_5/best_model.ckpt", dataset_params = dataset.aset_params, config = model_config, vae=vae, generative = diff)
         model = get_model(model_config)(model_config, vae, diff)
     elif model_config["type"] == "FM":
         model_config["traj_length"] = dataset.parameters['seq_len']
@@ -154,8 +189,20 @@ def extract_geographic_info(
     lon_padding: float = 1,
     lat_padding: float = 1,
 ) -> Tuple[float, float, float, float, float, float]:
+    """
+    Extract geographic information from the trajectories object.
+    Adapted from https://github.com/SynthAIr/SynTraj
+    Parameters
+    ----------
+    trajectories
+    lon_padding
+    lat_padding
 
-    # Determine the geographic bounds for plotting
+    Returns
+    -------
+
+    """
+
     lon_min = trajectories.data["longitude"].min()
     lon_max = trajectories.data["longitude"].max()
     lat_min = trajectories.data["latitude"].min()

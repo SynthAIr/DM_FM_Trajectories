@@ -8,7 +8,6 @@ from train import setup_logger, get_dataloaders, train
 from evaluation.similarity import compute_energy_distance, compute_dtw_3d_batch
 import os
 from torch.utils.data import DataLoader, SubsetRandomSampler
-from traffic.algorithms.generation import Generation
 import numpy as np
 from evaluation.diversity import data_diversity
 

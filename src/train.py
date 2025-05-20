@@ -1,5 +1,5 @@
 """
-This script is partly taken from https://github.com/SynthAIr/SynTraj
+This script is adapted from https://github.com/SynthAIr/SynTraj
 """
 import argparse
 from datetime import datetime
