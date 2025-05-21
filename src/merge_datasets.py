@@ -183,14 +183,10 @@ if __name__ == "__main__":
         "--data_dir", dest="base_path", type=str, default="./data"
     )
     output_filepath = f"./data/resampled/combined_traffic_resampled_{target_length}.pkl" if filter_alt else f"./data/resampled/combined_traffic_resampled_landing_EHAM_{target_length}.pkl" 
-    output_filepath = f"/mnt/ssda/synthair_temp/combined_traffic_resampled_landing_{target_length}.pkl"
+    output_filepath = f"./data/combined_traffic_resampled_landing_{target_length}.pkl"
     # source of data: Either Eurocontrol or OpenSky
-    parser.add_argument(
-        "--data_source", dest="data_source", type=str, default=output_filepath
-    )
-
     args = parser.parse_args()
-    output_filepath = f"/mnt/ssda/synthair_temp/combined_traffic_resampled_landing_{target_length}.pkl"
+    output_filepath = f"./data/combined_traffic_resampled_landing_{target_length}.pkl"
     args.data_source = output_filepath
     
     # Process, interpolate, and combine all Traffic objects

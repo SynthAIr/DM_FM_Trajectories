@@ -769,7 +769,6 @@ if __name__ == "__main__":
             help="GPU to use",
             )
 
-    parser.add_argument("--eval", dest="run_train", action='store_true')
     parser.add_argument(
             "--perturb",
             dest="perturb", 

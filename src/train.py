@@ -216,13 +216,7 @@ if __name__ == "__main__":
             default=0,
             help="GPU to use",
             )
-    parser.add_argument(
-        "--pruning",
-        "-p",
-        action="store_true",
-        help="Activate the pruning feature. `MedianPruner` stops unpromising "
-        "trials at the early stages of training.",
-    )
+
 
 
     args = parser.parse_args()
