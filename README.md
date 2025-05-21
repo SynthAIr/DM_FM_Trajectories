@@ -8,8 +8,9 @@ The projects contains `pyproject.toml` file that specifies the dependencies and 
 
 ```bash
 git clone git@github.com:SynthAIr/DM_FM_Trajectories.git
-cd SynTraj
+cd DM_FM_Trajectories
 poetry install
+cd src
 ```
 
 ## Project Structure
