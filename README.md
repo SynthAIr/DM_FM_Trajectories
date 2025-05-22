@@ -1,10 +1,10 @@
-# Repository for Master's Thesis using Diffusion- and Flow Matching-based models for generating synthetic aircraft trajectories
+# Diffusion- and Flow-Matching-based models for generating synthetic landing trajectories in aviation
 
-Code used for all models and experiments in the thesis
+Code used for all models and experiments in the Master's thesis of Olav Finne Præsteng Larsen, NTNU/SINTEF 2025.
 
 ## Installation
 
-The projects contains `pyproject.toml` file that specifies the dependencies and the build system. The project uses `poetry` for dependency management and packaging. To install the SynTraj package locally, clone the repository and install the dependencies using poetry:
+The project contains a `pyproject.toml` file that specifies the dependencies and the build system. The project uses `poetry` for dependency management and packaging. To install the SynTraj package locally, clone the repository and install the dependencies using poetry:
 
 ```bash
 git clone git@github.com:SynthAIr/DM_FM_Trajectories.git
@@ -24,7 +24,7 @@ The project is organized into the following main directories:
 ## Train
 
 The `train.py` script is used to train a flight trajectory generation model. 
-The models are saved in a folder with the model name. The folder contains the best model, and the model configuration file. 
+The models are saved in a folder with the model name. The folder contains the best model and the model configuration file. 
 
 ### Arguments
 
