@@ -5,7 +5,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from utils.data_utils import TrafficDataset
 from model.AirDiffTraj import AirDiffTrajDDIM ,AirDiffTrajDDPM
 from typing import Tuple
-from model.baselines import PerturbationModel, TimeGAN
+from model.baselines import PerturbationModel
 from model.AirLatDiffTraj import LatentDiffusionTraj
 from model.tcvae import TCVAE
 from model.flow_matching import AirFMTraj, FlowMatching, Wrapper
@@ -82,8 +82,6 @@ def get_model(configs):
             return LatentDiffusionTraj
         case "LatDiff":
             return LatentDiffusionTraj
-        case "TimeGAN":
-            return TimeGAN
         case "TCVAE":
             return TCVAE
         case "VAE":

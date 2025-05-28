@@ -24,7 +24,7 @@ import cvxopt
 from traffic.algorithms.generation import compute_latlon_from_trackgs
 import pandas as pd
 import seaborn as sns
-from model.baselines import PerturbationModel, TimeGAN
+from model.baselines import PerturbationModel
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
