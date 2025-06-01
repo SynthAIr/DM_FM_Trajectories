@@ -24,7 +24,7 @@ import cvxopt
 from traffic.algorithms.generation import compute_latlon_from_trackgs
 import pandas as pd
 import seaborn as sns
-from model.baselines import PerturbationModel, TimeGAN
+from model.baselines import PerturbationModel
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -358,7 +358,7 @@ def plot_from_array(t: Traffic, model_name = "model"):
     plt.xlabel('X values')
     plt.ylabel('Y values')
     plt.title('Generated Samples')
-    plt.savefig(f"./figures/{model_name}_generated_samples.png")
+    #plt.savefig(f"./figures/{model_name}_generated_samples.png")
     return fig
 
 def plot_traffic_comparison(traffic_list: list, n_samples: int, output_filename: str = "traffic_comparison.png", landing = True):
